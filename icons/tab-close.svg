@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="8" height="8" shape-rendering="crispEdges" version="1.1" viewBox="0 0 2.1167 2.1167" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+ <metadata>
+  <rdf:RDF>
+   <cc:Work rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title/>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <g opacity=".995" style="mix-blend-mode:normal">
+  <path d="m0.31432 0.13629a0.18534 0.18534 0 0 0-0.12863 0.053816 0.18534 0.18534 0 0 0 0 0.26281l0.61056 0.60984-0.61056 0.61056a0.18534 0.18534 0 0 0 0 0.2616 0.18534 0.18534 0 0 0 0.26281 0l0.60984-0.60984 0.61056 0.60984a0.18534 0.18534 0 0 0 0.2616 0 0.18534 0.18534 0 0 0 0-0.2616l-0.60984-0.61056 0.60984-0.60984a0.18534 0.18534 0 0 0 0-0.26281 0.18534 0.18534 0 0 0-0.13394-0.053816 0.18534 0.18534 0 0 0-0.12766 0.053816l-0.61056 0.61056-0.60984-0.61056a0.18534 0.18534 0 0 0-0.13418-0.053816z" color="#000000" color-rendering="auto" dominant-baseline="auto" fill="#fff" image-rendering="auto" opacity=".995" shape-rendering="auto" solid-color="#000000" stop-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;font-variation-settings:normal;inline-size:0;isolation:auto;mix-blend-mode:normal;shape-margin:0;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+ </g>
+</svg>
