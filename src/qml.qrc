@@ -58,7 +58,6 @@
         <file>../qml/ColorProperty.qml</file>
         <file>../qml/ColorRampProperty.qml</file>
         <file>../qml/ColorSettings.qml</file>
-        <file>../qml/CutLine.qml</file>
         <file>../qml/DockPanel.qml</file>
         <file>../qml/DragContainer.qml</file>
         <file>../qml/DragRect.qml</file>
