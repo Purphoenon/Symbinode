@@ -72,8 +72,6 @@ SOURCES += \
     src/coloringnode.cpp \
     src/mappingnode.cpp \
     src/mapping.cpp \
-    src/splatnode.cpp \
-    src/splat.cpp \
     src/mirrornode.cpp \
     src/mirror.cpp \
     src/brightnesscontrastnode.cpp \
@@ -145,8 +143,6 @@ HEADERS += \
     src/coloringnode.h \
     src/mappingnode.h \
     src/mapping.h \
-    src/splatnode.h \
-    src/splat.h \
     src/mirrornode.h \
     src/mirror.h \
     src/brightnesscontrastnode.h \

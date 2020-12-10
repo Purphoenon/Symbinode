@@ -56,9 +56,6 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 3:
                 n = new MappingNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
-            /*case 4:
-                n = new SplatNode(activeTab->scene(), activeTab->scene()->resolution());
-                break;*/
             case 5:
                 n = new MirrorNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;

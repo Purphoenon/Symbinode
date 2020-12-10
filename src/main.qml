@@ -550,12 +550,6 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 18)
                 }
             }            
-            /*Action {
-                text: "Splat"
-                onTriggered: {
-                    mainWindow.createNode(addNode.x, addNode.y, 4)
-                }
-            }*/
             Action {
                 text: "Mirror"
                 onTriggered: {

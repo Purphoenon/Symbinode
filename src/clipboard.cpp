@@ -36,7 +36,6 @@
 #include "colornode.h"
 #include "coloringnode.h"
 #include "mappingnode.h"
-#include "splatnode.h"
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
@@ -217,14 +216,6 @@ void Clipboard::copy(Scene *scene) {
             mappingNode->setBaseX(baseNode->baseX());
             mappingNode->setBaseY(baseNode->baseY());
             clipboard_nodes.append(mappingNode);
-        }
-        else if(qobject_cast<SplatNode*>(node)) {
-            SplatNode *baseNode = qobject_cast<SplatNode*>(node);
-            SplatNode *splatNode = new SplatNode(nullptr, scene->resolution(),
-                                                        baseNode->size(), baseNode->imagePerCell());
-            splatNode->setBaseX(baseNode->baseX());
-            splatNode->setBaseY(baseNode->baseY());
-            clipboard_nodes.append(splatNode);
         }
         else if(qobject_cast<MirrorNode*>(node)) {
             MirrorNode *baseNode = qobject_cast<MirrorNode*>(node);
@@ -495,21 +486,6 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
             scene->addSelected(mappingNode);
             pastedItem.append(mappingNode);
         }
-        else if(qobject_cast<SplatNode*>(n)) {
-            SplatNode *baseNode = qobject_cast<SplatNode*>(n);
-            SplatNode *splatNode = new SplatNode(scene, scene->resolution(),
-                                                        baseNode->size(), baseNode->imagePerCell());
-            float x = posX - (currentCenter.x() - (baseNode->baseX()*viewScale - viewPan.x()));
-            float y = posY - (currentCenter.y() - (baseNode->baseY()*viewScale - viewPan.y()));
-            splatNode->setPan(viewPan);
-            splatNode->updateScale(viewScale);
-            splatNode->setBaseX((splatNode->pan().x() + x)/splatNode->scaleView());
-            splatNode->setBaseY((splatNode->pan().y() + y)/splatNode->scaleView());
-            splatNode->setSelected(true);
-            scene->addNode(splatNode);
-            scene->addSelected(splatNode);
-            pastedItem.append(splatNode);
-        }
         else if(qobject_cast<MirrorNode*>(n)) {
             MirrorNode *baseNode = qobject_cast<MirrorNode*>(n);
             MirrorNode *mirrorNode = new MirrorNode(scene, scene->resolution(),
@@ -762,16 +738,6 @@ void Clipboard::duplicate(Scene *scene) {
             scene->addNode(mappingNode);
             scene->addSelected(mappingNode);
             pastedItem.append(mappingNode);
-        }
-        else if(qobject_cast<SplatNode*>(node)) {
-            SplatNode *baseNode = qobject_cast<SplatNode*>(node);
-            SplatNode *splatNode = new SplatNode(scene, scene->resolution(),
-                                                        baseNode->size(), baseNode->imagePerCell());
-            splatNode->setBaseX(baseNode->baseX());
-            splatNode->setBaseY(baseNode->baseY());
-            scene->addNode(splatNode);
-            scene->addSelected(splatNode);
-            pastedItem.append(splatNode);
         }
         else if(qobject_cast<MirrorNode*>(node)) {
             MirrorNode *baseNode = qobject_cast<MirrorNode*>(node);

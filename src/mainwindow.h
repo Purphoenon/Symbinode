@@ -43,7 +43,6 @@
 #include "colornode.h"
 #include "coloringnode.h"
 #include "mappingnode.h"
-#include "splatnode.h"
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"

@@ -40,7 +40,6 @@
 #include "colornode.h"
 #include "coloringnode.h"
 #include "mappingnode.h"
-#include "splatnode.h"
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
@@ -411,9 +410,6 @@ void Scene::deserialize(const QJsonObject &json) {
                 case 3:
                     node = new MappingNode(this, m_resolution);
                     break;
-                /*case 4:
-                    node = new SplatNode(this, m_resolution);
-                    break;*/
                 case 5:
                     node = new MirrorNode(this, m_resolution);
                     break;
