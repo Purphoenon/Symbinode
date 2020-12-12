@@ -563,18 +563,10 @@ void Clipboard::duplicate(Scene *scene) {
     QList<Node*> sel_nodes;
     QList<Edge*> sel_edges;
     QList<QQuickItem*> pastedItem;
-    float maxX = std::numeric_limits<float>::min();
-    float maxY = maxX;
-    float minX = std::numeric_limits<float>::max();
-    float minY = minX;
     for(auto item: selected) {
         if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item))) {
             Node *node = qobject_cast<Node*>(item);
             sel_nodes.append(node);
-            maxX = std::max(maxX, (float)(node->x() + node->width()));
-            maxY = std::max(maxY, (float)(node->y() + node->height()));
-            minX = std::min(minX, (float)node->x());
-            minY = std::min(minY, (float)node->y());
             QList<Edge*> edges = node->getEdges();
             for(auto edge: edges) {
                 if(sel_edges.contains(edge)) continue;
@@ -592,8 +584,8 @@ void Clipboard::duplicate(Scene *scene) {
             NoiseNode *baseNode = qobject_cast<NoiseNode*>(node);
             NoiseNode *noiseNode = new NoiseNode(scene, scene->resolution(), baseNode->perlinParams(),
                                                  baseNode->simpleParams(), baseNode->noiseType());
-            noiseNode->setBaseX(baseNode->baseX());
-            noiseNode->setBaseY(baseNode->baseY());
+            noiseNode->setBaseX(baseNode->baseX() + 50);
+            noiseNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(noiseNode);
             scene->addSelected(noiseNode);
             pastedItem.append(noiseNode);
@@ -601,8 +593,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<MixNode*>(node)) {
             MixNode *baseNode = qobject_cast<MixNode*>(node);
             MixNode *mixNode = new MixNode(scene, scene->resolution(), baseNode->factor(), baseNode->mode());
-            mixNode->setBaseX(baseNode->baseX());
-            mixNode->setBaseY(baseNode->baseY());
+            mixNode->setBaseX(baseNode->baseX() + 50);
+            mixNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(mixNode);
             scene->addSelected(mixNode);
             pastedItem.append(mixNode);
@@ -610,8 +602,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<NormalMapNode*>(node)) {
             NormalMapNode *baseNode = qobject_cast<NormalMapNode*>(node);
             NormalMapNode *normalMapNode = new NormalMapNode(scene, scene->resolution(), baseNode->strenght());
-            normalMapNode->setBaseX(baseNode->baseX());
-            normalMapNode->setBaseY(baseNode->baseY());
+            normalMapNode->setBaseX(baseNode->baseX() + 50);
+            normalMapNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(normalMapNode);
             scene->addSelected(normalMapNode);
             pastedItem.append(normalMapNode);
@@ -621,8 +613,8 @@ void Clipboard::duplicate(Scene *scene) {
             VoronoiNode *voronoiNode = new VoronoiNode(scene, scene->resolution(), baseNode->crystalsParam(),
                                                        baseNode->bordersParam(), baseNode->solidParam(),
                                                        baseNode->worleyParam(), baseNode->voronoiType());
-            voronoiNode->setBaseX(baseNode->baseX());
-            voronoiNode->setBaseY(baseNode->baseY());
+            voronoiNode->setBaseX(baseNode->baseX() + 50);
+            voronoiNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(voronoiNode);
             scene->addSelected(voronoiNode);
             pastedItem.append(voronoiNode);
@@ -631,8 +623,8 @@ void Clipboard::duplicate(Scene *scene) {
             PolygonNode *baseNode = qobject_cast<PolygonNode*>(node);
             PolygonNode *polygonNode = new PolygonNode(scene, scene->resolution(), baseNode->sides(),
                                                        baseNode->polygonScale(), baseNode->smooth());
-            polygonNode->setBaseX(baseNode->baseX());
-            polygonNode->setBaseY(baseNode->baseY());
+            polygonNode->setBaseX(baseNode->baseX() + 50);
+            polygonNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(polygonNode);
             scene->addSelected(polygonNode);
             pastedItem.append(polygonNode);
@@ -641,8 +633,8 @@ void Clipboard::duplicate(Scene *scene) {
             CircleNode *baseNode = qobject_cast<CircleNode*>(node);
             CircleNode *circleNode = new CircleNode(scene, scene->resolution(), baseNode->interpolation(),
                                                        baseNode->radius(), baseNode->smooth());
-            circleNode->setBaseX(baseNode->baseX());
-            circleNode->setBaseY(baseNode->baseY());
+            circleNode->setBaseX(baseNode->baseX() + 50);
+            circleNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(circleNode);
             scene->addSelected(circleNode);
             pastedItem.append(circleNode);
@@ -653,8 +645,8 @@ void Clipboard::duplicate(Scene *scene) {
                                                              baseNode->translationX(), baseNode->translationY(),
                                                              baseNode->scaleX(), baseNode->scaleY(),
                                                              baseNode->rotation(), baseNode->clampCoords());
-            transformNode->setBaseX(baseNode->baseX());
-            transformNode->setBaseY(baseNode->baseY());
+            transformNode->setBaseX(baseNode->baseX() + 50);
+            transformNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(transformNode);
             scene->addSelected(transformNode);
             pastedItem.append(transformNode);
@@ -668,8 +660,8 @@ void Clipboard::duplicate(Scene *scene) {
                                               baseNode->randRotation(), baseNode->randScale(),
                                               baseNode->maskStrength(), baseNode->inputsCount(),
                                               baseNode->keepProportion());
-            tileNode->setBaseX(baseNode->baseX());
-            tileNode->setBaseY(baseNode->baseY());
+            tileNode->setBaseX(baseNode->baseX() + 50);
+            tileNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(tileNode);
             scene->addSelected(tileNode);
             pastedItem.append(tileNode);
@@ -677,8 +669,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<WarpNode*>(node)) {
             WarpNode *baseNode = qobject_cast<WarpNode*>(node);
             WarpNode *warpNode = new WarpNode(scene, scene->resolution(), baseNode->intensity());
-            warpNode->setBaseX(baseNode->baseX());
-            warpNode->setBaseY(baseNode->baseY());
+            warpNode->setBaseX(baseNode->baseX() + 50);
+            warpNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(warpNode);
             scene->addSelected(warpNode);
             pastedItem.append(warpNode);
@@ -686,8 +678,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<BlurNode*>(node)) {
             BlurNode *baseNode = qobject_cast<BlurNode*>(node);
             BlurNode *blurNode = new BlurNode(scene, scene->resolution(), baseNode->intensity());
-            blurNode->setBaseX(baseNode->baseX());
-            blurNode->setBaseY(baseNode->baseY());
+            blurNode->setBaseX(baseNode->baseX() + 50);
+            blurNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(blurNode);
             scene->addSelected(blurNode);
             pastedItem.append(blurNode);
@@ -695,8 +687,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<InverseNode*>(node)) {
             InverseNode *baseNode = qobject_cast<InverseNode*>(node);
             InverseNode *inverseNode = new InverseNode(scene, scene->resolution());
-            inverseNode->setBaseX(baseNode->baseX());
-            inverseNode->setBaseY(baseNode->baseY());
+            inverseNode->setBaseX(baseNode->baseX() + 50);
+            inverseNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(inverseNode);
             scene->addSelected(inverseNode);
             pastedItem.append(inverseNode);
@@ -704,8 +696,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<ColorRampNode*>(node)) {
             ColorRampNode *baseNode = qobject_cast<ColorRampNode*>(node);
             ColorRampNode *colorRampNode = new ColorRampNode(scene, scene->resolution(), baseNode->stops());
-            colorRampNode->setBaseX(baseNode->baseX());
-            colorRampNode->setBaseY(baseNode->baseY());
+            colorRampNode->setBaseX(baseNode->baseX() + 50);
+            colorRampNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(colorRampNode);
             scene->addSelected(colorRampNode);
             pastedItem.append(colorRampNode);
@@ -713,8 +705,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<ColorNode*>(node)) {
             ColorNode *baseNode = qobject_cast<ColorNode*>(node);
             ColorNode *colorNode = new ColorNode(scene, scene->resolution(), baseNode->color());
-            colorNode->setBaseX(baseNode->baseX());
-            colorNode->setBaseY(baseNode->baseY());
+            colorNode->setBaseX(baseNode->baseX() + 50);
+            colorNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(colorNode);
             scene->addSelected(colorNode);
             pastedItem.append(colorNode);
@@ -722,8 +714,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<ColoringNode*>(node)) {
             ColoringNode *baseNode = qobject_cast<ColoringNode*>(node);
             ColoringNode *coloringNode = new ColoringNode(scene, scene->resolution(), baseNode->color());
-            coloringNode->setBaseX(baseNode->baseX());
-            coloringNode->setBaseY(baseNode->baseY());
+            coloringNode->setBaseX(baseNode->baseX() + 50);
+            coloringNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(coloringNode);
             scene->addSelected(coloringNode);
             pastedItem.append(coloringNode);
@@ -733,8 +725,8 @@ void Clipboard::duplicate(Scene *scene) {
             MappingNode *mappingNode = new MappingNode(scene, scene->resolution(),
                                                         baseNode->inputMin(), baseNode->inputMax(),
                                                         baseNode->outputMin(), baseNode->outputMax());
-            mappingNode->setBaseX(baseNode->baseX());
-            mappingNode->setBaseY(baseNode->baseY());
+            mappingNode->setBaseX(baseNode->baseX() + 50);
+            mappingNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(mappingNode);
             scene->addSelected(mappingNode);
             pastedItem.append(mappingNode);
@@ -743,8 +735,8 @@ void Clipboard::duplicate(Scene *scene) {
             MirrorNode *baseNode = qobject_cast<MirrorNode*>(node);
             MirrorNode *mirrorNode = new MirrorNode(scene, scene->resolution(),
                                                         baseNode->direction());
-            mirrorNode->setBaseX(baseNode->baseX());
-            mirrorNode->setBaseY(baseNode->baseY());
+            mirrorNode->setBaseX(baseNode->baseX() + 50);
+            mirrorNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(mirrorNode);
             scene->addSelected(mirrorNode);
             pastedItem.append(mirrorNode);
@@ -753,8 +745,8 @@ void Clipboard::duplicate(Scene *scene) {
             BrightnessContrastNode *baseNode = qobject_cast<BrightnessContrastNode*>(node);
             BrightnessContrastNode *brightnessContrastNode = new BrightnessContrastNode(scene, scene->resolution(),
                                                         baseNode->brightness(), baseNode->contrast());
-            brightnessContrastNode->setBaseX(baseNode->baseX());
-            brightnessContrastNode->setBaseY(baseNode->baseY());
+            brightnessContrastNode->setBaseX(baseNode->baseX() + 50);
+            brightnessContrastNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(brightnessContrastNode);
             scene->addSelected(brightnessContrastNode);
             pastedItem.append(brightnessContrastNode);
@@ -763,8 +755,8 @@ void Clipboard::duplicate(Scene *scene) {
             ThresholdNode *baseNode = qobject_cast<ThresholdNode*>(node);
             ThresholdNode *thresholdNode = new ThresholdNode(scene, scene->resolution(),
                                                         baseNode->threshold());
-            thresholdNode->setBaseX(baseNode->baseX());
-            thresholdNode->setBaseY(baseNode->baseY());
+            thresholdNode->setBaseX(baseNode->baseX() + 50);
+            thresholdNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(thresholdNode);
             scene->addSelected(thresholdNode);
             pastedItem.append(thresholdNode);

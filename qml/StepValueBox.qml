@@ -106,7 +106,6 @@ Item {
                     }
                 }
             }
-            console.log(simbol)
             if(Number.isInteger(parseInt(simbol)) ||
               ((simbol === ".") && (step < 1) && (text.substring(0, text.length-1).lastIndexOf(".") === -1))){
                 newText = text

@@ -682,6 +682,17 @@ MainWindow {
                 contentHeight: contentItem.childrenRect.height
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
+                MouseArea {
+                    y: flickable.visibleArea.yPosition * flickable.height
+                    width: flickable.width
+                    height: flickable.height
+
+                    onClicked: {
+                        flickable.focus = true
+                        flickable.focus = false
+                    }
+                }
+
                 ScrollBar.vertical: ScrollBar{
                     z: -1
                 }
