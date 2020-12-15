@@ -766,10 +766,10 @@ MainWindow {
                 visible: tabsList.children.length > 0
                 color: "#303133"
                 Image {
-                    x: 6
-                    y: 6
+                    x: 4
+                    y: 4
                     parent: preview3DParams.opened ? paramsClose : itemParams
-                    source: "qrc:/icons/params (1).svg"
+                    source: "qrc:/icons/params (2).svg"
                 }
                 MouseArea {
                     z: 1

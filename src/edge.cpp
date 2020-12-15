@@ -97,6 +97,12 @@ Socket *Edge::startSocket() {
 
 void Edge::setStartSocket(Socket *socket) {
     m_startSocket = socket;
+    if(socket) {
+        connect(socket, &Socket::globalPosChanged, this, &Edge::setStartPosition);
+    }
+    else {
+        disconnect(socket, &Socket::globalPosChanged, this, &Edge::setStartPosition);
+    }
 }
 
 Socket *Edge::endSocket() {
@@ -106,7 +112,15 @@ Socket *Edge::endSocket() {
 void Edge::setEndSocket(Socket *socket) {
     if(m_endSocket) m_endSocket->reset();
     m_endSocket = socket;
-    socket->setValue(m_startSocket->value());
+    if(socket) {
+        connect(socket, &Socket::globalPosChanged, this, &Edge::setEndPosition);
+    }
+    else {
+        disconnect(socket, &Socket::globalPosChanged, this, &Edge::setEndPosition);
+    }
+    if(m_startSocket) {
+        socket->setValue(m_startSocket->value());
+    }
 }
 
 Socket* Edge::findSockets(Scene *scene, float x, float y) {

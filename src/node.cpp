@@ -185,13 +185,13 @@ bool Node::checkConnected(Node *node, socketType type) {
         }
         for(auto socket: m_additionalInputs) {
             for(auto edge: socket->getEdges()) {
-                if(qobject_cast<Node*>(edge->endSocket()->parentItem())) {
-                    Node *endNode = qobject_cast<Node*>(edge->endSocket()->parentItem());
-                    if(endNode == node) {
+                if(qobject_cast<Node*>(edge->startSocket()->parentItem())) {
+                    Node *startNode = qobject_cast<Node*>(edge->startSocket()->parentItem());
+                    if(startNode == node) {
                         return true;
                     }
                     else {
-                        bool connected = endNode->checkConnected(node, type);
+                        bool connected = startNode->checkConnected(node, type);
                         if(connected) return true;
                     }
                 }

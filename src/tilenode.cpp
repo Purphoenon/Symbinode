@@ -32,7 +32,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
 {
     preview = new TileObject(grNode, m_resolution, m_offsetX, m_offsetY, m_columns, m_rows, m_scaleX, m_scaleY, m_rotationAngle, m_randPosition, m_randRotation, m_randScale, m_maskStrength, m_inputsCount, m_keepProportion);
     float s = scaleView();
-    setHeight(435*s);
+    setHeight((207 + 28*(m_inputsCount - 1))*s);
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
     preview->setHeight(174);
@@ -325,6 +325,7 @@ void TileNode::setInputsCount(int count) {
             }
         }
     }
+    setHeight((207 + 28*(m_inputsCount - 1))*scaleView());
     inputsCountChanged(count);
 }
 
@@ -342,7 +343,7 @@ void TileNode::setOutput() {
 }
 
 void TileNode::updateScale(float scale) {
-    setHeight(435*scale);
+    setHeight((207 + 28*(m_inputsCount - 1))*scale);
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);

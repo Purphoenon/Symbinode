@@ -560,6 +560,7 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
 
 void Clipboard::duplicate(Scene *scene) {
     QList<QQuickItem*> selected = scene->selectedList();
+    float viewScale = scene->background()->viewScale();
     QList<Node*> sel_nodes;
     QList<Edge*> sel_edges;
     QList<QQuickItem*> pastedItem;
@@ -764,8 +765,8 @@ void Clipboard::duplicate(Scene *scene) {
     }
     for(auto edge: sel_edges) {
         Edge *e = new Edge(scene);
-        e->setStartPosition(edge->startPosition());
-        e->setEndPosition(edge->endPosition());
+        e->setStartPosition(edge->startPosition() + QVector2D(50, 50)*viewScale);
+        e->setEndPosition(edge->endPosition() + QVector2D(50, 50)*viewScale);
         Socket *startSock = e->findSockets(scene, e->startPosition().x(), e->startPosition().y());
         if(startSock) {
             e->setStartSocket(startSock);

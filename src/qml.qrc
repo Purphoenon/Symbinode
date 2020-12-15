@@ -93,5 +93,6 @@
         <file>../icons/pin.svg</file>
         <file>../icons/symbinode.ico</file>
         <file>../icons/tab-close.svg</file>
+        <file>../icons/params (2).svg</file>
     </qresource>
 </RCC>
