@@ -256,10 +256,16 @@ void MainWindow::pin(bool pinned) {
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if(event->key() == Qt::Key_C && event->modifiers() == Qt::ControlModifier) {
-        copy();
+        if(activeFocusItem() && activeFocusItem() != contentItem()) {
+            QApplication::sendEvent(activeFocusItem(), event);
+        }
+        else copy();
     }
     else if(event->key() == Qt::Key_V && event->modifiers() == Qt::ControlModifier) {
-        paste();
+        if(activeFocusItem() && activeFocusItem() != contentItem()) {
+            QApplication::sendEvent(activeFocusItem(), event);
+        }
+        else paste();
     }
     else if(event->key() == Qt::Key_D && event->modifiers() == Qt::ControlModifier) {
         duplicate();

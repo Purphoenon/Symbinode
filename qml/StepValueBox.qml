@@ -59,6 +59,7 @@ Item {
             text = Math.max(Math.min(maximum, newValue), minimum)
             value = text
             newValueChanged(value)
+            if(!focus) select(0, 0)
         }
 
         onTextEdited: {
@@ -136,6 +137,12 @@ Item {
 
         onDoubleClicked: {
             textValue.focus = true
+        }
+        onPositionChanged: {
+            if(textValue.focus) {
+                var cursorSel = textValue.positionAt(mouse.x, mouse.y, TextInput.CursorOnCharacter)
+                textValue.moveCursorSelection(cursorSel, TextInput.SelectCharacters)
+            }
         }
     }
 

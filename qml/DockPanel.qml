@@ -36,9 +36,11 @@ Rectangle {
         anchors.fill: parent
         acceptedButtons: Qt.AllButtons
         onClicked: {
-            console.log("dock click")
             focus = true
             focus = false
+        }
+        onWheel: {
+
         }
     }
 

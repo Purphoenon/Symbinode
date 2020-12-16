@@ -59,6 +59,9 @@ Item {
         validator: IntValidator{bottom: 0; top: maximumValue;}
         verticalAlignment: TextInput.AlignVCenter
         horizontalAlignment: TextInput.AlignLeft
+        onFocusChanged: {
+            if(!focus) accepted()
+        }
         onAccepted: {
             focus = false
         }

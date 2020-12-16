@@ -96,13 +96,15 @@ Socket *Edge::startSocket() {
 }
 
 void Edge::setStartSocket(Socket *socket) {
-    m_startSocket = socket;
-    if(socket) {
-        connect(socket, &Socket::globalPosChanged, this, &Edge::setStartPosition);
+    if(socket != m_startSocket) {
+        if(socket) {
+            connect(socket, &Socket::globalPosChanged, this, &Edge::setStartPosition);
+        }
+        if(m_startSocket) {
+            disconnect(m_startSocket, &Socket::globalPosChanged, this, &Edge::setStartPosition);
+        }
     }
-    else {
-        disconnect(socket, &Socket::globalPosChanged, this, &Edge::setStartPosition);
-    }
+    m_startSocket = socket;    
 }
 
 Socket *Edge::endSocket() {
@@ -111,13 +113,16 @@ Socket *Edge::endSocket() {
 
 void Edge::setEndSocket(Socket *socket) {
     if(m_endSocket) m_endSocket->reset();
+    if(socket != m_endSocket) {
+        if(socket) {
+            connect(socket, &Socket::globalPosChanged, this, &Edge::setEndPosition);
+        }
+        if(m_endSocket) {
+            disconnect(m_endSocket, &Socket::globalPosChanged, this, &Edge::setEndPosition);
+        }
+    }
     m_endSocket = socket;
-    if(socket) {
-        connect(socket, &Socket::globalPosChanged, this, &Edge::setEndPosition);
-    }
-    else {
-        disconnect(socket, &Socket::globalPosChanged, this, &Edge::setEndPosition);
-    }
+
     if(m_startSocket) {
         socket->setValue(m_startSocket->value());
     }

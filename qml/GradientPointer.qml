@@ -42,7 +42,7 @@ Item {
         onPaint: {
             var ctx = getContext("2d");
             ctx.reset();
-            ctx.fillStyle = selected ? Qt.rgba(0.5, 0.5, 0.5, 1) : Qt.rgba(0.84, 0.84, 0.84, 1);
+            ctx.fillStyle = selected ? Qt.rgba(0.84, 0.84, 0.84, 1) : Qt.rgba(0.5, 0.5, 0.5, 1);
             ctx.lineTo(0, 10)
             ctx.lineTo(5, 1.34)
             ctx.lineTo(10, 10)
@@ -56,7 +56,7 @@ Item {
         y: 10
         color: "#000000"
         border.width: 1
-        border.color: selected ? Qt.rgba(0.5, 0.5, 0.5, 1) : Qt.rgba(0.84, 0.84, 0.84, 1)
+        border.color: selected ? Qt.rgba(0.84, 0.84, 0.84, 1) : Qt.rgba(0.5, 0.5, 0.5, 1)
     }
     MouseArea{
         property real offsetX: 0

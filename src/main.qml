@@ -694,7 +694,7 @@ MainWindow {
                 }
 
                 ScrollBar.vertical: ScrollBar{
-                    z: -1
+                     z: active ? 0 : -1
                 }
             }
         }

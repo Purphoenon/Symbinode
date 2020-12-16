@@ -344,13 +344,18 @@ Item {
                             regExp: /#?[0-9a-fA-F]*/
                         }
             numberBox.onTextEdited: {
+                if(numberBox.text[0] !== '#') {
+                    numberBox.text = numberBox.text.length < 7 ? numberBox.text : numberBox.text.substring(0, 6)
+                }
+                else {
+                    numberBox.text = numberBox.text.length < 8 ? numberBox.text : numberBox.text.substring(0, 7)
+                }
+            }
+
+            numberBox.onAccepted: {
                 if(numberBox.text[0] !== '#')
                     numberBox.text = '#' + numberBox.text;
 
-                numberBox.text = numberBox.text.length < 8 ? numberBox.text : numberBox.text.substring(0, 7)
-            }
-
-            numberBox.onEditingFinished: {
                 var r = ColorUtils.getChannelStr(numberBox.text, 0)
                 var g = ColorUtils.getChannelStr(numberBox.text, 1)
                 var b = ColorUtils.getChannelStr(numberBox.text, 2)
