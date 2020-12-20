@@ -32,6 +32,7 @@ struct VoronoiParams {
     int scale = 5;
     int scaleX = 1;
     int scaleY = 1;
+    int seed = 1;
     bool inverse = false;
 };
 
@@ -67,6 +68,8 @@ public:
     void setIntensity(float intensity);
     float bordersSize();
     void setBordersSize(float size);
+    int seed();
+    void setSeed(int seed);
 signals:
     void voronoiTypeChanged(QString type);
     void voronoiScaleChanged(int scale);
@@ -76,6 +79,7 @@ signals:
     void inverseChanged(bool inverse);
     void intensityChanged(float intensity);
     void bordersSizeChanged(float size);
+    void seedChanged(int seed);
 public slots:
     void updateScale(float scale);
     void updatePrev(bool sel);
@@ -89,6 +93,7 @@ public slots:
     void updateInverse(bool inverse);
     void updateIntensity(qreal intensity);
     void updateBordersSize(qreal size);
+    void updateSeed(int seed);
 private:
     VoronoiObject *preview;
     QString m_voronoiType = "crystals";

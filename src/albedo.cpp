@@ -167,7 +167,7 @@ void AlbedoRenderer::saveTexture(QString dir) {
     glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
     FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
     QString name = dir.append("/albedo.png");
-    if (FreeImage_Save(FIF_PNG, image, name.toStdString().c_str(), 0))
+    if (FreeImage_Save(FIF_PNG, image, name.toUtf8().constData(), 0))
         printf("Successfully saved!\n");
     else
         printf("Failed saving!\n");

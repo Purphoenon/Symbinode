@@ -31,6 +31,7 @@ Item {
     property alias startLayers: layersParam.propertyValue
     property alias startPersistence: persistenceParam.propertyValue
     property alias startAmplitude: amplitudeParam.propertyValue
+    property alias startSeed: seedParam.propertyValue
     property alias type: control.currentIndex
     signal noiseTypeChanged(string type)
     signal noiseScaleChanged(real scale)
@@ -39,6 +40,7 @@ Item {
     signal layersChanged(int layers)
     signal persistenceChanged(real persistence)
     signal amplitudeChanged(real aplitude)
+    signal seedChanged(int seed)
 
     ParamDropDown {
         id: control
@@ -109,6 +111,17 @@ Item {
         propertyName: "Amplitude"
         onPropertyValueChanged: {
             amplitudeChanged(amplitudeParam.propertyValue)
+        }
+    }
+    ParamSlider {
+        id: seedParam
+        y: 236
+        minimum: 1
+        maximum: 100
+        step: 1
+        propertyName: "Seed"
+        onPropertyValueChanged: {
+            seedChanged(propertyValue)
         }
     }
 }

@@ -31,13 +31,14 @@ struct NoiseParams {
     int scaleY = 1;
     int scale = 5;
     int layers = 8;
+    int seed = 1;
 };
 
 class NoiseNode: public Node
 {
     Q_OBJECT
 public:
-    NoiseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), NoiseParams perlin = NoiseParams(), NoiseParams simple = NoiseParams{0.5f, 1.0f, 1, 1, 20, 8}, QString noiseType = "noisePerlin");
+    NoiseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), NoiseParams perlin = NoiseParams(), NoiseParams simple = NoiseParams{0.5f, 1.0f, 1, 1, 20, 8, 1}, QString noiseType = "noisePerlin");
     ~NoiseNode();
     QString noiseType();    
     void setNoiseType(QString type);
@@ -55,6 +56,8 @@ public:
     void setPersistence(float value);
     float amplitude();
     void setAmplitude(float value);
+    int seed();
+    void setSeed(int seed);
     unsigned int &getPreviewTexture();
     void operation();
     void serialize(QJsonObject &json) const;
@@ -67,6 +70,7 @@ signals:
     void layersChanged(int layers);
     void persistenceChanged(float persistence);
     void amplitudeChanged(float amplitude);
+    void seedChanged(int seed);
 public slots:
     void updateNoiseType(QString type);
     void updateNoiseScale(qreal scale);
@@ -76,6 +80,7 @@ public slots:
     void updateLayers(int layers);
     void updatePersistence(qreal value);
     void updateAmplitude(qreal value);
+    void updateSeed(int seed);
     void updatePrev(bool sel);
     void previewGenerated();
     void updateScale(float scale);

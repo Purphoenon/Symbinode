@@ -24,10 +24,10 @@
 #include <iostream>
 
 NoiseObject::NoiseObject(QQuickItem *parent, QVector2D resolution, QString type, float noiseScale,
-                         float scaleX, float scaleY, int layers, float persistence, float amplitude):
-    QQuickFramebufferObject (parent), m_noiseType(type), m_noiseScale(noiseScale), m_scaleX(scaleX),
-    m_scaleY(scaleY), m_layers(layers), m_persistence(persistence), m_amplitude(amplitude),
-    m_resolution(resolution)
+                         float scaleX, float scaleY, int layers, float persistence, float amplitude,
+                         int seed): QQuickFramebufferObject (parent), m_noiseType(type),
+    m_noiseScale(noiseScale), m_scaleX(scaleX), m_scaleY(scaleY), m_layers(layers),
+    m_persistence(persistence), m_amplitude(amplitude), m_seed(seed), m_resolution(resolution)
 {
 
 }
@@ -112,6 +112,16 @@ float NoiseObject::amplitude() {
 
 void NoiseObject::setAmplitude(float value) {
     m_amplitude = value;
+    generatedNoise = true;
+    update();
+}
+
+int NoiseObject::seed() {
+    return m_seed;
+}
+
+void NoiseObject::setSeed(int seed) {
+    m_seed = seed;
     generatedNoise = true;
     update();
 }
@@ -238,6 +248,7 @@ void NoiseRenderer::synchronize(QQuickFramebufferObject *item) {
         generateNoise->setUniformValue(generateNoise->uniformLocation("octaves"), noiseItem->layers());
         generateNoise->setUniformValue(generateNoise->uniformLocation("persistence"), noiseItem->persistence());
         generateNoise->setUniformValue(generateNoise->uniformLocation("amplitude"), noiseItem->amplitude());
+        generateNoise->setUniformValue(generateNoise->uniformLocation("seed"), noiseItem->seed());
         generateNoise->setUniformValue(generateNoise->uniformLocation("res"), m_resolution);
         generateNoise->setUniformValue(generateNoise->uniformLocation("useMask"), m_maskTexture);
         createNoise();

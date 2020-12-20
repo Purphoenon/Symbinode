@@ -161,7 +161,7 @@ void Clipboard::copy(Scene *scene) {
                                               baseNode->rotationAngle(), baseNode->randPosition(),
                                               baseNode->randRotation(), baseNode->randScale(),
                                               baseNode->maskStrength(), baseNode->inputsCount(),
-                                              baseNode->keepProportion());
+                                              baseNode->seed(), baseNode->keepProportion());
             tileNode->setBaseX(baseNode->baseX());
             tileNode->setBaseY(baseNode->baseY());
             clipboard_nodes.append(tileNode);
@@ -374,7 +374,7 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
                                               baseNode->rotationAngle(), baseNode->randPosition(),
                                               baseNode->randRotation(), baseNode->randScale(),
                                               baseNode->maskStrength(), baseNode->inputsCount(),
-                                              baseNode->keepProportion());
+                                              baseNode->seed(), baseNode->keepProportion());
             float x = posX - (currentCenter.x() - (baseNode->baseX()*viewScale - viewPan.x()));
             float y = posY - (currentCenter.y() - (baseNode->baseY()*viewScale - viewPan.y()));
             tileNode->setPan(viewPan);
@@ -660,7 +660,7 @@ void Clipboard::duplicate(Scene *scene) {
                                               baseNode->rotationAngle(), baseNode->randPosition(),
                                               baseNode->randRotation(), baseNode->randScale(),
                                               baseNode->maskStrength(), baseNode->inputsCount(),
-                                              baseNode->keepProportion());
+                                              baseNode->seed(), baseNode->keepProportion());
             tileNode->setBaseX(baseNode->baseX() + 50);
             tileNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(tileNode);

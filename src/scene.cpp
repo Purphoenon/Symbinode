@@ -52,6 +52,8 @@ Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_r
     m_preview3d = new Preview3DObject();
     m_undoStack = new QUndoStack(this);
     m_undoStack->setUndoLimit(32);   
+    setClip(true);
+    connect(this, &Scene::resolutionUpdate, m_preview3d, &Preview3DObject::setTexResolution);
 }
 
 Scene::~Scene() {

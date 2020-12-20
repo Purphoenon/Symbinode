@@ -37,6 +37,7 @@ Item {
     property alias startRandScale: randScaleParam.propertyValue
     property alias startMask: maskStrengthParam.propertyValue
     property alias startInputsCount: inputsCountParam.propertyValue
+    property alias startSeed: seedParam.propertyValue
     property alias startKeepProportion: keepProportionParam.checked
     signal offsetXChanged(real offset)
     signal offsetYChanged(real offset)
@@ -50,6 +51,7 @@ Item {
     signal randScaleChanged(real rand)
     signal maskChanged(real mask)
     signal inputsCountChanged(int count)
+    signal seedChanged(int seed)
     signal keepProportionChanged(bool keep)
     ParamSlider {
         id: columnsParam
@@ -159,9 +161,20 @@ Item {
             inputsCountChanged(propertyValue)
         }
     }
+    ParamSlider {
+        id: seedParam
+        y: 396
+        minimum: 1
+        maximum: 100
+        step: 1
+        propertyName: "Seed"
+        onPropertyValueChanged: {
+            seedChanged(propertyValue)
+        }
+    }
     CheckBox {
         id: keepProportionParam
-        y: 411
+        y: 444
         leftPadding: 30
         height: 25
         width: 140

@@ -31,13 +31,14 @@ uniform float jitter = 1.0;
 uniform bool inverse = false;
 uniform float intensity = 2.0;
 uniform float bordersSize = 0.0;
+uniform int seed = 1;
 uniform bool useMask = false;
 
 out vec4 FragColor;
 
 vec2 random2( vec2 p ) {
     p = mod(p, scale*vec2(scaleX, scaleY));
-    return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
+    return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*1367.454541*seed);
 }
 
 vec2 f2Voronoi(vec2 st) {

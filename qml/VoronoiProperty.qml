@@ -30,6 +30,7 @@ Item {
     property alias startScaleY: scaleYParam.propertyValue
     property alias startJitter: jitterParam.propertyValue
     property alias startIntensity: intensityParam.propertyValue
+    property alias startSeed: seedParam.propertyValue
     property alias startBorders: bordersParam.propertyValue
     property alias startInverse: inverseParam.checked
     property alias type: control.currentIndex
@@ -41,6 +42,7 @@ Item {
     signal inverseChanged(bool inverse)
     signal intensityChanged(real intensity)
     signal bordersChanged(real size)
+    signal seedChanged(int seed)
 
     ParamDropDown{
         id: control
@@ -105,7 +107,7 @@ Item {
     }
     CheckBox {
         id: inverseParam
-        y: control.currentIndex == 1 ? 251 : 218
+        y: control.currentIndex == 1 ? 284 : 251
         leftPadding: 30
         height: 25
         width: 100
@@ -159,8 +161,20 @@ Item {
     }
 
     ParamSlider {
-        id: bordersParam
+        id: seedParam
         y: 203
+        minimum: 1
+        maximum: 100
+        step: 1
+        propertyName: "Seed"
+        onPropertyValueChanged: {
+            seedChanged(propertyValue)
+        }
+    }
+
+    ParamSlider {
+        id: bordersParam
+        y: 236
         visible: control.currentIndex == 1
         propertyName: "Width"
         onPropertyValueChanged: {

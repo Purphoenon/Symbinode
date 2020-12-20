@@ -31,19 +31,20 @@ uniform float persistence = 0.5;
 uniform float amplitude = 1.0;
 uniform float scaleX = 1.0;
 uniform float scaleY = 1.0;
+uniform int seed = 1;
 uniform bool useMask = false;
 out vec4 FragColor;
 
 float random (in vec2 st) {
     return - 1.0 + 2.0*fract(sin(dot(st.xy,
                          vec2(12.9898,78.233)))
-                 * 43758.5453123);
+                 * 1367.454541*seed);
 }
 
 vec2 random2(vec2 st){
     st = vec2( dot(st,vec2(127.1,311.7)),
               dot(st,vec2(269.5,183.3)) );
-    return (-1.0 + 2.0*fract(sin(st)*43758.5453123));
+    return (-1.0 + 2.0*fract(sin(st)*1367.454541*seed));
 }
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }

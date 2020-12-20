@@ -25,12 +25,12 @@
 
 TileObject::TileObject(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
                        int rows, float scaleX, float scaleY, int rotation, float randPosition,
-                       float randRotation, float randScale, float maskStrength, int inputsCount,
+                       float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
                        bool keepProportion): QQuickFramebufferObject (parent), m_resolution(resolution),
     m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows), m_scaleX(scaleX),
-    m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition), m_randRotation(randRotation),
-    m_randScale(randScale), m_maskStrength(maskStrength), m_inputsCount(inputsCount),
-    m_keepProportion(keepProportion)
+    m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition),
+    m_randRotation(randRotation), m_randScale(randScale), m_maskStrength(maskStrength),
+    m_inputsCount(inputsCount), m_seed(seed), m_keepProportion(keepProportion)
 {
     setMirrorVertically(true);
 }
@@ -238,6 +238,16 @@ void TileObject::setInputsCount(int count) {
     update();
 }
 
+int TileObject::seed() {
+    return m_seed;
+}
+
+void TileObject::setSeed(int seed) {
+    m_seed = seed;
+    randUpdated = true;
+    update();
+}
+
 bool TileObject::keepProportion() {
     return m_keepProportion;
 }
@@ -287,6 +297,10 @@ TileRenderer::TileRenderer(QVector2D res): m_resolution(res) {
     tileShader->setUniformValue(tileShader->uniformLocation("tile5"), 7);
     tileShader->release();
 
+    randomShader->bind();
+    randomShader->setUniformValue(randomShader->uniformLocation("seed"), 1);
+    randomShader->release();
+
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
     textureShader->release();
@@ -332,15 +346,6 @@ TileRenderer::TileRenderer(QVector2D res): m_resolution(res) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_randomTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, randomFBO);
-    glViewport(0, 0, 512, 512);
-    glBindVertexArray(textureVAO);
-    randomShader->bind();
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    randomShader->release();
-    glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -398,7 +403,15 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
         else {
             tileItem->setTexture(0);
         }
-    }     
+    }
+    if(tileItem->randUpdated) {
+        tileItem->randUpdated = false;
+        randomShader->bind();
+        randomShader->setUniformValue(randomShader->uniformLocation("seed"), tileItem->seed());
+        randomShader->release();
+        createRandom();
+        createTile();
+    }
 }
 
 void TileRenderer::render() {
@@ -446,6 +459,19 @@ void TileRenderer::createTile() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     tileShader->release();
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void TileRenderer::createRandom() {
+    glBindFramebuffer(GL_FRAMEBUFFER, randomFBO);
+    glViewport(0, 0, 512, 512);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindVertexArray(textureVAO);
+    randomShader->bind();
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    randomShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

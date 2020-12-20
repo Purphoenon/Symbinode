@@ -30,7 +30,7 @@ class TileObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, bool keepProportion = false);
+    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -72,11 +72,14 @@ public:
     void setMaskStrength(float mask);
     int inputsCount();
     void setInputsCount(int count);
+    int seed();
+    void setSeed(int seed);
     bool keepProportion();
     void setKeepProportion(bool keep);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool tiledTex = false;
+    bool randUpdated = true;
     bool selectedItem = false;
     bool resUpdated = false;
 signals:
@@ -104,6 +107,7 @@ private:
     float m_randScale = 0.0f;
     float m_maskStrength = 0.0f;
     int m_inputsCount = 1;
+    int m_seed = 1;
     bool m_keepProportion = false;
 };
 
@@ -116,6 +120,7 @@ public:
     void render();
 private:
     void createTile();
+    void createRandom();
     void updateTexResolution();
     QVector2D m_resolution;
     unsigned int m_sourceTexture = 0;

@@ -30,7 +30,7 @@ class VoronoiObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    VoronoiObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString voronoiType = "crystals", int scale = 5, int scaleX = 1, int scaleY = 1, float jitter = 1.0f, bool inverse = false, float intensity = 1.0f, float bordersSize = 0.0f);
+    VoronoiObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString voronoiType = "crystals", int scale = 5, int scaleX = 1, int scaleY = 1, float jitter = 1.0f, bool inverse = false, float intensity = 1.0f, float bordersSize = 0.0f, int seed = 1);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
@@ -52,6 +52,8 @@ public:
     void setIntensity(float intensity);
     float bordersSize();
     void setBordersSize(float size);
+    int seed();
+    void setSeed(int seed);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool generatedVoronoi = true;
@@ -72,6 +74,7 @@ private:
     bool m_inverse = false;
     float m_intensity = 1.0f;
     float m_borders = 0.0f;
+    int m_seed = 1;
 };
 
 class VoronoiRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core

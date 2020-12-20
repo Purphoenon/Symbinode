@@ -27,11 +27,11 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     preview = new VoronoiObject(grNode, m_resolution, m_voronoiType, voronoiScale(), scaleX(), scaleY(), jitter(), inverse(), intensity(), bordersSize());
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
-    preview->setWidth(174);
-    preview->setHeight(174);
+    preview->setWidth(174*s);
+    preview->setHeight(174*s);
     preview->setX(3*s);
     preview->setY(30*s);
-    preview->setScale(s);
+    //preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &VoronoiNode::updateScale);
     connect(this, &VoronoiNode::changeSelected, this, &VoronoiNode::updatePrev);
     connect(this, &VoronoiNode::generatePreview, this, &VoronoiNode::previewGenerated);
@@ -46,6 +46,7 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     connect(this, &VoronoiNode::inverseChanged, preview, &VoronoiObject::setInverse);
     connect(this, &VoronoiNode::intensityChanged, preview, &VoronoiObject::setIntensity);
     connect(this, &VoronoiNode::bordersSizeChanged, preview, &VoronoiObject::setBordersSize);
+    connect(this, &VoronoiNode::seedChanged, preview, &VoronoiObject::setSeed);
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Voronoi");
@@ -64,6 +65,7 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     propertiesPanel->setProperty("startIntensity", intensity());
     propertiesPanel->setProperty("startInverse", inverse());
     propertiesPanel->setProperty("startBorders", bordersSize());
+    propertiesPanel->setProperty("startSeed", seed());
     connect(propertiesPanel, SIGNAL(voronoiTypeChanged(QString)), this, SLOT(updateVoronoiType(QString)));
     connect(propertiesPanel, SIGNAL(voronoiScaleChanged(int)), this, SLOT(updateVoronoiScale(int)));
     connect(propertiesPanel, SIGNAL(scaleXChanged(int)), this, SLOT(updateScaleX(int)));
@@ -72,6 +74,7 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     connect(propertiesPanel, SIGNAL(inverseChanged(bool)), this, SLOT(updateInverse(bool)));
     connect(propertiesPanel, SIGNAL(intensityChanged(qreal)), this, SLOT(updateIntensity(qreal)));
     connect(propertiesPanel, SIGNAL(bordersChanged(qreal)), this, SLOT(updateBordersSize(qreal)));
+    connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
 }
 
 VoronoiNode::~VoronoiNode() {
@@ -93,6 +96,7 @@ void VoronoiNode::serialize(QJsonObject &json) const {
     crystalsParam["jitter"] = m_crystals.jitter;
     crystalsParam["inverse"] = m_crystals.inverse;
     crystalsParam["intensity"] = m_crystals.intensity;
+    crystalsParam["seed"] = m_crystals.seed;
     json["crystalsParam"] = crystalsParam;
     QJsonObject bordersParam;
     bordersParam["scale"] = m_borders.scale;
@@ -102,6 +106,7 @@ void VoronoiNode::serialize(QJsonObject &json) const {
     bordersParam["inverse"] = m_borders.inverse;
     bordersParam["intensity"] = m_borders.intensity;
     bordersParam["width"] = m_borders.borders;
+    bordersParam["seed"] = m_borders.seed;
     json["bordersParam"] = bordersParam;
     QJsonObject solidParam;
     solidParam["scale"] = m_solid.scale;
@@ -110,6 +115,7 @@ void VoronoiNode::serialize(QJsonObject &json) const {
     solidParam["jitter"] = m_solid.jitter;
     solidParam["inverse"] = m_solid.inverse;
     solidParam["intensity"] = m_solid.intensity;
+    solidParam["seed"] = m_solid.seed;
     json["solidParam"] = solidParam;
     QJsonObject worleyParam;
     worleyParam["scale"] = m_worley.scale;
@@ -118,6 +124,7 @@ void VoronoiNode::serialize(QJsonObject &json) const {
     worleyParam["jitter"] = m_worley.jitter;
     worleyParam["inverse"] = m_worley.inverse;
     worleyParam["intensity"] = m_worley.intensity;
+    worleyParam["seed"] = m_worley.seed;
     json["worleyParam"] = worleyParam;
     json["voronoiType"] = m_voronoiType;
 }
@@ -144,6 +151,9 @@ void VoronoiNode::deserialize(const QJsonObject &json) {
         if(crystalsParam.contains("intensity")) {
             m_crystals.intensity = crystalsParam["intensity"].toVariant().toFloat();
         }
+        if(crystalsParam.contains("seed")) {
+            m_crystals.seed = crystalsParam["seed"].toInt();
+        }
     }
     if(json.contains("bordersParam")) {
         QJsonObject bordersParam = json["bordersParam"].toObject();
@@ -168,6 +178,9 @@ void VoronoiNode::deserialize(const QJsonObject &json) {
         if(bordersParam.contains("width")) {
             m_borders.borders = bordersParam["width"].toVariant().toFloat();
         }
+        if(bordersParam.contains("seed")) {
+            m_borders.seed = bordersParam["seed"].toInt();
+        }
     }
     if(json.contains("solidParam")) {
         QJsonObject solidParam = json["solidParam"].toObject();
@@ -188,6 +201,9 @@ void VoronoiNode::deserialize(const QJsonObject &json) {
         }
         if(solidParam.contains("intensity")) {
             m_solid.intensity = solidParam["intensity"].toVariant().toFloat();
+        }
+        if(solidParam.contains("seed")) {
+            m_solid.seed = solidParam["seed"].toInt();
         }
     }
     if(json.contains("worleyParam")) {
@@ -210,6 +226,9 @@ void VoronoiNode::deserialize(const QJsonObject &json) {
         if(worleyParam.contains("intensity")) {
             m_worley.intensity = worleyParam["intensity"].toVariant().toFloat();
         }
+        if(worleyParam.contains("seed")) {
+            m_worley.seed = worleyParam["seed"].toInt();
+        }
     }
     if(json.contains("voronoiType")) {
         m_voronoiType = json["voronoiType"].toVariant().toString();
@@ -226,6 +245,7 @@ void VoronoiNode::deserialize(const QJsonObject &json) {
         propertiesPanel->setProperty("startInverse", inverse());
         propertiesPanel->setProperty("startIntensity", intensity());
         propertiesPanel->setProperty("startBorders", bordersSize());
+        propertiesPanel->setProperty("startSeed", seed());
     }
 }
 
@@ -259,6 +279,7 @@ void VoronoiNode::setVoronoiType(QString type) {
     propertiesPanel->setProperty("startIntensity", intensity());
     propertiesPanel->setProperty("startInverse", inverse());
     propertiesPanel->setProperty("startBorders", bordersSize());
+    propertiesPanel->setProperty("startSeed", seed());
 }
 
 int VoronoiNode::voronoiScale() {
@@ -369,10 +390,27 @@ void VoronoiNode::setBordersSize(float size) {
     }
 }
 
+int VoronoiNode::seed() {
+    if(m_voronoiType == "crystals") return m_crystals.seed;
+    else if(m_voronoiType == "borders") return m_borders.seed;
+    else if(m_voronoiType == "solid") return m_solid.seed;
+    else if(m_voronoiType == "worley") return m_worley.seed;
+    else return m_crystals.seed;
+}
+
+void VoronoiNode::setSeed(int seed) {
+    if(m_voronoiType == "crystals") m_crystals.seed = seed;
+    else if(m_voronoiType == "borders") m_borders.seed = seed;
+    else if(m_voronoiType == "solid") m_solid.seed = seed;
+    else if(m_voronoiType == "worley") m_worley.seed = seed;
+    seedChanged(seed);
+}
+
 void VoronoiNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setWidth(174*scale);
+    preview->setHeight(174*scale);
 }
 
 void VoronoiNode::updatePrev(bool sel) {
@@ -428,5 +466,10 @@ void VoronoiNode::updateIntensity(qreal intensity) {
 
 void VoronoiNode::updateBordersSize(qreal size) {
     setBordersSize(size);
+    dataChanged();
+}
+
+void VoronoiNode::updateSeed(int seed) {
+    setSeed(seed);
     dataChanged();
 }
