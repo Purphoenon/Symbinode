@@ -25,7 +25,11 @@ Item {
     property alias gradientColor: colorPointer.color
     property real proportionX: 0.0
     property bool selected: false
+    property real oldPos
+    property color oldColor
     signal activated(var item)
+    signal posChangingFinished()
+    signal colorChangingFinished()
     id: pointer
     x: parent.width * proportionX - width*0.5
     width: 10
@@ -69,6 +73,7 @@ Item {
         onPressed: {
             activated(pointer)
             offsetX = mouse.x
+            oldPos = pointer.proportionX
         }
 
         onDoubleClicked: {
@@ -82,11 +87,12 @@ Item {
             if(colorPickerComponent.status == Component.Ready) {
                 var colorPickerObject = colorPickerComponent.createObject(newObject)
                 picked = true
+                oldColor = colorPointer.color
                 colorPickerObject.width = Qt.binding(function() {return newObject.width})
                 colorPickerObject.height = Qt.binding(function() {return newObject.height})
                 colorPickerObject.startingColor = colorPointer.color
                 colorPickerObject.colorValueChanged.connect(setColorValue)
-                newObject.closing.connect(function(){mouseArea.picked = false})
+                newObject.closing.connect(function(){mouseArea.picked = false; colorChangingFinished()})
 
                 function setColorValue() {
                     colorPointer.color = colorPickerObject.colorValue
@@ -97,6 +103,9 @@ Item {
             var x = mouseArea.mapToItem(pointer.parent, mouse.x-offsetX, mouse.y).x
             x = Math.min(Math.max(x, -width*0.5), parent.parent.width - width*0.5)
             proportionX = (x + width*0.5)/pointer.parent.width
+        }
+        onReleased: {
+            if(proportionX != oldPos) posChangingFinished()
         }
     }
 }

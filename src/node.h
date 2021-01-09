@@ -58,14 +58,15 @@ public:
     void hoverLeaveEvent(QHoverEvent *event);
     virtual void serialize(QJsonObject &json) const;
     virtual void deserialize(const QJsonObject &json);
+    void setPropertyOnPanel(const char* name, QVariant value);
     void createSockets(int inputCount, int outputCount);
     void createAdditionalInputs(int count);
     void setTitle(QString title);
-    void setContentText(QString text);
     virtual void operation();
     virtual unsigned int &getPreviewTexture();
 public slots:
     void scaleUpdate(float scale);
+    void propertyChanged(QString propName, QVariant newValue, QVariant oldValue);
 signals:
     void changeBaseX(float value);
     void changeBaseY(float value);

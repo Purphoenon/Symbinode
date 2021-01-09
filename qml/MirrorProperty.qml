@@ -28,25 +28,29 @@ Item {
     width: parent.width
     property alias startDirection: control.currentIndex
     signal directionChanged(int dir)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
         id: control
         y: 15
         model: ["Left to right", "Right to left", "Top to bottom", "Bottom to top"]
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 directionChanged(0)
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 directionChanged(1)
             }
-            else if(index == 2) {
+            else if(currentIndex == 2) {
                 directionChanged(2)
             }
-            else if(index == 3) {
+            else if(currentIndex == 3) {
                 directionChanged(3)
             }
             focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startDirection", currentIndex, oldIndex)
         }
     }
 }

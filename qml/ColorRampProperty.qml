@@ -23,12 +23,14 @@ import QtQuick 2.12
 
 Item {
     property var activeItem
+    property var operation
     property var gradientStops: gradientsData()
-    signal gradientStopAdded(vector3d color, real pos)
+    signal gradientStopAdded(vector3d color, real pos, int index)
     signal positionChanged(real pos, int index)
     signal colorChanged(vector3d color, int index)
     signal gradientStopDeleted(int index)
     signal gradientsStopsChanged(var gradients)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     height: childrenRect.height + 30
     width: parent.width
 
@@ -44,6 +46,59 @@ Item {
         }
     }
 
+    onOperationChanged: {
+        var command = operation[0]
+        switch(command) {
+        case 0: //add
+            var gradientColor = operation[1]
+            var gradientPos = operation[2]
+            var index = operation[3]
+            createGradientPointer(gradientPos, gradientColor, index)
+            gradientStopAdded(Qt.vector3d(gradientColor.r, gradientColor.g, gradientColor.b), gradientPos, index)
+            break
+        case 1: //change pos
+            var pos = operation[1]
+            var index = operation[2]
+            var gradientPointer = gradientContainer.pointers[index]
+            setActiveItem(gradientPointer)
+            gradientPointer.proportionX = pos
+            break
+        case 2: //change color
+            var color = operation[1]
+            var index = operation[2]
+            var gradientPointer = gradientContainer.pointers[index]
+            setActiveItem(gradientPointer)
+            gradientPointer.gradientColor = color
+            break
+        case 3:  //delete
+            var index = operation[1]
+            var gradStop
+            var gradPointer = gradientContainer.pointers[index]
+            setActiveItem(gradPointer)
+            var newStops = []
+            for(var i = 0; i < grad.stops.length; ++i) {
+                if(gradPointer.proportionX === grad.stops[i].position && gradPointer.gradientColor === grad.stops[i].color) {
+                    gradStop = grad.stops[i]
+                }
+                else {
+                    newStops.push(grad.stops[i])
+                }
+            }
+            grad.stops = newStops
+            gradStop.destroy()            
+            gradientContainer.pointers.splice(index, 1)
+            gradPointer.destroy()
+            activeItem = null
+            gradientItem.update()
+            gradientStops = gradientsData()
+            gradientStopDeleted(index)
+            break
+        default:
+            console.log("unknown operation")
+            break
+        }        
+    }
+
     onGradientsStopsChanged: {
         grad.stops = []
         for(var i = 0; i < gradientContainer.pointers.length; ++i) {
@@ -51,7 +106,7 @@ Item {
         }
         gradientContainer.pointers = []
         for(var i = 0; i < gradients.length; ++i) {
-            createGradientPointer(gradients[i][3], Qt.rgba(gradients[i][0],gradients[i][1],gradients[i][2], 1))
+            createGradientPointer(gradients[i][3], Qt.rgba(gradients[i][0],gradients[i][1],gradients[i][2], 1), i)
         }
     }
 
@@ -59,26 +114,16 @@ Item {
         if(event.key == Qt.Key_Delete) {
             if(grad.stops.length < 2) return
             var pos = activeItem.proportionX
-            var gradStop
-            var index
-            var newStops = []
-            for(var i = 0; i < grad.stops.length; ++i) {
-                if(pos === grad.stops[i].position && activeItem.gradientColor === grad.stops[i].color) {
-                    gradStop = grad.stops[i]
-                    index = i
-                }
-                else {
-                    newStops.push(grad.stops[i])
-                }
-            }
-            grad.stops = newStops
-            gradStop.destroy()
-            gradientContainer.pointers.splice(gradientContainer.pointers.indexOf(activeItem), 1)
-            activeItem.destroy()
-            activeItem = null
-            gradientItem.update()
-            gradientStopDeleted(index)
-            gradientStops = gradientsData()
+            var index = gradientContainer.pointers.indexOf(activeItem)
+
+            var newValue = [3]
+            newValue.push(index)
+            var oldValue = [0]
+            var c = activeItem.gradientColor
+            oldValue.push(Qt.rgba(c.r, c.g, c.b, 1.0))
+            oldValue.push(pos)
+            oldValue.push(index)
+            propertyChangingFinished("operation", newValue, oldValue)
         }
     }
 
@@ -89,28 +134,40 @@ Item {
     }
     function gradientPositionUpdate() {
         var pos = activeItem.proportionX
-        var index
-        for(var i = 0; i < grad.stops.length; ++i) {
-            if(pos === grad.stops[i].position && activeItem.gradientColor === grad.stops[i].color) {
-                index = i
-            }
-        }
+        var index = gradientContainer.pointers.indexOf(activeItem)
         positionChanged(pos, index)
         gradientStops = gradientsData()
     }
+    function gradientPositionChanged() {
+        var newValue = [1]
+        var index = gradientContainer.pointers.indexOf(activeItem)
+        newValue.push(activeItem.proportionX)
+        newValue.push(index)
+        var oldValue = [1]
+        oldValue.push(activeItem.oldPos)
+        oldValue.push(index)
+        propertyChangingFinished("operation", newValue, oldValue)
+    }
+
     function gradientColorUpdate() {
         var pos = activeItem.proportionX
-        var index
-        for(var i = 0; i < grad.stops.length; ++i) {
-            if(pos === grad.stops[i].position && activeItem.gradientColor === grad.stops[i].color) {
-                index = i
-            }
-        }
+        var index = gradientContainer.pointers.indexOf(activeItem)
         colorChanged(Qt.vector3d(activeItem.gradientColor.r, activeItem.gradientColor.g, activeItem.gradientColor.b), index)
         gradientStops = gradientsData()
     }
 
-    function createGradientPointer(pos, color) {
+    function gradientColorChanged() {
+        var newValue = [2]
+        var index = gradientContainer.pointers.indexOf(activeItem)
+        newValue.push(Qt.rgba(activeItem.gradientColor.r, activeItem.gradientColor.g, activeItem.gradientColor.b, 1))
+        newValue.push(index)
+        var oldValue = [2]
+        oldValue.push(Qt.rgba(activeItem.oldColor.r, activeItem.oldColor.g, activeItem.oldColor.b, 1))
+        oldValue.push(index)
+        propertyChangingFinished("operation", newValue, oldValue)
+    }
+
+    function createGradientPointer(pos, color, index) {
         var gradientPointerComponent = Qt.createComponent("GradientPointer.qml")
         if(gradientPointerComponent.status == Component.Ready) {
             var gradientPointerObject = gradientPointerComponent.createObject(gradientContainer)
@@ -121,13 +178,15 @@ Item {
             gradientPointerObject.activated.connect(setActiveItem)
             gradientPointerObject.proportionXChanged.connect(gradientPositionUpdate)
             gradientPointerObject.gradientColorChanged.connect(gradientColorUpdate)
+            gradientPointerObject.posChangingFinished.connect(gradientPositionChanged)
+            gradientPointerObject.colorChangingFinished.connect(gradientColorChanged)
             var gradientStopObject = Qt.createQmlObject('import QtQuick 2.12; GradientStop {}',
                                                grad,
                                                "ColorRampProperty.qml");
             gradientStopObject.position = Qt.binding(function(){return gradientPointerObject.proportionX})
             gradientStopObject.color = Qt.binding(function(){return gradientPointerObject.gradientColor})
             grad.stops.push(gradientStopObject)
-            gradientContainer.pointers.push(gradientPointerObject)
+            gradientContainer.pointers.splice(index, 0, gradientPointerObject)
             setActiveItem(gradientPointerObject)
             gradientStops = gradientsData()
         }
@@ -182,17 +241,21 @@ Item {
                     var g = leftStop.color.g*(1.0 - k) + rightStop.color.g*k
                     var b = leftStop.color.b*(1.0 - k) + rightStop.color.b*k
                     c = Qt.rgba(r, g, b, 1)
-                    createGradientPointer(p, c)
                 }
                 else if(!leftStop) {
                     c = rightStop.color
-                    createGradientPointer(p, c)
                 }
                 else if(!rightStop) {
                     c = leftStop.color
-                    createGradientPointer(p, c)
                 }
-                gradientStopAdded(Qt.vector3d(c.r, c.g, c.b), p)
+
+                var newValue = [0]
+                newValue.push(c)
+                newValue.push(p)
+                newValue.push(gr.stops.length)
+                var oldValue = [3]
+                oldValue.push(gr.stops.length)
+                propertyChangingFinished("operation", newValue, oldValue)
             }
         }
         Rectangle {

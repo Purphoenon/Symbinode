@@ -43,6 +43,7 @@ ColorNode::ColorNode(QQuickItem *parent, QVector2D resolution, QVector3D color):
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startColor", m_color);
     connect(propertiesPanel, SIGNAL(colorChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(0, 1);
     setTitle("Color");
 }

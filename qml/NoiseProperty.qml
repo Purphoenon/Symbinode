@@ -41,18 +41,23 @@ Item {
     signal persistenceChanged(real persistence)
     signal amplitudeChanged(real aplitude)
     signal seedChanged(int seed)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
         id: control
         y: 15
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 noiseTypeChanged("noisePerlin")
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 noiseTypeChanged("noiseSimple")
             }
             focus = false
+        }
+
+        onActivated: {
+            propertyChangingFinished("type", currentIndex, oldIndex)
         }
     }
     ParamSlider {
@@ -63,6 +68,9 @@ Item {
         step: 1
         onPropertyValueChanged: {
             noiseScaleChanged(scaleParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startNoiseScale", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -75,6 +83,9 @@ Item {
         onPropertyValueChanged: {
             scaleXChanged(scaleXParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleX", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: scaleYParam
@@ -86,6 +97,9 @@ Item {
         onPropertyValueChanged: {
             scaleYChanged(scaleYParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleY", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: layersParam
@@ -96,6 +110,9 @@ Item {
         onPropertyValueChanged: {
             layersChanged(layersParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startLayers", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: persistenceParam
@@ -104,6 +121,9 @@ Item {
         onPropertyValueChanged: {
             persistenceChanged(persistenceParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startPersistence", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: amplitudeParam
@@ -111,6 +131,9 @@ Item {
         propertyName: "Amplitude"
         onPropertyValueChanged: {
             amplitudeChanged(amplitudeParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startAmplitude", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -122,6 +145,9 @@ Item {
         propertyName: "Seed"
         onPropertyValueChanged: {
             seedChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startSeed", propertyValue, oldValue)
         }
     }
 }

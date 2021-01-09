@@ -28,12 +28,16 @@ Item {
     width: parent.width
     property real startRough: 0.2
     signal roughChanged(real val)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: roughParam
         propertyName: "Roughness"
         propertyValue: startRough
         onPropertyValueChanged: {
             roughChanged(roughParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startRough", propertyValue, oldValue)
         }
     }
 }

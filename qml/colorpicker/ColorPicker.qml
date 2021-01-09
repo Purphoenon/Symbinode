@@ -28,6 +28,8 @@ Item {
     property color startingColor
     layer.enabled: true
     layer.samples: 8
+    signal colorChangingFinished()
+    property color oldColor
 
     onStartingColorChanged: {
         var r = ColorUtils.getChannelStr(startingColor, 0)
@@ -38,11 +40,9 @@ Item {
         hueSlider.value = ColorUtils.getHsbComponent(r, g, b, 0)/360
         hueSlider.proportionX = (1 - hueSlider.value)
 
-        sbPicker.saturation = ColorUtils.getHsbComponent(r, g, b, 1)
-        sbPicker.proportionX = sbPicker.saturation
+        sbPicker.proportionX = ColorUtils.getHsbComponent(r, g, b, 1)
 
-        sbPicker.brightness = ColorUtils.getHsbComponent(r, g, b, 2)
-        sbPicker.proportionY = 1 - sbPicker.brightness
+        sbPicker.proportionY = 1 - ColorUtils.getHsbComponent(r, g, b, 2)
     }
 
     Picker {
@@ -73,15 +73,12 @@ Item {
                         }
             }
 
-        onSbChanged: {
-            sHSB.numberBox.text = Math.round(sbPicker.saturation * 100)
-            bHSB.numberBox.text = Math.round(sbPicker.brightness * 100)
+        onSbChangingStarted: {
+            oldColor = colorValue
+        }
 
-            rRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 0)
-            gRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 1)
-            bRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 2)
-
-            hex.numberBox.text = colorValue
+        onSbChangingFinished: {
+            if(String(oldColor) != String(colorValue)) colorChangingFinished()
         }
     }
 
@@ -107,15 +104,12 @@ Item {
             }
         }
         ColorSlider { id: hueSlider; width: parent.width - 7; x: 7/2; y: -7*0.5 + 2
-        onHueChanged: {
-            hHSB.numberBox.text = Math.round(hueValue * 360)
-
-            rRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 0)
-            gRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 1)
-            bRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 2)
-
-            hex.numberBox.text = colorValue
-        }
+            onHueChangingStarted: {
+                oldColor = colorValue
+            }
+            onHueChangingFinished: {
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
+            }
         }
     }
 
@@ -154,14 +148,17 @@ Item {
             offsetX: 35
             maximumValue: 255
             numberBox.text: ColorUtils.getChannelStr(colorValue, 0)
+            numberBox.onFocusChanged: {
+                oldColor = colorValue
+            }
             numberBox.onTextEdited: {
                 numberBox.text =  numberBox.text === "" ? "0" : numberBox.text
                 numberBox.text = numberBox.text.length > 1 && numberBox.text[0] === "0" ?
                             numberBox.text.substring(1, 2) : numberBox.text
 
-                gRGB.numberBox.text = gRGB.numberBox.text
-                bRGB.numberBox.text = bRGB.numberBox.text
 
+            }
+            numberBox.onAccepted: {
                 var hue = ColorUtils.getHsbComponent(rRGB.numberBox.text, gRGB.numberBox.text,
                                                      bRGB.numberBox.text, 0) / 360
                 var saturation = ColorUtils.getHsbComponent(rRGB.numberBox.text, gRGB.numberBox.text,
@@ -172,17 +169,12 @@ Item {
                 hueSlider.value = hue
                 hueSlider.proportionX = (1 - hueSlider.value)
 
-                sbPicker.saturation = saturation
+                sbPicker.proportionX = saturation
 
-                sbPicker.proportionX = sbPicker.saturation
+                sbPicker.proportionY = 1 - brightness
 
-                sbPicker.brightness = brightness
-                sbPicker.proportionY = 1 - sbPicker.brightness
-
-                hex.numberBox.text = colorValue
-                hHSB.numberBox.text = Math.round(hue * 360)
-                sHSB.numberBox.text = Math.round(saturation * 100)
-                bHSB.numberBox.text = Math.round(brightness * 100)
+                numberBox.text = Qt.binding(function(){return ColorUtils.getChannelStr(colorValue, 0)})
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
             }
         }
 
@@ -193,14 +185,15 @@ Item {
             name: ""
             maximumValue: 255
             numberBox.text: ColorUtils.getChannelStr(colorValue, 1)
+            numberBox.onFocusChanged: {
+                oldColor = colorValue
+            }
             numberBox.onTextEdited: {
                 numberBox.text =  numberBox.text === "" ? "0" : numberBox.text
                 numberBox.text = numberBox.text.length > 1 && numberBox.text[0] === "0" ?
-                            numberBox.text.substring(1, 2) : numberBox.text
-
-                rRGB.numberBox.text = rRGB.numberBox.text
-                bRGB.numberBox.text = bRGB.numberBox.text
-
+                            numberBox.text.substring(1, 2) : numberBox.text                
+            }
+            numberBox.onAccepted: {
                 var hue = ColorUtils.getHsbComponent(rRGB.numberBox.text, gRGB.numberBox.text,
                                                      bRGB.numberBox.text, 0) / 360
                 var saturation = ColorUtils.getHsbComponent(rRGB.numberBox.text, gRGB.numberBox.text,
@@ -211,17 +204,12 @@ Item {
                 hueSlider.value = hue
                 hueSlider.proportionX = (1 - hueSlider.value)
 
-                sbPicker.saturation = saturation
+                sbPicker.proportionX = saturation
 
-                sbPicker.proportionX = sbPicker.saturation
+                sbPicker.proportionY = 1 - brightness
 
-                sbPicker.brightness = brightness
-                sbPicker.proportionY = 1 - sbPicker.brightness
-
-                hex.numberBox.text = colorValue
-                hHSB.numberBox.text = Math.round(hue * 360)
-                sHSB.numberBox.text = Math.round(saturation * 100)
-                bHSB.numberBox.text = Math.round(brightness * 100)
+                numberBox.text = Qt.binding(function(){return ColorUtils.getChannelStr(colorValue, 1)})
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
             }
         }
 
@@ -232,14 +220,15 @@ Item {
             name: ""
             maximumValue: 255
             numberBox.text: ColorUtils.getChannelStr(colorValue, 2)
+            numberBox.onFocusChanged: {
+                oldColor = colorValue
+            }
             numberBox.onTextEdited: {
                 numberBox.text =  numberBox.text === "" ? "0" : numberBox.text
                 numberBox.text = numberBox.text.length > 1 && numberBox.text[0] === "0" ?
-                            numberBox.text.substring(1, 2) : numberBox.text
-
-                gRGB.numberBox.text = gRGB.numberBox.text
-                rRGB.numberBox.text = rRGB.numberBox.text
-
+                            numberBox.text.substring(1, 2) : numberBox.text                
+            }
+            numberBox.onAccepted: {
                 var hue = ColorUtils.getHsbComponent(rRGB.numberBox.text, gRGB.numberBox.text,
                                                      bRGB.numberBox.text, 0) / 360
                 var saturation = ColorUtils.getHsbComponent(rRGB.numberBox.text, gRGB.numberBox.text,
@@ -250,16 +239,12 @@ Item {
                 hueSlider.value = hue
                 hueSlider.proportionX = (1 - hueSlider.value)
 
-                sbPicker.saturation = saturation
-                sbPicker.proportionX = sbPicker.saturation
+                sbPicker.proportionX = saturation
 
-                sbPicker.brightness = brightness
-                sbPicker.proportionY = 1 - sbPicker.brightness
+                sbPicker.proportionY = 1 - brightness
 
-                hex.numberBox.text = colorValue
-                hHSB.numberBox.text = Math.round(hue * 360)
-                sHSB.numberBox.text = Math.round(saturation * 100)
-                bHSB.numberBox.text = Math.round(brightness * 100)
+                numberBox.text = Qt.binding(function(){return ColorUtils.getChannelStr(colorValue, 2)})
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
             }
         }
 
@@ -270,20 +255,21 @@ Item {
             name: "HSB"
             offsetX: 35
             maximumValue: 360
-            numberBox.text: Math.ceil(hueSlider.value * 360)
+            numberBox.text: Math.round(hueSlider.value * 360)
+            numberBox.onFocusChanged: {
+                oldColor = colorValue
+            }
             numberBox.onTextEdited: {
                 numberBox.text =  numberBox.text === "" ? "0" : numberBox.text
                 numberBox.text = numberBox.text.length > 1 && numberBox.text[0] === "0" ?
-                            numberBox.text.substring(1, 2) : numberBox.text
-
+                            numberBox.text.substring(1, 2) : numberBox.text               
+            }
+            numberBox.onAccepted: {
                 hueSlider.value = numberBox.text / 360
                 hueSlider.proportionX = (1 - hueSlider.value)
 
-                hex.numberBox.text = colorValue
-
-                rRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 0)
-                gRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 1)
-                bRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 2)
+                numberBox.text = Qt.binding(function(){return Math.round(hueSlider.value * 360)})
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
             }
         }
 
@@ -293,20 +279,21 @@ Item {
             x: 81
             name: ""
             maximumValue: 100
-            numberBox.text: Math.ceil(sbPicker.saturation * 100)
+            numberBox.text: Math.round(sbPicker.saturation * 100)
+            numberBox.onFocusChanged: {
+                oldColor = colorValue
+            }
             numberBox.onTextEdited: {
-                numberBox.text =  numberBox.text === "" ? "0" : numberBox.text
+                numberBox.text = numberBox.text === "" ? "0" : numberBox.text
                 numberBox.text = numberBox.text.length > 1 && numberBox.text[0] === "0" ?
                             numberBox.text.substring(1, 2) : numberBox.text
 
-                sbPicker.saturation = numberBox.text / 100
-                sbPicker.proportionX = sbPicker.saturation
+            }
+            numberBox.onAccepted: {
+                sbPicker.proportionX = (numberBox.text / 100)
 
-                hex.numberBox.text = colorValue
-
-                rRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 0)
-                gRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 1)
-                bRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 2)
+                numberBox.text = Qt.binding(function(){return Math.round(sbPicker.saturation * 100)})
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
             }
         }
 
@@ -316,20 +303,20 @@ Item {
             x: 116
             name: ""
             maximumValue: 100
-            numberBox.text: Math.ceil(sbPicker.brightness * 100)
+            numberBox.text: Math.round(sbPicker.brightness * 100)
+            numberBox.onFocusChanged: {
+                oldColor = colorValue
+            }
             numberBox.onTextEdited: {
                 numberBox.text =  numberBox.text === "" ? "0" : numberBox.text
                 numberBox.text = numberBox.text.length > 1 && numberBox.text[0] === "0" ?
-                            numberBox.text.substring(1, 2) : numberBox.text
+                            numberBox.text.substring(1, 2) : numberBox.text                
+            }
+            numberBox.onAccepted: {
+                sbPicker.proportionY = 1 - (numberBox.text / 100)
 
-                sbPicker.brightness = numberBox.text / 100
-                sbPicker.proportionY = 1 - sbPicker.brightness
-
-                hex.numberBox.text = colorValue
-
-                rRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 0)
-                gRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 1)
-                bRGB.numberBox.text = ColorUtils.getChannelStr(colorValue, 2)
+                numberBox.text = Qt.binding(function(){return Math.round(sbPicker.brightness * 100)})
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
             }
         }
 
@@ -343,6 +330,10 @@ Item {
             numberBox.validator:  RegExpValidator{
                             regExp: /#?[0-9a-fA-F]*/
                         }
+            numberBox.onFocusChanged: {
+                oldColor = colorValue
+            }
+
             numberBox.onTextEdited: {
                 if(numberBox.text[0] !== '#') {
                     numberBox.text = numberBox.text.length < 7 ? numberBox.text : numberBox.text.substring(0, 6)
@@ -360,24 +351,15 @@ Item {
                 var g = ColorUtils.getChannelStr(numberBox.text, 1)
                 var b = ColorUtils.getChannelStr(numberBox.text, 2)
 
-                rRGB.numberBox.text = r
-                gRGB.numberBox.text = g
-                bRGB.numberBox.text = b
-
                 hueSlider.value = ColorUtils.getHsbComponent(r, g, b, 0)/360
                 hueSlider.proportionX = (1 - hueSlider.value)
 
-                sbPicker.saturation = ColorUtils.getHsbComponent(r, g, b, 1)
+                sbPicker.proportionX = ColorUtils.getHsbComponent(r, g, b, 1)
 
-                sbPicker.proportionX = sbPicker.saturation
+                sbPicker.proportionY = 1 - ColorUtils.getHsbComponent(r, g, b, 2)
 
-                sbPicker.brightness = ColorUtils.getHsbComponent(r, g, b, 2)
-                console.log(sbPicker.brightness)
-                sbPicker.proportionY = 1 - sbPicker.brightness
-
-                hHSB.numberBox.text = Math.round(hueSlider.value * 360)
-                sHSB.numberBox.text = Math.round(sbPicker.saturation * 100)
-                bHSB.numberBox.text = Math.round(sbPicker.brightness * 100)
+                numberBox.text = Qt.binding(function(){return colorValue})
+                if(String(oldColor) != String(colorValue)) colorChangingFinished()
             }
         }
     }

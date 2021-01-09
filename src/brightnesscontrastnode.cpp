@@ -47,6 +47,7 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     propertiesPanel->setProperty("startContrast", m_contrast);
     connect(propertiesPanel, SIGNAL(brightnessChanged(qreal)), this, SLOT(updateBrightness(qreal)));
     connect(propertiesPanel, SIGNAL(contrastChanged(qreal)), this, SLOT(updateContrast(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(1, 1);
     setTitle("Brightness-Contrast");
     m_socketsInput[0]->setTip("Texture");

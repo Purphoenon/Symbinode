@@ -279,10 +279,18 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         }
         else deleteItems();
     }
-    else if(event->key() == Qt::Key_Z && event->modifiers() == Qt::ControlModifier) {
+    else if(event->key() == Qt::Key_Z && event->modifiers() == Qt::ControlModifier) {        
+        if(activeFocusItem() && activeFocusItem() != contentItem()) {
+            activeFocusItem()->setFocus(false);
+            contentItem()->setFocus(true);
+        }
         undo();
     }
     else if(event->key() == Qt::Key_Y && event->modifiers() == Qt::ControlModifier) {
+        if(activeFocusItem() && activeFocusItem() != contentItem()) {
+            activeFocusItem()->setFocus(false);
+            contentItem()->setFocus(true);
+        }
         redo();
     }
     else {

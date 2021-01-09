@@ -48,7 +48,7 @@ public:
     bool selectedItem = false;
     bool resUpdated = false;
 public slots:
-    void gradientAdd(QVector3D color, qreal pos);
+    void gradientAdd(QVector3D color, qreal pos, int index);
     void positionUpdate(qreal pos, int index);
     void colorUpdate(QVector3D color, int index);
     void gradientDelete(int index);

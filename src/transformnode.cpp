@@ -59,6 +59,7 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float tra
     connect(propertiesPanel, SIGNAL(scaleYChanged(qreal)), this, SLOT(updateScaleY(qreal)));
     connect(propertiesPanel, SIGNAL(angleChanged(int)), this, SLOT(updateRotation(int)));
     connect(propertiesPanel, SIGNAL(clampCoordsChanged(bool)), this, SLOT(updateClampCoords(bool)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Transform");
     m_socketsInput[0]->setTip("Texture");

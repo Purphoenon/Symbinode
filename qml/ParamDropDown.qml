@@ -24,12 +24,17 @@ import QtQuick.Controls 2.5
 
 ComboBox {
     property color popupColor: "#2C2D2F"
+    property int oldIndex
     id: control
     model: ["Perlin", "Simple"]
     leftPadding: 10
     rightPadding: 10
     width: parent.width - 10
     height: childrenRect.height
+
+    onPressedChanged: {
+        if(pressed) oldIndex = currentIndex
+    }
 
     delegate: ItemDelegate {
         width: control.width

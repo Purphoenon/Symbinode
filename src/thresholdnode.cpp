@@ -42,6 +42,7 @@ ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, float thr
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startThreshold", m_threshold);
     connect(propertiesPanel, SIGNAL(thresholdChanged(qreal)), this, SLOT(updateThreshold(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Threshold");
     m_socketsInput[0]->setTip("Texture");

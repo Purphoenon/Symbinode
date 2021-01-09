@@ -96,10 +96,10 @@ void ColorRampObject::setResolution(QVector2D res) {
     update();
 }
 
-void ColorRampObject::gradientAdd(QVector3D color, qreal pos) {
+void ColorRampObject::gradientAdd(QVector3D color, qreal pos, int index) {
     rampedTex = true;
     QVector4D grad = QVector4D(color, pos);
-    m_stops.push_back(grad);
+    m_stops.insert(m_stops.begin() + index, grad);
     update();
 }
 

@@ -53,6 +53,7 @@ Item {
     signal inputsCountChanged(int count)
     signal seedChanged(int seed)
     signal keepProportionChanged(bool keep)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: columnsParam
         propertyName: "Columns"
@@ -61,6 +62,9 @@ Item {
         step: 1
         onPropertyValueChanged: {
             columnsChanged(columnsParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startColumns", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -73,6 +77,9 @@ Item {
         onPropertyValueChanged: {
             rowsChanged(rowsParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRows", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: offsetXParam
@@ -81,6 +88,9 @@ Item {
         onPropertyValueChanged: {
             offsetXChanged(offsetXParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startOffsetX", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: offsetYParam
@@ -88,6 +98,9 @@ Item {
         propertyName: "Offset Y"
         onPropertyValueChanged: {
             offsetYChanged(offsetYParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startOffsetY", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -98,6 +111,9 @@ Item {
         onPropertyValueChanged: {
             scaleXChanged(scaleXParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleX", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: scaleYParam
@@ -106,6 +122,9 @@ Item {
         propertyName: "Scale Y"
         onPropertyValueChanged: {
             scaleYChanged(scaleYParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleY", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -117,6 +136,9 @@ Item {
         onPropertyValueChanged: {
             rotationAngleChanged(rotationParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRotation", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: randPositionParam
@@ -124,6 +146,9 @@ Item {
         propertyName: "Randomizing position"
         onPropertyValueChanged: {
             randPositionChanged(randPositionParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startRandPosition", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -133,6 +158,9 @@ Item {
         onPropertyValueChanged: {
             randRotationChanged(randRotationParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRandRotation", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: randScaleParam
@@ -141,6 +169,9 @@ Item {
         onPropertyValueChanged: {
             randScaleChanged(randScaleParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRandScale", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: maskStrengthParam
@@ -148,6 +179,9 @@ Item {
         propertyName: "Mask"
         onPropertyValueChanged: {
             maskChanged(maskStrengthParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startMask", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -160,6 +194,9 @@ Item {
         onPropertyValueChanged: {
             inputsCountChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startInputsCount", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: seedParam
@@ -171,6 +208,9 @@ Item {
         onPropertyValueChanged: {
             seedChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startSeed", propertyValue, oldValue)
+        }
     }
     CheckBox {
         id: keepProportionParam
@@ -181,7 +221,10 @@ Item {
         text: qsTr("Keep proportion")
         checked: false
         onCheckedChanged: {
-            keepProportionChanged(keepProportionParam.checked)
+            keepProportionChanged(keepProportionParam.checked)            
+        }
+        onToggled: {
+            propertyChangingFinished("startKeepProportion", checked, !checked)
             focus = false
         }
 

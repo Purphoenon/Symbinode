@@ -28,7 +28,6 @@ DragRect {
     }
     property real scaleView: 1.0
     property string title: "Title"
-    property string contentLabel: ""
     id: node
     width: parent.width - 16*scaleView
     border.width: 0

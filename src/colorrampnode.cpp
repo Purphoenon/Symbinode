@@ -41,11 +41,12 @@ ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, QJsonArra
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorRampProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
-    connect(propertiesPanel, SIGNAL(gradientStopAdded(QVector3D, qreal)), preview, SLOT(gradientAdd(QVector3D, qreal)));
+    connect(propertiesPanel, SIGNAL(gradientStopAdded(QVector3D, qreal, int)), preview, SLOT(gradientAdd(QVector3D, qreal, int)));
     connect(propertiesPanel, SIGNAL(positionChanged(qreal, int)), preview, SLOT(positionUpdate(qreal, int)));
     connect(propertiesPanel, SIGNAL(colorChanged(QVector3D, int)), preview, SLOT(colorUpdate(QVector3D, int)));
     connect(propertiesPanel, SIGNAL(gradientStopDeleted(int)), preview, SLOT(gradientDelete(int)));
     connect(this, SIGNAL(stopsChanged(QVariant)), propertiesPanel, SIGNAL(gradientsStopsChanged(QVariant)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Color Ramp");
     m_socketsInput[0]->setTip("Texture");

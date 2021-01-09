@@ -31,6 +31,7 @@ Item {
     signal sidesChanged(int sides)
     signal polygonScaleChanged(real scale)
     signal polygonSmoothChanged(real smooth)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: sidesParam
         propertyName: "Sides"
@@ -40,6 +41,9 @@ Item {
         onPropertyValueChanged: {
             sidesChanged(sidesParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startSides", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: scaleParam
@@ -48,6 +52,9 @@ Item {
         onPropertyValueChanged: {
             polygonScaleChanged(scaleParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScale", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: smoothParam
@@ -55,6 +62,9 @@ Item {
         propertyName: "Smooth"
         onPropertyValueChanged: {
             polygonSmoothChanged(smoothParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startSmooth", propertyValue, oldValue)
         }
     }
 }

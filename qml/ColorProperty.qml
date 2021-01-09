@@ -29,6 +29,7 @@ Item {
     width: parent.width
     property vector3d startColor: Qt.vector3d(1.0, 1.0, 1.0)
     signal colorChanged(vector3d color)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ColorPicker {
         id: color
         height: parent.parent.height - 15
@@ -36,6 +37,9 @@ Item {
         startingColor: Qt.rgba(startColor.x, startColor.y, startColor.z, 1.0)
         onColorValueChanged: {
             colorChanged(Qt.vector3d(colorValue.r, colorValue.g, colorValue.b))
+        }
+        onColorChangingFinished: {
+            propertyChangingFinished("startColor", Qt.vector3d(colorValue.r, colorValue.g, colorValue.b), Qt.vector3d(oldColor.r, oldColor.g, oldColor.b))
         }
     }
 }

@@ -30,12 +30,16 @@ Item {
     property alias startContrast: contrastParam.propertyValue
     signal brightnessChanged(real value)
     signal contrastChanged(real value)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: brightnessParam
         propertyName: "Brightness"
         minimum: -1
         onPropertyValueChanged: {
             brightnessChanged(brightnessParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startBrightness", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -45,6 +49,9 @@ Item {
         minimum: -1
         onPropertyValueChanged: {
             contrastChanged(contrastParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startContrast", propertyValue, oldValue)
         }
     }
 }

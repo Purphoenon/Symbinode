@@ -43,25 +43,30 @@ Item {
     signal intensityChanged(real intensity)
     signal bordersChanged(real size)
     signal seedChanged(int seed)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown{
         id: control
         y: 15
         model: ["Crystals", "Borders", "Solid", "Worley"]
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 voronoiTypeChanged("crystals")
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 voronoiTypeChanged("borders")
             }
-            else if(index == 2) {
+            else if(currentIndex == 2) {
                 voronoiTypeChanged("solid")
             }
-            else if(index == 3) {
+            else if(currentIndex == 3) {
                 voronoiTypeChanged("worley")
             }
             focus = false
+        }
+
+        onActivated: {
+            propertyChangingFinished("type", currentIndex, oldIndex)
         }
     }
 
@@ -74,6 +79,9 @@ Item {
         onPropertyValueChanged: {
             voronoiScaleChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScale", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: scaleXParam
@@ -84,6 +92,9 @@ Item {
         step: 1
         onPropertyValueChanged: {
             scaleXChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleX", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -96,6 +107,9 @@ Item {
         onPropertyValueChanged: {
             scaleYChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleY", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: jitterParam
@@ -103,6 +117,9 @@ Item {
         propertyName: "Jitter"
         onPropertyValueChanged: {
             jitterChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startJitter", propertyValue, oldValue)
         }
     }
     CheckBox {
@@ -114,7 +131,10 @@ Item {
         text: qsTr("Inverse")
         checked: false        
         onCheckedChanged: {
-            inverseChanged(inverseParam.checked)
+            inverseChanged(inverseParam.checked)            
+        }
+        onToggled: {
+            propertyChangingFinished("startInverse", checked, !checked)
             focus = false
         }
 
@@ -158,6 +178,9 @@ Item {
         onPropertyValueChanged: {
             intensityChanged(intensityParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startIntensity", propertyValue, oldValue)
+        }
     }
 
     ParamSlider {
@@ -170,6 +193,9 @@ Item {
         onPropertyValueChanged: {
             seedChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startSeed", propertyValue, oldValue)
+        }
     }
 
     ParamSlider {
@@ -179,6 +205,9 @@ Item {
         propertyName: "Width"
         onPropertyValueChanged: {
             bordersChanged(bordersParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startBorders", propertyValue, oldValue)
         }
     }
 }

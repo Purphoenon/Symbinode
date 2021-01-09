@@ -50,6 +50,7 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int mod
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(factorChanged(qreal)), this, SLOT(updateFactor(qreal)));
     connect(propertiesPanel, SIGNAL(modeChanged(int)), this, SLOT(updateMode(int)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     propertiesPanel->setProperty("startFactor", m_factor);
     propertiesPanel->setProperty("startMode", m_mode);
 }

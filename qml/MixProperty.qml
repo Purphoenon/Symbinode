@@ -29,28 +29,32 @@ Item {
     property real startFactor
     signal modeChanged(int mode)
     signal factorChanged(real f)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
         id: control
         y: 15
         model: ["Mix", "Add", "Multiply", "Substract", "Divide"]
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 modeChanged(0)
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 modeChanged(1)
             }
-            else if(index == 2) {
+            else if(currentIndex == 2) {
                 modeChanged(2)
             }
-            else if(index == 3) {
+            else if(currentIndex == 3) {
                 modeChanged(3)
             }
-            else if(index == 4) {
+            else if(currentIndex == 4) {
                 modeChanged(4)
             }
             focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startMode", currentIndex, oldIndex)
         }
     }
 
@@ -61,6 +65,9 @@ Item {
         propertyValue: startFactor
         onPropertyValueChanged: {
             factorChanged(factorParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startFactor", propertyValue, oldValue)
         }
     }
 }

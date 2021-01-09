@@ -49,6 +49,7 @@ MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, float inputMi
     connect(propertiesPanel, SIGNAL(inputMaxChanged(qreal)), this, SLOT(updateInputMax(qreal)));
     connect(propertiesPanel, SIGNAL(outputMinChanged(qreal)), this, SLOT(updateOutputMin(qreal)));
     connect(propertiesPanel, SIGNAL(outputMaxChanged(qreal)), this, SLOT(updateOutputMax(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     propertiesPanel->setProperty("startInputMin", m_inputMin);
     propertiesPanel->setProperty("startInputMax", m_inputMax);
     propertiesPanel->setProperty("startOutputMin", m_outputMin);

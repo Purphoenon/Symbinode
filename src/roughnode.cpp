@@ -44,6 +44,7 @@ RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/RoughProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(roughChanged(qreal)), this, SLOT(updateRough(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 RoughNode::~RoughNode() {

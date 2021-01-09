@@ -402,8 +402,19 @@ void Node::setTitle(QString title) {
     grNode->setProperty("title", title);
 }
 
-void Node::setContentText(QString text) {
-    grNode->setProperty("contentLabel", text);
+void Node::setPropertyOnPanel(const char *name, QVariant value) {
+    propertiesPanel->setProperty(name, value);
+}
+
+void Node::propertyChanged(QString propName, QVariant newValue, QVariant oldValue) {
+    Scene* scene = reinterpret_cast<Scene*>(parentItem());
+    if(scene) {
+        std::string prop = propName.toStdString();
+        char *name = new char[prop.size() + 1];
+        std::copy(prop.begin(), prop.end(), name);
+        name[prop.size()] = '\0';
+        scene->nodePropertyChanged(this, name, newValue, oldValue);
+    }
 }
 
 void Node::operation() {

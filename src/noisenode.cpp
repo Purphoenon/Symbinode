@@ -71,6 +71,7 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     connect(propertiesPanel, SIGNAL(amplitudeChanged(qreal)), this, SLOT(updateAmplitude(qreal)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
     connect(propertiesPanel, SIGNAL(noiseTypeChanged(QString)), this, SLOT(updateNoiseType(QString)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 NoiseNode::~NoiseNode() {
@@ -285,7 +286,7 @@ void NoiseNode::deserialize(const QJsonObject &json) {
 }
 
 void NoiseNode::updateNoiseType(QString type) {
-    setNoiseType(type);
+    setNoiseType(type);    
     dataChanged();
 }
 

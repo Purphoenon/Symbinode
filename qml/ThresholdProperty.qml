@@ -28,11 +28,15 @@ Item {
     width: parent.width
     property alias startThreshold: thresholdParam.propertyValue
     signal thresholdChanged(real value)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: thresholdParam
         propertyName: "Threshold"
         onPropertyValueChanged: {
             thresholdChanged(thresholdParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startThreshold", propertyValue, oldValue)
         }
     }
 }

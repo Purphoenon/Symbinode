@@ -45,6 +45,7 @@ NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, float str
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/NormalMapProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(strenghtChanged(qreal)), this, SLOT(updateStrenght(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     propertiesPanel->setProperty("startStrenght", m_strenght/30.0f);
 }
 

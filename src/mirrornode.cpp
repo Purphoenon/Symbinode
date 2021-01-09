@@ -43,6 +43,7 @@ MirrorNode::MirrorNode(QQuickItem *parent, QVector2D resolution, int dir): Node(
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startDirection", m_direction);
     connect(propertiesPanel, SIGNAL(directionChanged(int)), this, SLOT(updateDirection(int)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Mirror");
     m_socketsInput[0]->setTip("Texture");

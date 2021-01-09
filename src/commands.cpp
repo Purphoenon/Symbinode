@@ -257,3 +257,22 @@ void PasteCommand::redo() {
         }
     }
 }
+
+PropertyChangeCommand::PropertyChangeCommand(Node* node, const char* propName, QVariant newValue,
+                                             QVariant oldValue, QUndoCommand *parent):
+    QUndoCommand (parent), m_node(node), m_propName(propName), m_oldValue(oldValue), m_newValue(newValue) {
+
+}
+
+PropertyChangeCommand::~PropertyChangeCommand() {
+    m_node = nullptr;
+    m_propName = nullptr;
+}
+
+void PropertyChangeCommand::undo() {
+    m_node->setPropertyOnPanel(m_propName, m_oldValue);
+}
+
+void PropertyChangeCommand::redo() {
+    m_node->setPropertyOnPanel(m_propName, m_newValue);
+}

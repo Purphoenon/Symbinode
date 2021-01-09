@@ -54,6 +54,7 @@ PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, fl
     connect(propertiesPanel, SIGNAL(sidesChanged(int)), this, SLOT(updateSides(int)));
     connect(propertiesPanel, SIGNAL(polygonScaleChanged(qreal)), this, SLOT(updatePolygonScale(qreal)));
     connect(propertiesPanel, SIGNAL(polygonSmoothChanged(qreal)), this, SLOT(updateSmooth(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 PolygonNode::~PolygonNode() {

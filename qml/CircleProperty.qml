@@ -31,19 +31,23 @@ Item {
     signal interpolationChanged(int interpolation)
     signal radiusChanged(real radius)
     signal smoothValueChanged(real smooth)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
         id: control
         y: 15
         model: ["Linear", "Hermite"]
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 interpolationChanged(0)
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 interpolationChanged(1)
             }
             focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startInterpolation", currentIndex, oldIndex)
         }
     }
     ParamSlider {
@@ -53,6 +57,9 @@ Item {
         onPropertyValueChanged: {
             radiusChanged(radiusParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRadius", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: smoothParam
@@ -60,6 +67,9 @@ Item {
         propertyName: "Smooth"
         onPropertyValueChanged: {
             smoothValueChanged(smoothParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startSmooth", propertyValue, oldValue)
         }
     }
 }

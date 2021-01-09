@@ -37,12 +37,16 @@ Item {
     signal scaleYChanged(real y)
     signal angleChanged(int angle)
     signal clampCoordsChanged(bool clamp)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: transXParam
         propertyName: "Translate X"
         minimum: -1
         onPropertyValueChanged: {
             transXChanged(transXParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startTransX", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -53,6 +57,9 @@ Item {
         onPropertyValueChanged: {
             transYChanged(transYParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startTransY", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: scaleXParam
@@ -61,6 +68,9 @@ Item {
         maximum: 2
         onPropertyValueChanged: {
             scaleXChanged(scaleXParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleX", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -71,6 +81,9 @@ Item {
         onPropertyValueChanged: {
             scaleYChanged(scaleYParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleY", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: rotationParam
@@ -80,6 +93,9 @@ Item {
         step: 1
         onPropertyValueChanged: {
             angleChanged(rotationParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startRotation", propertyValue, oldValue)
         }
     }
     CheckBox {
@@ -92,6 +108,10 @@ Item {
         checked: false
         onCheckedChanged: {
             clampCoordsChanged(clampParam.checked)
+        }
+        onToggled: {
+            propertyChangingFinished("startClamp", checked, !checked)
+            focus = false
         }
 
         indicator: Item {
