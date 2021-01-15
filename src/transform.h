@@ -88,6 +88,7 @@ private:
     unsigned int textureVAO = 0;
     unsigned int transformFBO = 0;
     QOpenGLShaderProgram *transformShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

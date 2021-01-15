@@ -153,6 +153,11 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
     generateNoise->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/noise.frag");
     generateNoise->link();
 
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
+
     renderTexture = new QOpenGLShaderProgram();
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -216,6 +221,7 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
 
 NoiseRenderer::~NoiseRenderer() {
     delete generateNoise;
+    delete checkerShader;
     delete renderTexture;
 }
 
@@ -260,9 +266,16 @@ void NoiseRenderer::synchronize(QQuickFramebufferObject *item) {
 void NoiseRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(noiseVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     renderTexture->bind();
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);

@@ -28,6 +28,7 @@
 class Node;
 class Edge;
 class Scene;
+class Socket;
 
 class MoveCommand: public QUndoCommand {
 public:
@@ -108,6 +109,18 @@ private:
     const char *m_propName;
     QVariant m_oldValue;
     QVariant m_newValue;
+};
+
+class MoveEdgeCommand: public QUndoCommand {
+public:
+    MoveEdgeCommand(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket, QUndoCommand *parent = nullptr);
+    ~MoveEdgeCommand();
+    void undo();
+    void redo();
+private:
+    Edge *m_edge = nullptr;
+    Socket *m_oldSocket = nullptr;
+    Socket *m_newSocket = nullptr;
 };
 
 #endif // COMMANDS_H

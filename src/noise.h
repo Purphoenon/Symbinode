@@ -85,6 +85,7 @@ private:
     void createNoise();
     void updateTexResolution();
     QOpenGLShaderProgram *generateNoise;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     unsigned int noiseFBO;
     unsigned int noiseVAO, textureVAO;

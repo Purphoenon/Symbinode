@@ -139,6 +139,10 @@ TransformRenderer::TransformRenderer(QVector2D resolution): m_resolution(resolut
     transformShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     transformShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/transform.frag");
     transformShader->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -182,6 +186,7 @@ TransformRenderer::TransformRenderer(QVector2D resolution): m_resolution(resolut
 
 TransformRenderer::~TransformRenderer() {
     delete transformShader;
+    delete checkerShader;
     delete textureShader;
 }
 
@@ -224,9 +229,16 @@ void TransformRenderer::synchronize(QQuickFramebufferObject *item) {
 void TransformRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(textureVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     if (m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();

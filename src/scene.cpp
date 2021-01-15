@@ -597,6 +597,10 @@ void Scene::pastedItems(QList<QQuickItem *> items) {
      m_undoStack->push(new PasteCommand(items, this));
 }
 
+void Scene::movedEdge(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket) {
+    m_undoStack->push(new MoveEdgeCommand(edge, oldEndSocket, newEndSocket));
+}
+
 void Scene::nodePropertyChanged(Node *node, const char *propName, QVariant newValue, QVariant oldValue) {
     m_undoStack->push(new PropertyChangeCommand(node, propName, newValue, oldValue));
 }

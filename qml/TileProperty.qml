@@ -39,6 +39,7 @@ Item {
     property alias startInputsCount: inputsCountParam.propertyValue
     property alias startSeed: seedParam.propertyValue
     property alias startKeepProportion: keepProportionParam.checked
+    property alias startUseAlpha: useAlphaParam.checked
     signal offsetXChanged(real offset)
     signal offsetYChanged(real offset)
     signal columnsChanged(int columns)
@@ -53,6 +54,7 @@ Item {
     signal inputsCountChanged(int count)
     signal seedChanged(int seed)
     signal keepProportionChanged(bool keep)
+    signal useAlphaChanged(bool use)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: columnsParam
@@ -252,6 +254,53 @@ Item {
         contentItem: Text {
             topPadding: 0
             text: keepProportionParam.text
+            color: "#A2A2A2"
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+            renderType: Text.NativeRendering
+        }
+    }
+    CheckBox {
+        id: useAlphaParam
+        y: 469
+        leftPadding: 30
+        height: 25
+        width: 140
+        text: qsTr("Use alpha")
+        checked: true
+        onCheckedChanged: {
+            useAlphaChanged(useAlphaParam.checked)
+        }
+        onToggled: {
+            propertyChangingFinished("startUseAlpha", checked, !checked)
+            focus = false
+        }
+
+        indicator: Item {
+            implicitWidth: 30
+            implicitHeight: 30
+            x: useAlphaParam.contentItem.width + 5
+            anchors.verticalCenter: parent.verticalCenter
+            Rectangle {
+                width: 14
+                height: 14
+                anchors.centerIn: parent
+                color: "transparent"
+                border.color: "#A2A2A2"
+                Rectangle {
+                    width: 6
+                    height: 6
+                    anchors.centerIn: parent
+                    visible: useAlphaParam.checked
+                    color: "#A2A2A2"
+                }
+            }
+        }
+
+        contentItem: Text {
+            topPadding: 0
+            text: useAlphaParam.text
             color: "#A2A2A2"
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignVCenter

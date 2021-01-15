@@ -22,10 +22,11 @@
 #include "polygonnode.h"
 #include <iostream>
 
-PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, float polygonScale, float smooth):
-    Node(parent, resolution), m_sides(sides), m_polygonScale(polygonScale), m_smooth(smooth)
+PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, float polygonScale,
+                         float smooth, bool useAlpha): Node(parent, resolution), m_sides(sides),
+    m_polygonScale(polygonScale), m_smooth(smooth), m_useAlpha(useAlpha)
 {
-    preview = new PolygonObject(grNode, m_resolution, m_sides, m_polygonScale, m_smooth);
+    preview = new PolygonObject(grNode, m_resolution, m_sides, m_polygonScale, m_smooth, m_useAlpha);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -42,6 +43,7 @@ PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, fl
     connect(this, &PolygonNode::sidesChanged, preview, &PolygonObject::setSides);
     connect(this, &PolygonNode::polygonScaleChanged, preview, &PolygonObject::setPolygonScale);
     connect(this, &PolygonNode::smoothChanged, preview, &PolygonObject::setSmooth);
+    connect(this, &PolygonNode::useAlphaChanged, preview, &PolygonObject::setUseAlpha);
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Polygon");
@@ -51,9 +53,11 @@ PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, fl
     propertiesPanel->setProperty("startSides", m_sides);
     propertiesPanel->setProperty("startScale", m_polygonScale);
     propertiesPanel->setProperty("startSmooth", m_smooth);
+    propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
     connect(propertiesPanel, SIGNAL(sidesChanged(int)), this, SLOT(updateSides(int)));
     connect(propertiesPanel, SIGNAL(polygonScaleChanged(qreal)), this, SLOT(updatePolygonScale(qreal)));
     connect(propertiesPanel, SIGNAL(polygonSmoothChanged(qreal)), this, SLOT(updateSmooth(qreal)));
+    connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -72,6 +76,7 @@ void PolygonNode::serialize(QJsonObject &json) const {
     json["sides"] = m_sides;
     json["scale"] = m_polygonScale;
     json["smooth"] = m_smooth;
+    json["useAlpha"] = m_useAlpha;
 }
 
 void PolygonNode::deserialize(const QJsonObject &json) {
@@ -85,9 +90,13 @@ void PolygonNode::deserialize(const QJsonObject &json) {
     if(json.contains("smooth")) {
         m_smooth = json["smooth"].toVariant().toFloat();
     }
+    if(json.contains("useAlpha")) {
+        m_useAlpha = json["useAlpha"].toBool();
+    }
     propertiesPanel->setProperty("startSides", m_sides);
     propertiesPanel->setProperty("startScale", m_polygonScale);
     propertiesPanel->setProperty("startSmooth", m_smooth);
+    propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
 }
 
 int PolygonNode::sides() {
@@ -115,6 +124,15 @@ float PolygonNode::smooth() {
 void PolygonNode::setSmooth(float smooth) {
     m_smooth = smooth;
     smoothChanged(smooth);
+}
+
+bool PolygonNode::useAlpha() {
+    return m_useAlpha;
+}
+
+void PolygonNode::setUseAlpha(bool use) {
+    m_useAlpha = use;
+    useAlphaChanged(use);
 }
 
 void PolygonNode::updateScale(float scale) {
@@ -151,5 +169,10 @@ void PolygonNode::updatePolygonScale(qreal scale) {
 
 void PolygonNode::updateSmooth(qreal smooth) {
     setSmooth(smooth);
+    dataChanged();
+}
+
+void PolygonNode::updateUseAlpha(bool use) {
+    setUseAlpha(use);
     dataChanged();
 }

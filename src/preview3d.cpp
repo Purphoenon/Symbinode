@@ -518,7 +518,6 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
     if(previewItem->useAlbedoTex) {
         if(previewItem->changedAlbedo) {
             previewItem->changedAlbedo = false;
-            std::cout << "albedo changed" << std::endl;
             updateOutputsTexture(albedoTexture, previewItem->albedo().toUInt());
         }
     }
@@ -550,7 +549,6 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
         previewItem->changedNormal = false;
         updateOutputsTexture(normalTexture, previewItem->normal());
     }
-    //normalTexture = previewItem->normal();
     bool useNorm = previewItem->normal() ? true : false;
     pbrShader->setUniformValue(pbrShader->uniformLocation("useNormMap"), useNorm);
     pbrShader->release();

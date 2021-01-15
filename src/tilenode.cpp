@@ -25,13 +25,13 @@
 TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
                    int rows, float scaleX, float scaleY, int rotation, float randPosition,
                    float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
-                   bool keepProportion): Node(parent, resolution), m_offsetX(offsetX), m_offsetY(offsetY),
-    m_columns(columns), m_rows(rows), m_scaleX(scaleX), m_scaleY(scaleY), m_rotationAngle(rotation),
-    m_randPosition(randPosition), m_randRotation(randRotation), m_randScale(randScale),
-    m_maskStrength(maskStrength), m_inputsCount(inputsCount), m_seed(seed),
-    m_keepProportion(keepProportion)
+                   bool keepProportion, bool useAlpha): Node(parent, resolution), m_offsetX(offsetX),
+    m_offsetY(offsetY), m_columns(columns), m_rows(rows), m_scaleX(scaleX), m_scaleY(scaleY),
+    m_rotationAngle(rotation), m_randPosition(randPosition), m_randRotation(randRotation),
+    m_randScale(randScale), m_maskStrength(maskStrength), m_inputsCount(inputsCount), m_seed(seed),
+    m_keepProportion(keepProportion), m_useAlpha(useAlpha)
 {
-    preview = new TileObject(grNode, m_resolution, m_offsetX, m_offsetY, m_columns, m_rows, m_scaleX, m_scaleY, m_rotationAngle, m_randPosition, m_randRotation, m_randScale, m_maskStrength, m_inputsCount, m_seed, m_keepProportion);
+    preview = new TileObject(grNode, m_resolution, m_offsetX, m_offsetY, m_columns, m_rows, m_scaleX, m_scaleY, m_rotationAngle, m_randPosition, m_randRotation, m_randScale, m_maskStrength, m_inputsCount, m_seed, m_keepProportion, m_useAlpha);
     float s = scaleView();
     setHeight((207 + 28*(m_inputsCount - 1))*s);
     preview->setTransformOrigin(TopLeft);
@@ -59,6 +59,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(this, &TileNode::inputsCountChanged, preview, &TileObject::setInputsCount);
     connect(this, &TileNode::seedChanged, preview, &TileObject::setSeed);
     connect(this, &TileNode::keepProportionChanged, preview, &TileObject::setKeepProportion);
+    connect(this, &TileNode::useAlphaChanged, preview, &TileObject::setUseAlpha);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/TileProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -76,6 +77,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     propertiesPanel->setProperty("startInputsCount", m_inputsCount);
     propertiesPanel->setProperty("startSeed", m_seed);
     propertiesPanel->setProperty("startKeepProportion", m_keepProportion);
+    propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
     connect(propertiesPanel, SIGNAL(offsetXChanged(qreal)), this, SLOT(updateOffsetX(qreal)));
     connect(propertiesPanel, SIGNAL(offsetYChanged(qreal)), this, SLOT(updateOffsetY(qreal)));
     connect(propertiesPanel, SIGNAL(columnsChanged(int)), this, SLOT(updateColums(int)));
@@ -90,6 +92,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(propertiesPanel, SIGNAL(inputsCountChanged(int)), this, SLOT(updateInputsCount(int)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
     connect(propertiesPanel, SIGNAL(keepProportionChanged(bool)), this, SLOT(updateKeepProportion(bool)));
+    connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     createAdditionalInputs(5);
@@ -144,6 +147,7 @@ void TileNode::serialize(QJsonObject &json) const {
     json["inputsCount"] = m_inputsCount;
     json["seed"] = m_seed;
     json["keepProportion"] = m_keepProportion;
+    json["useAlpha"] = m_useAlpha;
 }
 
 void TileNode::deserialize(const QJsonObject &json) {
@@ -190,6 +194,9 @@ void TileNode::deserialize(const QJsonObject &json) {
     if(json.contains("keepProportion")) {
         m_keepProportion = json["keepProportion"].toBool();
     }
+    if(json.contains("useAlpha")) {
+        m_useAlpha = json["useAlpha"].toBool();
+    }
     for(int i = 0; i < 5; ++i) {
         Socket *s = m_additionalInputs[i];
         if(i < m_inputsCount - 1) {
@@ -213,6 +220,7 @@ void TileNode::deserialize(const QJsonObject &json) {
     propertiesPanel->setProperty("startInputsCount", m_inputsCount);
     propertiesPanel->setProperty("startSeed", m_seed);
     propertiesPanel->setProperty("startKeepProportion", m_keepProportion);
+    propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
 }
 
 float TileNode::offsetX() {
@@ -357,6 +365,15 @@ void TileNode::setKeepProportion(bool keep) {
     keepProportionChanged(keep);
 }
 
+bool TileNode::useAlpha() {
+    return m_useAlpha;
+}
+
+void TileNode::setUseAlpha(bool use) {
+    m_useAlpha = use;
+    useAlphaChanged(use);
+}
+
 void TileNode::setOutput() {
     m_socketOutput[0]->setValue(preview->texture());
 }
@@ -459,6 +476,12 @@ void TileNode::updateSeed(int seed) {
 
 void TileNode::updateKeepProportion(bool keep) {
     setKeepProportion(keep);
+    operation();
+    dataChanged();
+}
+
+void TileNode::updateUseAlpha(bool use) {
+    setUseAlpha(use);
     operation();
     dataChanged();
 }

@@ -77,6 +77,7 @@ private:
     unsigned int textureVAO = 0;
     unsigned int warpFBO = 0;
     QOpenGLShaderProgram *warpShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

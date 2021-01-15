@@ -94,5 +94,7 @@
         <file>../icons/symbinode.ico</file>
         <file>../icons/tab-close.svg</file>
         <file>../icons/params (2).svg</file>
+        <file>../shaders/checker.frag</file>
+        <file>../shaders/checker.vert</file>
     </qresource>
 </RCC>

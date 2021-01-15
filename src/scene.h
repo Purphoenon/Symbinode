@@ -82,6 +82,7 @@ public:
     void deletedItems(QList<QQuickItem*> items);
     void selectedItems(QList<QQuickItem*> items);
     void pastedItems(QList<QQuickItem*> items);
+    void movedEdge(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket);
     void nodePropertyChanged(Node *node, const char *propName, QVariant newValue, QVariant oldValue);
     bool albedoConnected();
     bool metalConnected();

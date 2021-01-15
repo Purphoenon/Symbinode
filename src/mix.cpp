@@ -23,8 +23,8 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int mode):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_factor(factor), m_mode(mode)
+MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int mode, bool includingAlpha):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_factor(factor), m_mode(mode), m_includingAlpha(includingAlpha)
 {
      setMirrorVertically(true);
 }
@@ -73,6 +73,14 @@ void MixObject::setMode(int mode) {
     m_mode = mode;
 }
 
+bool MixObject::includingAlpha() {
+    return m_includingAlpha;
+}
+
+void MixObject::setIncludingAlpha(bool including) {
+    m_includingAlpha = including;
+}
+
 QVector2D MixObject::resolution() {
     return m_resolution;
 }
@@ -94,6 +102,7 @@ void MixObject::setTexture(unsigned int texture) {
 
 MixRenderer::~MixRenderer() {
     delete mixShader;
+    delete checkerShader;
     delete renderTexture;
 }
 
@@ -104,6 +113,11 @@ MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
     mixShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     mixShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/mix.frag");
     mixShader->link();
+
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
 
     renderTexture = new QOpenGLShaderProgram();
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -175,6 +189,7 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
             mixShader->bind();
             mixShader->setUniformValue(mixShader->uniformLocation("useFactorTex"), mixItem->useFactorTexture);
             mixShader->setUniformValue(mixShader->uniformLocation("mode"), mixItem->mode());
+            mixShader->setUniformValue(mixShader->uniformLocation("includingAlpha"), mixItem->includingAlpha());
             mixShader->setUniformValue(mixShader->uniformLocation("useMask"), maskTexture);
             mixShader->release();
             if(mixItem->useFactorTexture) {
@@ -195,10 +210,17 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
 void MixRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    if(mixTexture) {
+
+    checkerShader->bind();
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
+    if(firstTexture || secondTexture) {
         renderTexture->bind();
         glBindVertexArray(VAO);
         glActiveTexture(GL_TEXTURE0);

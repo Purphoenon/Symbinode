@@ -33,6 +33,7 @@ uniform float randRotation = 0.0;
 uniform float randScale = 0.0;
 uniform float maskStrength = 0.0;
 uniform bool keepProportion = false;
+uniform bool useAlpha = true;
 uniform int inputCount = 1;
 uniform bool useMask = false;
 uniform sampler2D textureTile;
@@ -72,7 +73,8 @@ void main()
     vec2 cell = floor(scaledUV);
     vec2 offset = fract(scaledUV);
     vec2 randomUV = cell*vec2(0.037, 0.119);
-    vec4 random = texture(randomTexture, randomUV);    
+    vec4 random = texture(randomTexture, randomUV);
+    float priority = -1.0;
     vec4 image;
     vec4 color = vec4(0.0);
     for(int i = -3; i <= 2; ++i) {
@@ -118,11 +120,31 @@ void main()
             float maskS = 1.0 - (random.x + random.y)*0.5*maskStrength;
 
             if(image.a > 0) {
-                image.rgb = max(color.rgb, image.rgb*maskS);
-                color = image*image.a + color*(1.0 - image.a);
+                if(maskS > priority)
+                {
+                    if(image.a < 1.0) {
+                        float a = image.a + color.a*(1 - image.a);
+                        vec3 rgb = (image.rgb*maskS*image.a + color.rgb*color.a*(1 - image.a))/a;
+                        color = vec4(rgb, a);
+                    }
+                    else {
+                        color.a = image.a;
+                        color.rgb = image.rgb*maskS;
+                    }
+                    priority = maskS;
+                }
+                else {
+                    if(color.a < 1.0) {
+                        float a = color.a + image.a*(1 - color.a);
+                        vec3 rgb = (color.rgb*color.a + image.rgb*maskS*image.a*(1 - color.a))/a;
+                        color = vec4(rgb, a);
+                    }
+                }
             }
         }
     }
+
+    if(!useAlpha) color.a = 1.0;
 
     if(useMask) {
         vec4 maskColor = texture(maskTexture, texCoords);

@@ -188,4 +188,6 @@ DISTFILES += \
     shaders/random.frag \
     shaders/mirror.frag \
     shaders/brightnesscontrast.frag \
-    shaders/threshold.frag
+    shaders/threshold.frag \
+    shaders/checker.vert \
+    shaders/checker.frag

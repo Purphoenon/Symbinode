@@ -90,6 +90,10 @@ BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res): m_resolut
     brightnessContrastShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     brightnessContrastShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/brightnesscontrast.frag");
     brightnessContrastShader->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -133,6 +137,7 @@ BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res): m_resolut
 
 BrightnessContrastRenderer::~BrightnessContrastRenderer() {
     delete brightnessContrastShader;
+    delete checkerShader;
     delete textureShader;
 }
 
@@ -168,9 +173,16 @@ void BrightnessContrastRenderer::synchronize(QQuickFramebufferObject *item) {
 void BrightnessContrastRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(textureVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     if(m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();

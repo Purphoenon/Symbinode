@@ -30,7 +30,7 @@ class TileObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false);
+    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -76,6 +76,8 @@ public:
     void setSeed(int seed);
     bool keepProportion();
     void setKeepProportion(bool keep);
+    bool useAlpha();
+    void setUseAlpha(bool use);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool tiledTex = false;
@@ -109,6 +111,7 @@ private:
     int m_inputsCount = 1;
     int m_seed = 1;
     bool m_keepProportion = false;
+    bool m_useAlpha = true;
 };
 
 class TileRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -137,6 +140,7 @@ private:
     unsigned int randomFBO = 0;
     QOpenGLShaderProgram *tileShader;
     QOpenGLShaderProgram *randomShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

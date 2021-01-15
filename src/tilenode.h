@@ -29,7 +29,7 @@ class TileNode: public Node
 {
     Q_OBJECT
 public:
-    TileNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false);
+    TileNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true);
     ~TileNode();
     void operation();
     void serialize(QJsonObject &json) const;
@@ -62,6 +62,8 @@ public:
     void setSeed(int seed);
     bool keepProportion();
     void setKeepProportion(bool keep);
+    bool useAlpha();
+    void setUseAlpha(bool use);
     void setOutput();
 signals:
     void offsetXChanged(float offset);
@@ -78,6 +80,7 @@ signals:
     void inputsCountChanged(int count);
     void seedChanged(int seed);
     void keepProportionChanged(bool keep);
+    void useAlphaChanged(bool use);
 public slots:
     void updateScale(float scale);
     void updatePrev(bool sel);
@@ -96,6 +99,7 @@ public slots:
     void updateInputsCount(int count);
     void updateSeed(int seed);
     void updateKeepProportion(bool keep);
+    void updateUseAlpha(bool use);
 private:
     TileObject *preview;
     float m_offsetX = 0.0f;
@@ -112,6 +116,7 @@ private:
     int m_inputsCount = 1;
     int m_seed = 1;
     bool m_keepProportion = false;
+    bool m_useAlpha = true;
 };
 
 #endif // TILENODE_H

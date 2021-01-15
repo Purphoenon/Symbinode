@@ -106,7 +106,7 @@ void Clipboard::copy(Scene *scene) {
         }
         else if(qobject_cast<MixNode*>(node)) {
             MixNode *baseNode = qobject_cast<MixNode*>(node);
-            MixNode *mixNode = new MixNode(nullptr, scene->resolution(), baseNode->factor(), baseNode->mode());
+            MixNode *mixNode = new MixNode(nullptr, scene->resolution(), baseNode->factor(), baseNode->mode(), baseNode->includingAlpha());
             mixNode->setBaseX(baseNode->baseX());
             mixNode->setBaseY(baseNode->baseY());
             clipboard_nodes.append(mixNode);
@@ -130,7 +130,8 @@ void Clipboard::copy(Scene *scene) {
         else if(qobject_cast<PolygonNode*>(node)) {
             PolygonNode *baseNode = qobject_cast<PolygonNode*>(node);
             PolygonNode *polygonNode = new PolygonNode(nullptr, scene->resolution(), baseNode->sides(),
-                                                       baseNode->polygonScale(), baseNode->smooth());
+                                                       baseNode->polygonScale(), baseNode->smooth(),
+                                                       baseNode->useAlpha());
             polygonNode->setBaseX(baseNode->baseX());
             polygonNode->setBaseY(baseNode->baseY());
             clipboard_nodes.append(polygonNode);
@@ -138,7 +139,8 @@ void Clipboard::copy(Scene *scene) {
         else if(qobject_cast<CircleNode*>(node)) {
             CircleNode *baseNode = qobject_cast<CircleNode*>(node);
             CircleNode *circleNode = new CircleNode(nullptr, scene->resolution(), baseNode->interpolation(),
-                                                       baseNode->radius(), baseNode->smooth());
+                                                       baseNode->radius(), baseNode->smooth(),
+                                                    baseNode->useAlpha());
             circleNode->setBaseX(baseNode->baseX());
             circleNode->setBaseY(baseNode->baseY());
             clipboard_nodes.append(circleNode);
@@ -161,7 +163,8 @@ void Clipboard::copy(Scene *scene) {
                                               baseNode->rotationAngle(), baseNode->randPosition(),
                                               baseNode->randRotation(), baseNode->randScale(),
                                               baseNode->maskStrength(), baseNode->inputsCount(),
-                                              baseNode->seed(), baseNode->keepProportion());
+                                              baseNode->seed(), baseNode->keepProportion(),
+                                              baseNode->useAlpha());
             tileNode->setBaseX(baseNode->baseX());
             tileNode->setBaseY(baseNode->baseY());
             clipboard_nodes.append(tileNode);
@@ -277,7 +280,8 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
         }
         else if(qobject_cast<MixNode*>(n)) {
             MixNode *baseNode = qobject_cast<MixNode*>(n);
-            MixNode *mixNode = new MixNode(scene, scene->resolution(), baseNode->factor(), baseNode->mode());
+            MixNode *mixNode = new MixNode(scene, scene->resolution(), baseNode->factor(), baseNode->mode(),
+                                           baseNode->includingAlpha());
             float x = posX - (currentCenter.x() - (baseNode->baseX()*viewScale - viewPan.x()));
             float y = posY - (currentCenter.y() - (baseNode->baseY()*viewScale - viewPan.y()));
             mixNode->setPan(viewPan);
@@ -322,7 +326,8 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
         else if(qobject_cast<PolygonNode*>(n)) {
             PolygonNode *baseNode = qobject_cast<PolygonNode*>(n);
             PolygonNode *polygonNode = new PolygonNode(scene, scene->resolution(), baseNode->sides(),
-                                                       baseNode->polygonScale(), baseNode->smooth());
+                                                       baseNode->polygonScale(), baseNode->smooth(),
+                                                       baseNode->useAlpha());
             float x = posX - (currentCenter.x() - (baseNode->baseX()*viewScale - viewPan.x()));
             float y = posY - (currentCenter.y() - (baseNode->baseY()*viewScale - viewPan.y()));
             polygonNode->setPan(viewPan);
@@ -337,7 +342,8 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
         else if(qobject_cast<CircleNode*>(n)) {
             CircleNode *baseNode = qobject_cast<CircleNode*>(n);
             CircleNode *circleNode = new CircleNode(scene, scene->resolution(), baseNode->interpolation(),
-                                                       baseNode->radius(), baseNode->smooth());
+                                                       baseNode->radius(), baseNode->smooth(),
+                                                    baseNode->useAlpha());
             float x = posX - (currentCenter.x() - (baseNode->baseX()*viewScale - viewPan.x()));
             float y = posY - (currentCenter.y() - (baseNode->baseY()*viewScale - viewPan.y()));
             circleNode->setPan(viewPan);
@@ -374,7 +380,8 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
                                               baseNode->rotationAngle(), baseNode->randPosition(),
                                               baseNode->randRotation(), baseNode->randScale(),
                                               baseNode->maskStrength(), baseNode->inputsCount(),
-                                              baseNode->seed(), baseNode->keepProportion());
+                                              baseNode->seed(), baseNode->keepProportion(),
+                                              baseNode->useAlpha());
             float x = posX - (currentCenter.x() - (baseNode->baseX()*viewScale - viewPan.x()));
             float y = posY - (currentCenter.y() - (baseNode->baseY()*viewScale - viewPan.y()));
             tileNode->setPan(viewPan);
@@ -593,7 +600,8 @@ void Clipboard::duplicate(Scene *scene) {
         }
         else if(qobject_cast<MixNode*>(node)) {
             MixNode *baseNode = qobject_cast<MixNode*>(node);
-            MixNode *mixNode = new MixNode(scene, scene->resolution(), baseNode->factor(), baseNode->mode());
+            MixNode *mixNode = new MixNode(scene, scene->resolution(), baseNode->factor(), baseNode->mode(),
+                                           baseNode->includingAlpha());
             mixNode->setBaseX(baseNode->baseX() + 50);
             mixNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(mixNode);
@@ -623,7 +631,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<PolygonNode*>(node)) {
             PolygonNode *baseNode = qobject_cast<PolygonNode*>(node);
             PolygonNode *polygonNode = new PolygonNode(scene, scene->resolution(), baseNode->sides(),
-                                                       baseNode->polygonScale(), baseNode->smooth());
+                                                       baseNode->polygonScale(), baseNode->smooth(),
+                                                       baseNode->useAlpha());
             polygonNode->setBaseX(baseNode->baseX() + 50);
             polygonNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(polygonNode);
@@ -633,7 +642,8 @@ void Clipboard::duplicate(Scene *scene) {
         else if(qobject_cast<CircleNode*>(node)) {
             CircleNode *baseNode = qobject_cast<CircleNode*>(node);
             CircleNode *circleNode = new CircleNode(scene, scene->resolution(), baseNode->interpolation(),
-                                                       baseNode->radius(), baseNode->smooth());
+                                                       baseNode->radius(), baseNode->smooth(),
+                                                    baseNode->useAlpha());
             circleNode->setBaseX(baseNode->baseX() + 50);
             circleNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(circleNode);
@@ -660,7 +670,8 @@ void Clipboard::duplicate(Scene *scene) {
                                               baseNode->rotationAngle(), baseNode->randPosition(),
                                               baseNode->randRotation(), baseNode->randScale(),
                                               baseNode->maskStrength(), baseNode->inputsCount(),
-                                              baseNode->seed(), baseNode->keepProportion());
+                                              baseNode->seed(), baseNode->keepProportion(),
+                                              baseNode->useAlpha());
             tileNode->setBaseX(baseNode->baseX() + 50);
             tileNode->setBaseY(baseNode->baseY() + 50);
             scene->addNode(tileNode);

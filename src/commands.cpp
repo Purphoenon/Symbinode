@@ -276,3 +276,31 @@ void PropertyChangeCommand::undo() {
 void PropertyChangeCommand::redo() {
     m_node->setPropertyOnPanel(m_propName, m_newValue);
 }
+
+MoveEdgeCommand::MoveEdgeCommand(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket,
+                                 QUndoCommand *parent): QUndoCommand (parent), m_edge(edge),
+    m_oldSocket(oldEndSocket), m_newSocket(newEndSocket){
+
+}
+
+MoveEdgeCommand::~MoveEdgeCommand() {
+    m_edge = nullptr;
+    m_oldSocket = nullptr;
+    m_newSocket = nullptr;
+}
+
+void MoveEdgeCommand::undo() {
+    m_newSocket->deleteEdge(m_edge);
+    m_edge->setEndSocket(m_oldSocket);
+    m_oldSocket->addEdge(m_edge);
+    m_edge->setEndPosition(m_oldSocket->globalPos());
+    m_oldSocket->setValue(m_edge->startSocket()->value());
+}
+
+void MoveEdgeCommand::redo() {
+    m_oldSocket->deleteEdge(m_edge);
+    m_edge->setEndSocket(m_newSocket);
+    m_newSocket->addEdge(m_edge);
+    m_edge->setEndPosition(m_newSocket->globalPos());
+    m_newSocket->setValue(m_edge->startSocket()->value());
+}

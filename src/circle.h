@@ -30,7 +30,7 @@ class CircleObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    CircleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f);
+    CircleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
@@ -42,6 +42,8 @@ public:
     void setRadius(float radius);
     float smooth();
     void setSmooth(float smooth);
+    bool useAlpha();
+    void setUseAlpha(bool use);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool generatedCircle = true;
@@ -57,6 +59,7 @@ private:
     int m_interpolation = 1;
     float m_radius = 0.5f;
     float m_smooth = 0.01f;
+    bool m_useAlpha = true;
 };
 
 class CircleRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -70,6 +73,7 @@ private:
     void createCircle();
     void updateTexResolution();
     QOpenGLShaderProgram *generateCircle;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     unsigned int circleFBO;
     unsigned int circleVAO, textureVAO;

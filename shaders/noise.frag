@@ -174,9 +174,7 @@ void main() {
    if(useMask) {
        vec4 maskColor = texture(maskTexture, st);
        float mask = 0.33333*(maskColor.r + maskColor.g + maskColor.b);
-       color *= mask;
-       result.rgb = color;
-       result.a = mask;
+       result *= mask;
    }
 
    FragColor = result;

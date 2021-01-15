@@ -89,6 +89,7 @@ private:
     void createVoronoi();
     void updateTexResolution();
     QOpenGLShaderProgram *generateVoronoi;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     unsigned int voronoiFBO;
     unsigned int voronoiVAO, textureVAO;

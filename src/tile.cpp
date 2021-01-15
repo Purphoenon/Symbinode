@@ -26,11 +26,11 @@
 TileObject::TileObject(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
                        int rows, float scaleX, float scaleY, int rotation, float randPosition,
                        float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
-                       bool keepProportion): QQuickFramebufferObject (parent), m_resolution(resolution),
-    m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows), m_scaleX(scaleX),
-    m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition),
+                       bool keepProportion, bool useAlpha): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows),
+    m_scaleX(scaleX), m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition),
     m_randRotation(randRotation), m_randScale(randScale), m_maskStrength(maskStrength),
-    m_inputsCount(inputsCount), m_seed(seed), m_keepProportion(keepProportion)
+    m_inputsCount(inputsCount), m_seed(seed), m_keepProportion(keepProportion), m_useAlpha(useAlpha)
 {
     setMirrorVertically(true);
 }
@@ -258,6 +258,16 @@ void TileObject::setKeepProportion(bool keep) {
     update();
 }
 
+bool TileObject::useAlpha() {
+    return m_useAlpha;
+}
+
+void TileObject::setUseAlpha(bool use) {
+    m_useAlpha = use;
+    tiledTex = true;
+    update();
+}
+
 QVector2D TileObject::resolution() {
     return m_resolution;
 }
@@ -280,6 +290,11 @@ TileRenderer::TileRenderer(QVector2D res): m_resolution(res) {
     randomShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
     randomShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/random.frag");
     randomShader->link();
+
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
 
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -351,6 +366,7 @@ TileRenderer::TileRenderer(QVector2D res): m_resolution(res) {
 
 TileRenderer::~TileRenderer() {
     delete tileShader;
+    delete checkerShader;
     delete textureShader;
 }
 
@@ -392,6 +408,7 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
             tileShader->setUniformValue(tileShader->uniformLocation("maskStrength"), tileItem->maskStrength());
             tileShader->setUniformValue(tileShader->uniformLocation("inputCount"), tileItem->inputsCount());
             tileShader->setUniformValue(tileShader->uniformLocation("keepProportion"), tileItem->keepProportion());
+            tileShader->setUniformValue(tileShader->uniformLocation("useAlpha"), tileItem->useAlpha());
             tileShader->setUniformValue(tileShader->uniformLocation("useMask"), maskTexture);
             tileShader->release();
             createTile();
@@ -417,10 +434,17 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
 void TileRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    if(m_sourceTexture  || m_tile1 || m_tile2 || m_tile3 || m_tile4 || m_tile5) {
+
+    checkerShader->bind();
+    glBindVertexArray(textureVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
+    if(m_sourceTexture || m_tile1 || m_tile2 || m_tile3 || m_tile4 || m_tile5) {
         textureShader->bind();
         glBindVertexArray(textureVAO);
         glActiveTexture(GL_TEXTURE0);

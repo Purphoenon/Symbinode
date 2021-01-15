@@ -73,6 +73,7 @@ private:
     unsigned int maskTexture = 0;
     unsigned int textureVAO = 0;
     QOpenGLShaderProgram *blurShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

@@ -24,8 +24,9 @@
 #include <iostream>
 
 CircleObject::CircleObject(QQuickItem *parent, QVector2D resolution, int interpolation, float radius,
-                           float smooth): QQuickFramebufferObject (parent), m_resolution(resolution),
-    m_interpolation(interpolation), m_radius(radius), m_smooth(smooth)
+                           float smooth, bool useAlpha): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_interpolation(interpolation), m_radius(radius), m_smooth(smooth),
+    m_useAlpha(useAlpha)
 {
 
 }
@@ -83,6 +84,16 @@ void CircleObject::setSmooth(float smooth) {
     update();
 }
 
+bool CircleObject::useAlpha() {
+    return m_useAlpha;
+}
+
+void CircleObject::setUseAlpha(bool use) {
+    m_useAlpha = use;
+    generatedCircle = true;
+    update();
+}
+
 QVector2D CircleObject::resolution() {
     return m_resolution;
 }
@@ -99,6 +110,10 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
     generateCircle->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
     generateCircle->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/circle.frag");
     generateCircle->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     renderTexture = new QOpenGLShaderProgram();
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -158,6 +173,7 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
 
 CircleRenderer::~CircleRenderer() {
     delete generateCircle;
+    delete checkerShader;
     delete renderTexture;
 }
 
@@ -186,6 +202,7 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
         generateCircle->setUniformValue(generateCircle->uniformLocation("interpolation"), circleItem->interpolation());
         generateCircle->setUniformValue(generateCircle->uniformLocation("radius"), circleItem->radius());
         generateCircle->setUniformValue(generateCircle->uniformLocation("smoothValue"), circleItem->smooth());
+        generateCircle->setUniformValue(generateCircle->uniformLocation("useAlpha"), circleItem->useAlpha());
         generateCircle->setUniformValue(generateCircle->uniformLocation("useMask"), maskTexture);
         generateCircle->release();
         createCircle();
@@ -197,9 +214,16 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
 void CircleRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(circleVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     renderTexture->bind();
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);

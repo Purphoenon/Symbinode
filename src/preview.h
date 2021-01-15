@@ -70,12 +70,15 @@ public:
 private:
     int wWidth, wHeight;
     unsigned int texture = 0;
+    unsigned int checkerTexture = 0;
     QVector3D color = QVector3D(0.227f, 0.235f, 0.243f);
     bool useTexture = false;
     unsigned int VAO;
+    unsigned int checkerVAO;
     float scale = 1.0f;
     QVector2D pan = QVector2D(0.0f, 0.0f);
     QOpenGLShaderProgram *textureShader = nullptr;
+    QOpenGLShaderProgram *checkerShader;
 };
 
 #endif // PREVIEW_H

@@ -72,6 +72,7 @@ private:
     unsigned int m_sourceTexture = 0;
     unsigned int textureVAO = 0;
     QOpenGLShaderProgram *brightnessContrastShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

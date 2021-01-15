@@ -62,7 +62,7 @@ void Socket::addEdge(Edge *edge) {
         edge->setVisible(isVisible());
     }
     if(edges.contains(edge)) return;
-    edges.append(edge);    
+    edges.append(edge);
 }
 
 void Socket::deleteEdge(Edge *edge) {
@@ -150,18 +150,19 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                                 scene->startSocket->parentItem() != s->parentItem()) &&
                                 !connectedNodes);
                 if(dragAccepted) {
-                    if(existEdge) {
-                        scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
-                        connect(this, &Socket::globalPosChanged, scene->dragEdge, &Edge::setEndPosition);
+                    if(existEdge) {                        
+                        //scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
+                        //connect(this, &Socket::globalPosChanged, scene->dragEdge, &Edge::setEndPosition);
                         if(s != scene->startSocket) {      
-                            scene->startSocket->edges.removeOne(scene->dragEdge);
+                            //scene->startSocket->deleteEdge(scene->dragEdge);
                             if(s->edges.count() > 0) {
                                 QList<QQuickItem*> deletedEdge;
                                 deletedEdge.append(s->edges[0]);
                                 scene->deletedItems(deletedEdge);
                             }
-                            s->edges.push_back(scene->dragEdge);
-                            scene->dragEdge->setEndSocket(s);
+                            scene->movedEdge(scene->dragEdge, scene->startSocket, s);
+                            //s->edges.push_back(scene->dragEdge);
+                            //scene->dragEdge->setEndSocket(s);
                         }
                     }
                     else {
@@ -182,9 +183,9 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                             scene->dragEdge->setStartPosition(QVector2D(globalPos.x(), globalPos.y()));
                             scene->dragEdge->setStartSocket(s);
                         }
-                    }
-                    scene->addEdge(scene->dragEdge);
-                    scene->addedEdge(scene->dragEdge);
+                        scene->addEdge(scene->dragEdge);
+                        scene->addedEdge(scene->dragEdge);
+                    }                   
                 }
             }
             else {

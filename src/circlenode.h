@@ -29,7 +29,7 @@ class CircleNode: public Node
 {
     Q_OBJECT
 public:
-    CircleNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f);
+    CircleNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
     ~CircleNode();
     void operation();
     void serialize(QJsonObject &json) const;
@@ -40,10 +40,13 @@ public:
     void setRadius(float radius);
     float smooth();
     void setSmooth(float smooth);
+    bool useAlpha();
+    void setUseAlpha(bool use);
 signals:
     void interpolationChanged(int interpolation);
     void radiusChanged(float radius);
     void smoothChanged(float smooth);
+    void useAlphaChanged(bool use);
 public slots:
     void updateScale(float scale);
     void updatePrev(bool sel);
@@ -52,11 +55,13 @@ public slots:
     void updateInterpolation(int interpolation);
     void updateRadius(qreal radius);
     void updateSmooth(qreal smooth);
+    void updateUseAlpha(bool use);
 private:
     CircleObject *preview;
     int m_interpolation = 1;
     float m_radius = 0.5f;
     float m_smooth = 0.01f;
+    bool m_useAlpha = true;
 };
 
 #endif // CIRCLENODE_H

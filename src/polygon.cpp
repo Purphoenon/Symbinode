@@ -23,8 +23,9 @@
 #include "QOpenGLFramebufferObjectFormat"
 #include <iostream>
 
-PolygonObject::PolygonObject(QQuickItem *parent, QVector2D resolution, int sides, float polygonScale, float smooth): QQuickFramebufferObject (parent),
-    m_resolution(resolution), m_sides(sides), m_scale(polygonScale), m_smooth(smooth)
+PolygonObject::PolygonObject(QQuickItem *parent, QVector2D resolution, int sides, float polygonScale,
+                             float smooth, bool useAlpha): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_sides(sides), m_scale(polygonScale), m_smooth(smooth), m_useAlpha(useAlpha)
 {
 
 }
@@ -82,6 +83,16 @@ void PolygonObject::setSmooth(float smooth) {
     update();
 }
 
+bool PolygonObject::useAlpha() {
+    return m_useAlpha;
+}
+
+void PolygonObject::setUseAlpha(bool use) {
+    m_useAlpha = use;
+    generatedPolygon = true;
+    update();
+}
+
 QVector2D PolygonObject::resolution() {
     return m_resolution;
 }
@@ -98,6 +109,10 @@ PolygonRenderer::PolygonRenderer(QVector2D resolution): m_resolution(resolution)
     generatePolygon->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
     generatePolygon->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/polygon.frag");
     generatePolygon->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     renderTexture = new QOpenGLShaderProgram();
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -157,6 +172,7 @@ PolygonRenderer::PolygonRenderer(QVector2D resolution): m_resolution(resolution)
 
 PolygonRenderer::~PolygonRenderer() {
     delete generatePolygon;
+    delete checkerShader;
     delete renderTexture;
 }
 
@@ -185,6 +201,7 @@ void PolygonRenderer::synchronize(QQuickFramebufferObject *item) {
         generatePolygon->setUniformValue(generatePolygon->uniformLocation("sides"), polygonItem->sides());
         generatePolygon->setUniformValue(generatePolygon->uniformLocation("scale"), polygonItem->polygonScale());
         generatePolygon->setUniformValue(generatePolygon->uniformLocation("smoothValue"), polygonItem->smooth());
+        generatePolygon->setUniformValue(generatePolygon->uniformLocation("useAlpha"), polygonItem->useAlpha());
         generatePolygon->setUniformValue(generatePolygon->uniformLocation("useMask"), maskTexture);
         generatePolygon->release();
         createPolygon();
@@ -196,9 +213,15 @@ void PolygonRenderer::synchronize(QQuickFramebufferObject *item) {
 void PolygonRenderer::render() {
     glDisable(GL_DEPTH_TEST);    
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(polygonVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
 
     renderTexture->bind();
     glBindVertexArray(textureVAO);
