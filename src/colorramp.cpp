@@ -207,8 +207,8 @@ void ColorRampRenderer::synchronize(QQuickFramebufferObject *item) {
         if(m_sourceTexture) {
             maskTexture = colorRampItem->maskTexture();
             colorRamp(colorRampItem->stops());
-            if(colorRampItem->selectedItem) colorRampItem->updatePreview(m_colorTexture, true);
             colorRampItem->setTexture(m_colorTexture);
+            colorRampItem->updatePreview(m_colorTexture);
         }
     }    
 }

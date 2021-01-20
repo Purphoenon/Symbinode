@@ -58,7 +58,7 @@ public:
     bool resUpdated = false;
     bool selectedItem = false;
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void changedTexture();
 private:
     QString m_noiseType = "noisePerlin";

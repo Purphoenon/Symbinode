@@ -84,7 +84,7 @@ signals:
     void deleteTab(Tab *tab);
     void propertiesPanelChanged(QQuickItem *oldPanel, QQuickItem *newPanel);
     void preview3DChanged(QQuickItem *oldPreview, QQuickItem *newPreview);
-    void previewUpdate(QVariant previewData, bool useTexture);
+    void previewUpdate(unsigned int previewData);
     void resolutionChanged(QVector2D res);
 private:
     Tab *activeTab = nullptr;

@@ -96,5 +96,8 @@
         <file>../icons/params (2).svg</file>
         <file>../shaders/checker.frag</file>
         <file>../shaders/checker.vert</file>
+        <file>../icons/tab-close-1.png</file>
+        <file>../icons/tab-close-2.png</file>
+        <file>../icons/tab-close-3.png</file>
     </qresource>
 </RCC>

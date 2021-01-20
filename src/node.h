@@ -74,7 +74,7 @@ signals:
     void changeResolution(QVector2D res);
     void changeSelected(bool select);
     void changeScaleView(float scale);
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void dataChanged();
     void generatePreview();
 protected:

@@ -98,8 +98,8 @@ void BackgroundObject::wheelEvent(QWheelEvent *event) {
     y = y - lastY;
     m_pan.setY(y);
     emit scaleChanged(m_scale);
-    update();
     emit panChanged(m_pan);
+    update();    
 }
 
 float BackgroundObject::viewScale() {

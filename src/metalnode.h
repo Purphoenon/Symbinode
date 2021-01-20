@@ -32,11 +32,11 @@ public:
     MetalNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
     ~MetalNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
 public slots:
     void updateMetal(qreal metal);
-    void updatePrev(bool sel);
     void updateScale(float scale);
     void saveMetal(QString dir);
 signals:

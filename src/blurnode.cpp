@@ -34,7 +34,6 @@ BlurNode::BlurNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &BlurNode::updateScale);
-    connect(this, &BlurNode::changeSelected, this, &BlurNode::updatePrev);
     connect(preview, &BlurObject::textureChanged, this, &BlurNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BlurObject::setResolution);
     connect(this, &BlurNode::intensityChanged, preview, &BlurObject::setIntensity);
@@ -60,6 +59,10 @@ void BlurNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &BlurNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void BlurNode::serialize(QJsonObject &json) const {
@@ -89,12 +92,6 @@ void BlurNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void BlurNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void BlurNode::setOutput() {

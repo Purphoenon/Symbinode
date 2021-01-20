@@ -258,8 +258,8 @@ void NoiseRenderer::synchronize(QQuickFramebufferObject *item) {
         generateNoise->setUniformValue(generateNoise->uniformLocation("res"), m_resolution);
         generateNoise->setUniformValue(generateNoise->uniformLocation("useMask"), m_maskTexture);
         createNoise();
-        if(noiseItem->selectedItem) noiseItem->updatePreview(noiseTexture, true);
         noiseItem->setTexture(noiseTexture);
+        noiseItem->updatePreview(noiseTexture);
     }
 }
 

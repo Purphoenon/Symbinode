@@ -99,7 +99,6 @@ public:
     QQuickItem* cutLine = nullptr;    
 signals:
     void activeNodeChanged();
-    void previewUpdate(QVariant previewData, bool useTexture);
     void fileNameUpdate(QString fileName, bool modified);
     void outputsSave(QString dir);
     void resolutionUpdate(QVector2D res);

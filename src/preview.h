@@ -28,12 +28,10 @@
 class PreviewObject: public QQuickFramebufferObject
 {
     Q_OBJECT
-    Q_PROPERTY(bool pinned READ pinned WRITE setPinned NOTIFY pinnedChanged)
-    Q_PROPERTY(bool canUpdatePreview READ canUpdatePreview WRITE setCanUpdatePreview)
 public:
-    Q_INVOKABLE void setPreviewData(QVariant previewData, bool useTexture);
+    Q_INVOKABLE void setPreviewData(unsigned int previewData);
     Q_INVOKABLE void resetView();
-    QVariant &previewData();
+    unsigned int &previewData();
     PreviewObject(QQuickItem *parent = nullptr);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     void mousePressEvent(QMouseEvent *event);
@@ -42,22 +40,13 @@ public:
     void wheelEvent(QWheelEvent *event);
     float previewScale();
     QVector2D previewPan();
-    bool pinned();
-    void setPinned(bool pin);
-    bool canUpdatePreview();
-    void setCanUpdatePreview(bool can);
-    bool useTexture = false;
-signals:
-    void pinnedChanged(bool pin);
 private:
-    QVariant m_data = QVector3D(0.227f, 0.235f, 0.243f);
+    unsigned int m_previewTexture = 0;
     float m_scale = 0.2f;
     float offsetX = 0, offsetY = 0;
     float lastX, lastY;
     float scaleStep = 0.0f;
     QVector2D m_pan = QVector2D(0.0f, 0.0f);
-    bool m_pinned = false;
-    bool m_canUpdatePreview = true;
 };
 
 class PreviewRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -71,7 +60,6 @@ private:
     int wWidth, wHeight;
     unsigned int texture = 0;
     unsigned int checkerTexture = 0;
-    QVector3D color = QVector3D(0.227f, 0.235f, 0.243f);
     bool useTexture = false;
     unsigned int VAO;
     unsigned int checkerVAO;

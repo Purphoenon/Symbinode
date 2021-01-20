@@ -35,7 +35,6 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &BrightnessContrastNode::updateScale);
     connect(preview, &BrightnessContrastObject::updatePreview, this, &Node::updatePreview);
-    connect(this, &Node::changeSelected, this, &BrightnessContrastNode::updatePrev);
     connect(preview, &BrightnessContrastObject::textureChanged, this, &BrightnessContrastNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BrightnessContrastObject::setResolution);
     connect(this, &BrightnessContrastNode::brightnessChanged, preview, &BrightnessContrastObject::setBrightness);
@@ -60,6 +59,10 @@ BrightnessContrastNode::~BrightnessContrastNode() {
 void BrightnessContrastNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &BrightnessContrastNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void BrightnessContrastNode::serialize(QJsonObject &json) const {
@@ -103,13 +106,6 @@ void BrightnessContrastNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void BrightnessContrastNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void BrightnessContrastNode::setOutput() {

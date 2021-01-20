@@ -35,7 +35,6 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float tra
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &TransformNode::updateScale);
     connect(preview, &TransformObject::textureChanged, this, &TransformNode::setOutput);
-    connect(this, &TransformNode::changeSelected, this, &TransformNode::updatePrev);
     connect(preview, &TransformObject::updatePreview, this, &TransformNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TransformObject::setResolution);
     connect(this, &TransformNode::translationXChanged, preview, &TransformObject::setTranslateX);
@@ -75,6 +74,10 @@ void TransformNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &TransformNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void TransformNode::serialize(QJsonObject &json) const {
@@ -178,12 +181,6 @@ void TransformNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void TransformNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void TransformNode::updateTranslationX(qreal x) {

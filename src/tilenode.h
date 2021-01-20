@@ -32,6 +32,7 @@ public:
     TileNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true);
     ~TileNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     float offsetX();
@@ -83,7 +84,6 @@ signals:
     void useAlphaChanged(bool use);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void previewGenerated();
     void updateOffsetX(qreal offset);
     void updateOffsetY(qreal offset);

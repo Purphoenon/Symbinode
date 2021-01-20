@@ -41,6 +41,19 @@ void OneChanelObject::setValue(QVariant val) {
     m_value = val;
 }
 
+void OneChanelObject::setColorTexture(unsigned int texture) {
+    m_colorTexture = texture;
+}
+
+void OneChanelObject::setSourceTexture(unsigned int texture) {
+    m_sourceTexture = texture;
+}
+
+unsigned int &OneChanelObject::texture() {
+    if(useTex) return m_sourceTexture;
+    else return m_colorTexture;
+}
+
 QVector2D OneChanelObject::resolution() {
     return m_resolution;
 }
@@ -79,6 +92,20 @@ OneChanelRenderer::OneChanelRenderer(QVector2D resolution): m_resolution(resolut
     renderChanel->setUniformValue(renderChanel->uniformLocation("tex"), 0);
     renderChanel->setUniformValue(renderChanel->uniformLocation("val"), val);
     renderChanel->release();
+
+    glGenFramebuffers(1, &m_colorFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_colorFBO);
+    glGenTextures(1, &m_colorTexture);
+    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    createColor();
 }
 
 OneChanelRenderer::~OneChanelRenderer() {
@@ -99,17 +126,16 @@ void OneChanelRenderer::synchronize(QQuickFramebufferObject *item) {
     m_resolution = oneChanelItem->resolution();
     if(oneChanelItem->useTex) {
         texture = oneChanelItem->value().toUInt();
-        if(oneChanelItem->selectedItem) {
-            oneChanelItem->updatePreview(texture, true);
-        }
+        oneChanelItem->setSourceTexture(texture);
+        oneChanelItem->updatePreview(texture);
         oneChanelItem->updateValue(texture, true);
     }
     else {
         val = oneChanelItem->value().toFloat();
         renderChanel->setUniformValue(renderChanel->uniformLocation("val"), val);
-        if(oneChanelItem->selectedItem) {
-            oneChanelItem->updatePreview(QVector3D(val, val, val), false);
-        }
+        createColor();
+        oneChanelItem->setColorTexture(m_colorTexture);
+        oneChanelItem->updatePreview(m_colorTexture);
         oneChanelItem->updateValue(val, false);
     }
 
@@ -134,6 +160,20 @@ void OneChanelRenderer::render() {
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     renderChanel->release();
+}
+
+void OneChanelRenderer::createColor() {
+    glBindFramebuffer(GL_FRAMEBUFFER, m_colorFBO);
+    glViewport(0, 0, 8, 8);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderChanel->bind();
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    renderChanel->release();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void OneChanelRenderer::saveTexture(QString dir) {

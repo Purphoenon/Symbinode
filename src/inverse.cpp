@@ -141,9 +141,7 @@ void InverseRenderer::synchronize(QQuickFramebufferObject *item) {
         if(m_sourceTexture) {
             inverte();
             inverseItem->setTexture(m_inversedTexture);
-            if(inverseItem->selectedItem) {
-                inverseItem->updatePreview(m_inversedTexture, true);
-            }
+            inverseItem->updatePreview(m_inversedTexture);
         }
     }    
 }

@@ -53,7 +53,7 @@ public slots:
     void colorUpdate(QVector3D color, int index);
     void gradientDelete(int index);
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     QVector2D m_resolution;

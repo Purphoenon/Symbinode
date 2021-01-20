@@ -135,7 +135,6 @@ void MainWindow::newDocument() {
     connect(tab, &Tab::changeActiveTab, this, &MainWindow::setActiveTab);
     connect(tab, &Tab::closedTab, this, &MainWindow::closeTab);
     connect(tab->scene(), &Scene::activeNodeChanged, this, &MainWindow::activeNodeChanged);
-    connect(tab->scene(), &Scene::previewUpdate, this, &MainWindow::previewUpdate);
     setActiveTab(tab);
     tabs.append(tab);
     emit addTab(tab);
@@ -250,7 +249,17 @@ void MainWindow::pin(bool pinned) {
        m_pinnedNode = m_activeNode;
     }
     else {
+        if(m_pinnedNode) {
+            disconnect(m_pinnedNode, &Node::updatePreview, this, &MainWindow::previewUpdate);
+        }
         m_pinnedNode = nullptr;
+        if(m_activeNode) {
+            connect(m_activeNode, &Node::updatePreview, this, &MainWindow::previewUpdate);
+            previewUpdate(m_activeNode->getPreviewTexture());
+        }
+        else {
+            previewUpdate(0);
+        }
     }
 }
 
@@ -343,7 +352,7 @@ void MainWindow::closeTab(Tab *tab) {
     else {
        activeTab = nullptr;
        m_activeNode = nullptr;
-       previewUpdate(QVector3D(0.227f, 0.235f, 0.243f), false);
+       previewUpdate(0);
     }
     tab->deleteLater();
 }
@@ -358,10 +367,17 @@ Node *MainWindow::activeNode() {
 
 void MainWindow::activeNodeChanged() {
     QQuickItem *oldPanel = m_activeNode ? m_activeNode->getPropertyPanel() : nullptr;
+    if(!m_pinnedNode && m_activeNode) {
+        disconnect(m_activeNode, &Node::updatePreview, this, &MainWindow::previewUpdate);
+    }
     m_activeNode = activeTab->scene()->activeNode();
     QQuickItem *newPanel = m_activeNode ? m_activeNode->getPropertyPanel() : nullptr;
     propertiesPanelChanged(oldPanel, newPanel);
-    if(!m_activeNode) {
-        previewUpdate(QVector3D(0.227f, 0.235f, 0.243f), false);
+    if(!m_pinnedNode && m_activeNode) {
+        connect(m_activeNode, &Node::updatePreview, this, &MainWindow::previewUpdate);
+        previewUpdate(m_activeNode->getPreviewTexture());
+    }
+    else if(!m_pinnedNode && !m_activeNode) {
+        previewUpdate(0);
     }
 }

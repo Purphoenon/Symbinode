@@ -205,8 +205,8 @@ void PolygonRenderer::synchronize(QQuickFramebufferObject *item) {
         generatePolygon->setUniformValue(generatePolygon->uniformLocation("useMask"), maskTexture);
         generatePolygon->release();
         createPolygon();
-        if(polygonItem->selectedItem) polygonItem->updatePreview(polygonTexture, true);
         polygonItem->setTexture(polygonTexture);
+        polygonItem->updatePreview(polygonTexture);
     }   
 }
 

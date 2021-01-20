@@ -200,11 +200,9 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
             }
             mix();
             mixItem->setTexture(mixTexture);
-            if(mixItem->selectedItem) {
-               mixItem->updatePreview(mixTexture, true);
-            }
+            mixItem->updatePreview(mixTexture);
         }
-    }    
+    }
 }
 
 void MixRenderer::render() {

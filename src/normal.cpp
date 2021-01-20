@@ -41,7 +41,7 @@ void NormalObject::setResolution(QVector2D res) {
     m_resolution = res;
 }
 
-unsigned int NormalObject::normalTexture() {
+unsigned int &NormalObject::normalTexture() {
     return m_normalMap;
 }
 
@@ -94,10 +94,8 @@ void NormalRenderer::synchronize(QQuickFramebufferObject *item) {
     NormalObject *normalItem = static_cast<NormalObject*>(item);
     m_normalTexture = normalItem->normalTexture();
     m_resolution = normalItem->resolution();
-    if(normalItem->selectedItem) {
-        normalItem->updatePreview(m_normalTexture, true);
-    }
     normalItem->updateNormal(m_normalTexture);
+    normalItem->updatePreview(m_normalTexture);
 
     if(normalItem->texSaving && m_normalTexture) {
         normalItem->texSaving = false;

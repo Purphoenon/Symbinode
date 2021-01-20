@@ -35,7 +35,6 @@ PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, fl
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &PolygonNode::updateScale);
-    connect(this, &PolygonNode::changeSelected, this, &PolygonNode::updatePrev);
     connect(this, &PolygonNode::generatePreview, this, &PolygonNode::previewGenerated);
     connect(preview, &PolygonObject::changedTexture, this, &PolygonNode::setOutput);
     connect(preview, &PolygonObject::updatePreview, this, &PolygonNode::updatePreview);
@@ -68,6 +67,10 @@ PolygonNode::~PolygonNode() {
 void PolygonNode::operation() {
     preview->selectedItem = selected();
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+}
+
+unsigned int &PolygonNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void PolygonNode::serialize(QJsonObject &json) const {
@@ -139,13 +142,6 @@ void PolygonNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void PolygonNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void PolygonNode::setOutput() {

@@ -32,6 +32,7 @@ public:
     TransformNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float transX = 0.0f, float transY = 0.0f, float scaleX = 1.0f, float scaleY = 1.0f, int angle = 0, bool clamp = false);
     ~TransformNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     float translationX();
@@ -56,7 +57,6 @@ signals:
     void clampCoordsChanged(bool clamp);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void updateTranslationX(qreal x);
     void updateTranslationY(qreal y);
     void updateScaleX(qreal x);

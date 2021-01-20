@@ -33,10 +33,10 @@ ColorNode::ColorNode(QQuickItem *parent, QVector2D resolution, QVector3D color):
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColorNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ColorNode::updatePrev);
     connect(this, &Node::changeResolution, preview, &ColorObject::setResolution);
     connect(this, &ColorNode::generatePreview, this, &ColorNode::previewGenerated);
     connect(this, &ColorNode::colorChanged, preview, &ColorObject::setColor);
+    connect(preview, &ColorObject::updatePreview, this, &ColorNode::updatePreview);
     connect(preview, &ColorObject::textureChanged, this, &ColorNode::operation);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorProperty.qml")));
@@ -54,6 +54,10 @@ ColorNode::~ColorNode() {
 
 void ColorNode::operation() {
     m_socketOutput[0]->setValue(preview->texture());
+}
+
+unsigned int &ColorNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void ColorNode::serialize(QJsonObject &json) const {
@@ -83,19 +87,12 @@ QVector3D ColorNode::color() {
 void ColorNode::setColor(QVector3D color) {
     m_color = color;
     colorChanged(color);
-    updatePreview(m_color, false);
 }
 
 void ColorNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void ColorNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(m_color, false);
-    }
 }
 
 void ColorNode::previewGenerated() {

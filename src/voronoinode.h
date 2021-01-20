@@ -46,6 +46,7 @@ public:
                 QString voronoiType = "crystals");
     ~VoronoiNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     VoronoiParams crystalsParam();
@@ -82,7 +83,6 @@ signals:
     void seedChanged(int seed);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void setOutput();
     void previewGenerated();
     void updateVoronoiType(QString type);

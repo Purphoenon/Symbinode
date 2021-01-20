@@ -33,7 +33,6 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     preview->setY(30*s);
     //preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &VoronoiNode::updateScale);
-    connect(this, &VoronoiNode::changeSelected, this, &VoronoiNode::updatePrev);
     connect(this, &VoronoiNode::generatePreview, this, &VoronoiNode::previewGenerated);
     connect(preview, &VoronoiObject::changedTexture, this, &VoronoiNode::setOutput);
     connect(preview, &VoronoiObject::updatePreview, this, &VoronoiNode::updatePreview);
@@ -85,6 +84,10 @@ VoronoiNode::~VoronoiNode() {
 void VoronoiNode::operation() {
     preview->selectedItem = selected();
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+}
+
+unsigned int &VoronoiNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void VoronoiNode::serialize(QJsonObject &json) const {
@@ -412,13 +415,6 @@ void VoronoiNode::updateScale(float scale) {
     preview->setY(30*scale);
     preview->setWidth(174*scale);
     preview->setHeight(174*scale);
-}
-
-void VoronoiNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-         updatePreview(preview->texture(), true);
-    }
 }
 
 void VoronoiNode::setOutput() {

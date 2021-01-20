@@ -31,6 +31,7 @@ public:
     MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int mode = 0, bool includingAlpha = true);
     ~MixNode();
     void operation();
+    unsigned int &getPreviewTexture();
     float factor();
     void setFactor(float f);
     int mode();
@@ -45,7 +46,6 @@ signals:
     void modeChanged(int mode);
     void includingAlphaChanged(bool including);
 public slots:
-    void updatePrev(bool sel);
     void previewGenerated();
     void updateFactor(qreal f);
     void updateMode(int mode);

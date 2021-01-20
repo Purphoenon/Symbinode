@@ -63,7 +63,7 @@ void NormalMapObject::setResolution(QVector2D res) {
     update();
 }
 
-unsigned int NormalMapObject::normalTexture() {
+unsigned int &NormalMapObject::normalTexture() {
     return m_normalTexture;
 }
 
@@ -165,9 +165,7 @@ void NormalMapRenderer::synchronize(QQuickFramebufferObject *item) {
             strenght = normalItem->strenght();
             createNormalMap();
             normalItem->setNormalTexture(m_normalTexture);
-            if(normalItem->selectedItem) {
-                normalItem->updatePreview(m_normalTexture, true);
-            }
+            normalItem->updatePreview(m_normalTexture);
         }
     }
 }

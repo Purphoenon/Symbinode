@@ -32,12 +32,25 @@ QQuickFramebufferObject::Renderer *AlbedoObject::createRenderer() const {
     return new AlbedoRenderer(m_resolution);
 }
 
+unsigned int &AlbedoObject::texture() {
+    if(useAlbedoTex) return m_albedoTexture;
+    else return m_colorTexture;
+}
+
 QVariant AlbedoObject::albedo() {
     return m_albedo;
 }
 
 void AlbedoObject::setAlbedo(QVariant albedo) {
     m_albedo = albedo;
+}
+
+void AlbedoObject::setColorTexture(unsigned int texture) {
+    m_colorTexture = texture;
+}
+
+void AlbedoObject::setAlbedoTexture(unsigned int texture) {
+    m_albedoTexture = texture;
 }
 
 QVector2D AlbedoObject::resolution() {
@@ -75,6 +88,20 @@ AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
     renderAlbedo->bind();
     renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("albedoTex"), 0);
     renderAlbedo->release();
+
+    glGenFramebuffers(1, &colorFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, colorFBO);
+    glGenTextures(1, &colorTexture);
+    glBindTexture(GL_TEXTURE_2D, colorTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    createColor();
 }
 
 AlbedoRenderer::~AlbedoRenderer() {
@@ -95,18 +122,17 @@ void AlbedoRenderer::synchronize(QQuickFramebufferObject *item) {
     renderAlbedo->release();
     m_resolution = albedoItem->resolution();
     if(albedoItem->useAlbedoTex) {
-        albedoTexture = albedoItem->albedo().toUInt();
-        if(albedoItem->selectedItem) {
-            albedoItem->updatePreview(albedoTexture, true);
-        }
+        albedoTexture = albedoItem->albedo().toUInt();        
+        albedoItem->setAlbedoTexture(albedoTexture);
         albedoItem->updateAlbedo(albedoTexture, true);
+        albedoItem->updatePreview(albedoTexture);
     }
     else {
-        albedoVal = qvariant_cast<QVector3D>(albedoItem->albedo());
-        if(albedoItem->selectedItem) {
-            albedoItem->updatePreview(albedoVal, false);
-        }
+        albedoVal = qvariant_cast<QVector3D>(albedoItem->albedo());     
+        createColor();
+        albedoItem->setColorTexture(colorTexture);
         albedoItem->updateAlbedo(albedoVal, false);
+        albedoItem->updatePreview(colorTexture);
     }
     if(albedoItem->texSaving) {
         albedoItem->texSaving = false;
@@ -172,5 +198,21 @@ void AlbedoRenderer::saveTexture(QString dir) {
     else
         printf("Failed saving!\n");
     FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void AlbedoRenderer::createColor() {
+    glBindFramebuffer(GL_FRAMEBUFFER, colorFBO);
+    glViewport(0, 0, 8, 8);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderAlbedo->bind();
+    renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("useAlbedoTex"), false);
+    renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("albedoVal"), albedoVal);
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    renderAlbedo->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

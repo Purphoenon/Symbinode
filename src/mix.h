@@ -52,7 +52,7 @@ public:
     bool useFactorTexture = false;
     bool resUpdated = false;
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     unsigned int m_firstTexture = 0;

@@ -111,7 +111,7 @@ ColorRenderer::ColorRenderer(QVector2D res): m_resolution(res){
     glBindFramebuffer(GL_FRAMEBUFFER, colorFBO);
     glGenTextures(1, &m_colorTexture);
     glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -150,6 +150,7 @@ void ColorRenderer::synchronize(QQuickFramebufferObject *item) {
         colorShader->release();
         createColor();
         colorItem->setTexture(m_colorTexture);
+        colorItem->updatePreview(m_colorTexture);
     }    
 }
 
@@ -170,7 +171,7 @@ void ColorRenderer::render() {
 
 void ColorRenderer::createColor() {
     glBindFramebuffer(GL_FRAMEBUFFER, colorFBO);
-    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glViewport(0, 0, 8, 8);
     glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     colorShader->bind();
@@ -182,9 +183,9 @@ void ColorRenderer::createColor() {
 }
 
 void ColorRenderer::updateTexResolution() {
-    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    /*glBindTexture(GL_TEXTURE_2D, m_colorTexture);
     glTexImage2D(
         GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);*/
 }

@@ -412,10 +412,8 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
             tileShader->setUniformValue(tileShader->uniformLocation("useMask"), maskTexture);
             tileShader->release();
             createTile();
-            tileItem->setTexture(m_tiledTexture);
-            if(tileItem->selectedItem) {
-                tileItem->updatePreview(m_tiledTexture, true);
-            }
+            tileItem->setTexture(m_tiledTexture);            
+            tileItem->updatePreview(m_tiledTexture);
         }
         else {
             tileItem->setTexture(0);

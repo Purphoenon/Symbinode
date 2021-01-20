@@ -94,27 +94,8 @@ QVector2D PreviewObject::previewPan() {
     return m_pan;
 }
 
-bool PreviewObject::pinned() {
-    return m_pinned;
-}
-
-void PreviewObject::setPinned(bool pin) {
-    m_pinned = pin;
-    pinnedChanged(pin);
-    update();
-}
-
-bool PreviewObject::canUpdatePreview() {
-    return m_canUpdatePreview;
-}
-
-void PreviewObject::setCanUpdatePreview(bool can) {
-    m_canUpdatePreview = can;
-}
-
-void PreviewObject::setPreviewData(QVariant previewData, bool useTexture) {
-    m_data = previewData;
-    this->useTexture = useTexture;
+void PreviewObject::setPreviewData(unsigned int previewData) {
+    m_previewTexture = previewData;
     update();
 }
 
@@ -123,23 +104,22 @@ void PreviewObject::resetView() {
     m_pan = QVector2D(0, 0);
 }
 
-QVariant &PreviewObject::previewData() {
-    return m_data;
+unsigned int &PreviewObject::previewData() {
+    return m_previewTexture;
 }
 
 PreviewRenderer::PreviewRenderer() {
     initializeOpenGLFunctions();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texmatrix.vert");
-    textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/albedo.frag");
+    textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
     textureShader->link();
     checkerShader = new QOpenGLShaderProgram();
     checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
     checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
     checkerShader->link();
     textureShader->bind();
-    textureShader->setUniformValue(textureShader->uniformLocation("useAlbedoTex"), false);
-    textureShader->setUniformValue(textureShader->uniformLocation("albedoTex"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
     textureShader->release();
 
     float vertQuadTex[] = {0.0f, 0.0f, 0.0f, 1.0f,
@@ -237,24 +217,9 @@ void PreviewRenderer::synchronize(QQuickFramebufferObject *item) {
     PreviewObject *previewItem = static_cast<PreviewObject*>(item);
     wWidth = previewItem->width();
     wHeight = previewItem->height();
-
-    if(previewItem->canUpdatePreview()) {
-        textureShader->bind();
-        textureShader->setUniformValue(textureShader->uniformLocation("useAlbedoTex"), previewItem->useTexture);
-        textureShader->release();
-        if(previewItem->useTexture) {
-            if(previewItem->previewData().toUInt() != texture) {
-                texture = previewItem->previewData().toUInt();
-                previewItem->resetView();
-            }
-
-        }
-        else {
-            if(color != qvariant_cast<QVector3D>(previewItem->previewData())) {
-                color = qvariant_cast<QVector3D>(previewItem->previewData());
-                previewItem->resetView();
-            }
-        }
+    if(previewItem->previewData() != texture) {
+        texture = previewItem->previewData();
+        previewItem->resetView();
     }
     scale = previewItem->previewScale();
     pan = previewItem->previewPan();
@@ -272,27 +237,26 @@ void PreviewRenderer::render() {
     matrix.scale(scale);
     matrix.translate(0.0f, 0.0f, 0.0f);
 
-    textureShader->bind();
-    textureShader->setUniformValue(textureShader->uniformLocation("matrix"), matrix);
-    textureShader->setUniformValue(textureShader->uniformLocation("albedoVal"), color);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, checkerTexture);
-    glBindVertexArray(checkerVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    if(texture) {
+        textureShader->bind();
+        textureShader->setUniformValue(textureShader->uniformLocation("matrix"), matrix);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, checkerTexture);
+        glBindVertexArray(checkerVAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    textureShader->release();
+        glBindVertexArray(0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->release();
 
-    textureShader->bind();
-    textureShader->setUniformValue(textureShader->uniformLocation("matrix"), matrix);
-    textureShader->setUniformValue(textureShader->uniformLocation("albedoVal"), color);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    textureShader->release();
-    glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindVertexArray(0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->release();
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }

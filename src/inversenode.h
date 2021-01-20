@@ -32,10 +32,10 @@ public:
     InverseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
     ~InverseNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void setOutput();
 private:
     InverseObject *preview;

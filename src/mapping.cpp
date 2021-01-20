@@ -198,8 +198,8 @@ void MappingRenderer::synchronize(QQuickFramebufferObject *item) {
             mappingShader->setUniformValue(mappingShader->uniformLocation("useMask"), maskTexture);
             mappingShader->release();
             map();
-            if(mappingItem->selectedItem) mappingItem->updatePreview(m_mappingTexture, true);
             mappingItem->setTexture(m_mappingTexture);
+            mappingItem->updatePreview(m_mappingTexture);
         }
     }    
 }

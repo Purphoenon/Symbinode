@@ -33,7 +33,6 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &NoiseNode::changeSelected, this, &NoiseNode::updatePrev);
     connect(this, &NoiseNode::generatePreview, this, &NoiseNode::previewGenerated);
     connect(this, &NoiseNode::noiseTypeChanged, preview, &NoiseObject::setNoiseType);
     connect(this, &NoiseNode::noiseScaleChanged, preview, &NoiseObject::setNoiseScale);
@@ -328,13 +327,6 @@ void NoiseNode::updateSeed(int seed) {
 void NoiseNode::previewGenerated() {
     preview->generatedNoise = true;
     preview->update();
-}
-
-void NoiseNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void NoiseNode::updateScale(float scale) {

@@ -41,6 +41,7 @@ public:
     bool createdTexture = true;
     bool resUpdated = false;
 signals:
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     QVector2D m_resolution;

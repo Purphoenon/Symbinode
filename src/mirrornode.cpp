@@ -33,7 +33,6 @@ MirrorNode::MirrorNode(QQuickItem *parent, QVector2D resolution, int dir): Node(
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &MirrorNode::updateScale);
-    connect(this, &Node::changeSelected, this, &MirrorNode::updatePrev);
     connect(preview, &MirrorObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MirrorObject::textureChanged, this, &MirrorNode::setOutput);
     connect(this, &Node::changeResolution, preview, &MirrorObject::setResolution);
@@ -58,6 +57,10 @@ void MirrorNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &MirrorNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void MirrorNode::serialize(QJsonObject &json) const {
@@ -87,13 +90,6 @@ void MirrorNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void MirrorNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void MirrorNode::setOutput() {

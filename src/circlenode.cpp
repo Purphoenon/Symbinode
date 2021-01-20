@@ -34,7 +34,6 @@ CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolati
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &CircleNode::updateScale);
-    connect(this, &CircleNode::changeSelected, this, &CircleNode::updatePrev);
     connect(this, &CircleNode::generatePreview, this, &CircleNode::previewGenerated);
     connect(preview, &CircleObject::changedTexture, this, &CircleNode::setOutput);
     connect(preview, &CircleObject::updatePreview, this, &CircleNode::updatePreview);
@@ -67,6 +66,10 @@ CircleNode::~CircleNode() {
 void CircleNode::operation() {
     preview->selectedItem = selected();
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+}
+
+unsigned int &CircleNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void CircleNode::serialize(QJsonObject &json) const {
@@ -139,13 +142,6 @@ void CircleNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void CircleNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void CircleNode::setOutput() {

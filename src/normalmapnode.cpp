@@ -35,7 +35,6 @@ NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, float str
     preview->setY(30*s);
     preview->setScale(s);
     propView = new QQuickView();
-    connect(this, &NormalMapNode::changeSelected, this, &NormalMapNode::updatePrev);
     connect(preview, &NormalMapObject::textureChanged, this, &NormalMapNode::setOutput);
     connect(this, &NormalMapNode::generatePreview, this, &NormalMapNode::previewGenerated);
     connect(this, &NormalMapNode::strenghtChanged, preview, &NormalMapObject::setStrenght);
@@ -58,6 +57,10 @@ void NormalMapNode::operation() {
     preview->selectedItem = selected();
     preview->update();
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &NormalMapNode::getPreviewTexture() {
+    return preview->normalTexture();
 }
 
 float NormalMapNode::strenght() {
@@ -92,13 +95,6 @@ void NormalMapNode::setOutput() {
 void NormalMapNode::previewGenerated() {
     preview->normalGenerated = true;
     preview->update();
-}
-
-void NormalMapNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->normalTexture(), true);
-    }
-    preview->selectedItem = sel;
 }
 
 void NormalMapNode::updateScale(float scale) {

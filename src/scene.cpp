@@ -208,8 +208,9 @@ void Scene::deleteNode(Node *node) {
         m_normalConnected = false;
         m_preview3d->updateNormal(0);
     }
-    disconnect(node, &Node::updatePreview, this, &Scene::previewUpdate);
     disconnect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
+    disconnect(m_background, &BackgroundObject::scaleChanged, node, &Node::scaleUpdate);
+    disconnect(m_background, &BackgroundObject::panChanged, node, &Node::setPan);
     if(!m_modified) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);
@@ -243,9 +244,12 @@ void Scene::addNode(Node *node) {
         connect(this, &Scene::outputsSave, normNode, &NormalNode::saveNormal);
         m_normalConnected = true;
     }
-    connect(node, &Node::updatePreview, this, &Scene::previewUpdate);
     connect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
     connect(this, &Scene::resolutionUpdate, node, &Node::setResolution);
+    connect(m_background, &BackgroundObject::scaleChanged, node, &Node::scaleUpdate);
+    connect(m_background, &BackgroundObject::panChanged, node, &Node::setPan);
+    node->scaleUpdate(m_background->viewScale());
+    node->setPan(m_background->viewPan());
     if(!m_modified) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);

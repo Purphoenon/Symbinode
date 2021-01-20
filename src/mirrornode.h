@@ -31,6 +31,7 @@ public:
     MirrorNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int dir = 0);
     ~MirrorNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     int direction();
@@ -39,7 +40,6 @@ signals:
     void directionChanged(int dir);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void setOutput();
     void updateDirection(int dir);
 private:

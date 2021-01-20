@@ -35,7 +35,6 @@ RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     preview->setY(30*s);
     preview->setScale(s);
     preview->setValue(0.2f);
-    connect(this, &RoughNode::changeSelected, this, &RoughNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &RoughNode::updateScale);
     connect(preview, &OneChanelObject::updatePreview, this, &RoughNode::updatePreview);
     connect(preview, &OneChanelObject::updateValue, this, &RoughNode::roughChanged);
@@ -64,6 +63,10 @@ void RoughNode::operation() {
     preview->update();
 }
 
+unsigned int &RoughNode::getPreviewTexture() {
+    return preview->texture();
+}
+
 void RoughNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 10;
@@ -84,17 +87,6 @@ void RoughNode::updateRough(qreal rough) {
         operation();
     }
     dataChanged();
-}
-
-void RoughNode::updatePrev(bool sel) {
-    if(sel) {
-        if(m_socketsInput[0]->countEdge() > 0) {
-            updatePreview(m_socketsInput[0]->value(), true);
-        }
-        else {
-            updatePreview(QVector3D(m_rough, m_rough, m_rough), false);
-        }
-    }
 }
 
 void RoughNode::updateScale(float scale) {

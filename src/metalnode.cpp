@@ -35,7 +35,6 @@ MetalNode::MetalNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     preview->setY(30*s);
     preview->setScale(s);
     connect(preview, &OneChanelObject::updatePreview, this, &MetalNode::updatePreview);
-    connect(this, &MetalNode::changeSelected, this, &MetalNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &MetalNode::updateScale);
     connect(preview, &OneChanelObject::updateValue, this, &MetalNode::metalChanged);
     connect(this, &Node::changeResolution, preview, &OneChanelObject::setResolution);
@@ -63,6 +62,10 @@ void MetalNode::operation() {
     preview->update();
 }
 
+unsigned int &MetalNode::getPreviewTexture() {
+    return preview->texture();
+}
+
 void MetalNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 9;
@@ -83,17 +86,6 @@ void MetalNode::updateMetal(qreal metal) {
         operation();
     }
     dataChanged();
-}
-
-void MetalNode::updatePrev(bool sel) {
-    if(sel) {
-        if(m_socketsInput[0]->countEdge() > 0) {
-            updatePreview(m_socketsInput[0]->value(), true);
-        }
-        else {
-            updatePreview(QVector3D(m_metal, m_metal, m_metal), false);
-        }
-    }
 }
 
 void MetalNode::updateScale(float scale) {

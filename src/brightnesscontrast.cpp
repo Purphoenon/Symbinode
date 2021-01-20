@@ -164,8 +164,8 @@ void BrightnessContrastRenderer::synchronize(QQuickFramebufferObject *item) {
             brightnessContrastShader->setUniformValue(brightnessContrastShader->uniformLocation("contrast"), brightnessContrastItem->contrast());
             brightnessContrastShader->release();
             create();
-            if(brightnessContrastItem->selectedItem) brightnessContrastItem->updatePreview(m_brightnessContrastTexture, true);
             brightnessContrastItem->setTexture(m_brightnessContrastTexture);
+            brightnessContrastItem->updatePreview(m_brightnessContrastTexture);
         }
     }    
 }

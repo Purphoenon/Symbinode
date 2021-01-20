@@ -170,9 +170,7 @@ void BlurRenderer::synchronize(QQuickFramebufferObject *item) {
             blurShader->release();
             createBlur();
             blurItem->setTexture(pingpongBuffer[1]);
-            if(blurItem->selectedItem) {
-                blurItem->updatePreview(pingpongBuffer[1], true);
-            }
+            blurItem->updatePreview(pingpongBuffer[1]);
         }
     }
 }

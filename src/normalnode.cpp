@@ -36,7 +36,6 @@ NormalNode::NormalNode(QQuickItem *parent, QVector2D resolution): Node(parent, r
     preview->setY(30*s);
     preview->setScale(s);
     connect(preview, &NormalObject::updatePreview, this, &NormalNode::updatePreview);
-    connect(this, &NormalNode::changeSelected, this, &NormalNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &NormalNode::updateScale);
     connect(preview, &NormalObject::updateNormal, this, &NormalNode::normalChanged);
     connect(this, &Node::changeResolution, preview, &NormalObject::setResolution);
@@ -52,16 +51,13 @@ void NormalNode::operation() {
     preview->update();
 }
 
+unsigned int &NormalNode::getPreviewTexture() {
+    return preview->normalTexture();
+}
+
 void NormalNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 12;
-}
-
-void NormalNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->normalTexture(), true);
-    }
-    preview->selectedItem = selected();
 }
 
 void NormalNode::updateScale(float scale) {

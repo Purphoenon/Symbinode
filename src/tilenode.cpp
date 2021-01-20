@@ -41,7 +41,6 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &TileNode::updateScale);
-    connect(this, &TileNode::changeSelected, this, &TileNode::updatePrev);
     connect(preview, &TileObject::changedTexture, this, &TileNode::setOutput);
     connect(preview, &TileObject::updatePreview, this, &TileNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TileObject::setResolution);
@@ -128,6 +127,10 @@ void TileNode::operation() {
     preview->setTile3(m_additionalInputs[2]->value().toUInt());
     preview->setTile4(m_additionalInputs[3]->value().toUInt());
     preview->setTile5(m_additionalInputs[4]->value().toUInt());
+}
+
+unsigned int &TileNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void TileNode::serialize(QJsonObject &json) const {
@@ -383,12 +386,6 @@ void TileNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void TileNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void TileNode::previewGenerated() {

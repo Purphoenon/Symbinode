@@ -150,8 +150,8 @@ void ColoringRenderer::synchronize(QQuickFramebufferObject *item) {
             coloringShader->setUniformValue(coloringShader->uniformLocation("color"), coloringItem->color());
             coloringShader->release();
             colorize();
-            if(coloringItem->selectedItem) coloringItem->updatePreview(m_colorTexture, true);
             coloringItem->setTexture(m_colorTexture);
+            coloringItem->updatePreview(m_colorTexture);
         }
     }    
 }

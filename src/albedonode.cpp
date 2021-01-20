@@ -33,7 +33,6 @@ AlbedoNode::AlbedoNode(QQuickItem *parent, QVector2D resolution): Node(parent, r
     preview->setY(30*s);
     preview->setScale(s);
     connect(preview, &AlbedoObject::updatePreview, this, &AlbedoNode::updatePreview);
-    connect(this, &AlbedoNode::changeSelected, this, &AlbedoNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &AlbedoNode::updateScale);
     connect(preview, &AlbedoObject::updateAlbedo, this, &AlbedoNode::albedoChanged);
     connect(this, &Node::changeResolution, preview, &AlbedoObject::setResolution);
@@ -64,6 +63,10 @@ void AlbedoNode::operation() {
     preview->update();
 }
 
+unsigned int &AlbedoNode::getPreviewTexture() {
+    return preview->texture();
+}
+
 void AlbedoNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 8;
@@ -91,17 +94,6 @@ void AlbedoNode::updateAlbedo(QVector3D color) {
         operation();
     }
     dataChanged();
-}
-
-void AlbedoNode::updatePrev(bool sel) {
-    if(sel) {
-        if(m_socketsInput[0]->countEdge() > 0) {
-            updatePreview(m_socketsInput[0]->value(), true);
-        }
-        else {
-            updatePreview(m_albedo, false);
-        }
-    }
 }
 
 void AlbedoNode::updateScale(float scale) {

@@ -34,7 +34,6 @@ MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, float inputMi
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &MappingNode::updateScale);
-    connect(this, &Node::changeSelected, this, &MappingNode::updatePrev);
     connect(this, &Node::changeResolution, preview, &MappingObject::setResolution);
     connect(preview, &MappingObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MappingObject::textureChanged, this, &MappingNode::setOutput);
@@ -69,6 +68,10 @@ void MappingNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &MappingNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void MappingNode::serialize(QJsonObject &json) const {
@@ -140,13 +143,6 @@ void MappingNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void MappingNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void MappingNode::setOutput() {

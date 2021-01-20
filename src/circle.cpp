@@ -206,8 +206,8 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
         generateCircle->setUniformValue(generateCircle->uniformLocation("useMask"), maskTexture);
         generateCircle->release();
         createCircle();
-        if(circleItem->selectedItem) circleItem->updatePreview(circleTexture, true);
         circleItem->setTexture(circleTexture);
+        circleItem->updatePreview(circleTexture);
     }      
 }
 

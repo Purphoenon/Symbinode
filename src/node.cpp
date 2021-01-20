@@ -34,25 +34,7 @@ Node::Node(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_res
     grNode = qobject_cast<QQuickItem *>(view->rootObject());
     grNode->setParentItem(this);
     grNode->setX(8);
-    if(parent) {
-        Scene *scene = reinterpret_cast<Scene*>(parent);
-        connect(scene->background(), &BackgroundObject::scaleChanged, this, &Node::scaleUpdate);
-        connect(scene->background(), &BackgroundObject::panChanged, this, &Node::setPan);
-        m_scale = scene->background()->viewScale();
-        m_pan = scene->background()->viewPan();
-    }
-
-    setBaseX(40);
-    setBaseY(50);
-    setX(baseX()*m_scale - pan().x());
-    setY(baseY()*m_scale - pan().y());
     setZ(1);
-    setTransformOrigin(TopLeft);
-    setWidth(196*m_scale);
-    setHeight(207*m_scale);
-    grNode->setHeight(207*m_scale);
-    grNode->setProperty("scaleView", m_scale);    
-    changeScaleView(m_scale);
 }
 
 Node::Node(const Node &node):Node() {

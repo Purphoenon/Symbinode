@@ -32,13 +32,13 @@ public:
     NormalMapNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float strenght = 6.0f);
     ~NormalMapNode();
     void operation();
+    unsigned int &getPreviewTexture();
     float strenght();
     void setOutput();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
 public slots:
     void updateStrenght(qreal strenght);
-    void updatePrev(bool sel);
     void previewGenerated();
     void updateScale(float scale);
 signals:

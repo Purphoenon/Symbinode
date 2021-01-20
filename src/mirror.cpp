@@ -162,8 +162,8 @@ void MirrorRenderer::synchronize(QQuickFramebufferObject *item) {
             mirrorShader->setUniformValue(mirrorShader->uniformLocation("useMask"), maskTexture);
             mirrorShader->release();
             mirror();
-            if(mirrorItem->selectedItem) mirrorItem->updatePreview(m_mirrorTexture, true);
             mirrorItem->setTexture(m_mirrorTexture);
+            mirrorItem->updatePreview(m_mirrorTexture);
         }
     }    
 }

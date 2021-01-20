@@ -163,8 +163,8 @@ void ThresholdRenderer::synchronize(QQuickFramebufferObject *item) {
             thresholdShader->setUniformValue(thresholdShader->uniformLocation("useMask"), maskTexture);
             thresholdShader->release();
             create();
-            if(thresholdItem->selectedItem) thresholdItem->updatePreview(m_thresholdTexture, true);
             thresholdItem->setTexture(m_thresholdTexture);
+            thresholdItem->updatePreview(m_thresholdTexture);
         }
     }    
 }

@@ -33,7 +33,6 @@ ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D c
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColoringNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ColoringNode::updatePrev);
     connect(preview, &ColoringObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &ColoringObject::setResolution);
     connect(preview, &ColoringObject::textureChanged, this, &ColoringNode::setOutput);
@@ -57,6 +56,10 @@ void ColoringNode::operation() {
     preview->selectedItem = selected();
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &ColoringNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void ColoringNode::serialize(QJsonObject &json) const {
@@ -92,13 +95,6 @@ void ColoringNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void ColoringNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void ColoringNode::setOutput() {

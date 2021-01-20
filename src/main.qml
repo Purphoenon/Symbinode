@@ -618,15 +618,9 @@ MainWindow {
         if(oldPanel) oldPanel.parent = null
 
     }
-    onPreviewUpdate: {
-        if((preview.pinned && mainWindow.activeNode == mainWindow.pinnedNode) || !preview.pinned) {
-            preview.canUpdatePreview = true
-        }
-        else {
-            preview.canUpdatePreview = false
-        }
 
-        preview.setPreviewData(previewData, useTexture)
+    onPreviewUpdate: {
+        preview.setPreviewData(previewData)
     }
 
     onPreview3DChanged: {
@@ -713,6 +707,7 @@ MainWindow {
             }
 
             Rectangle {
+                property bool pinned: false
                 id: pin
                 x: parent.width - width - 5
                 y: 30
@@ -723,21 +718,14 @@ MainWindow {
                 Image {
                     x: 2
                     y: 2
-                    source: preview.pinned ? "qrc:/icons/pin-active (1).svg" : "qrc:/icons/pin (2).svg"
+                    source: pin.pinned ? "qrc:/icons/pin-active (1).svg" : "qrc:/icons/pin (2).svg"
                 }
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        preview.pinned = !preview.pinned
-                        mainWindow.pin(preview.pinned)
-                        if((preview.pinned && mainWindow.activeNode == mainWindow.pinnedNode) ||
-                                !preview.pinned) {
-                            preview.canUpdatePreview = true
-                        }
-                        else {
-                            preview.canUpdatePreview = false
-                        }
+                        pin.pinned = !pin.pinned
+                        mainWindow.pin(pin.pinned)
                     }
                 }                
             }

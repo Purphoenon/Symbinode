@@ -34,7 +34,6 @@ ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, QJsonArra
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColorRampNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ColorRampNode::updatePrev);
     connect(this, &Node::changeResolution, preview, &ColorRampObject::setResolution);
     connect(preview, &ColorRampObject::textureChanged, this, &ColorRampNode::setOutput);
     connect(preview, &ColorRampObject::updatePreview, this, &ColorRampNode::updatePreview);
@@ -63,6 +62,10 @@ void ColorRampNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &ColorRampNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void ColorRampNode::serialize(QJsonObject &json) const {
@@ -94,13 +97,6 @@ void ColorRampNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void ColorRampNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void ColorRampNode::setOutput() {

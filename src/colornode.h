@@ -32,6 +32,7 @@ public:
     ColorNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QVector3D color = QVector3D(1, 1, 1));
     ~ColorNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     QVector3D color();
@@ -40,7 +41,6 @@ signals:
     void colorChanged(QVector3D color);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void updateColor(QVector3D color);
     void previewGenerated();
 private:

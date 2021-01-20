@@ -39,7 +39,6 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int mod
     m_socketsInput[1]->setTip("Color2");
     m_socketsInput[2]->setTip("Factor");
     m_socketsInput[3]->setTip("Mask");
-    connect(this, &MixNode::changeSelected, this, &MixNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &MixNode::updateScale);
     connect(preview, &MixObject::textureChanged, this, &MixNode::setOutput);
     connect(this, &MixNode::generatePreview, this, &MixNode::previewGenerated);
@@ -82,6 +81,10 @@ void MixNode::operation() {
     preview->update();
 
     if(m_socketsInput[0]->countEdge() == 0 && m_socketsInput[1]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &MixNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 float MixNode::factor() {
@@ -163,12 +166,6 @@ void MixNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void MixNode::updatePrev(bool sel) {
-    if(sel) {
-         updatePreview(preview->texture(), true);
-    }
 }
 
 void MixNode::previewGenerated() {

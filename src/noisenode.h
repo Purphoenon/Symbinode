@@ -81,7 +81,6 @@ public slots:
     void updatePersistence(qreal value);
     void updateAmplitude(qreal value);
     void updateSeed(int seed);
-    void updatePrev(bool sel);
     void previewGenerated();
     void updateScale(float scale);
 private:

@@ -33,7 +33,6 @@ WarpNode::WarpNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &WarpNode::updateScale);
-    connect(this, &WarpNode::changeSelected, this, &WarpNode::updatePrev);
     connect(preview, &WarpObject::changedTexture, this, &WarpNode::setOutput);
     connect(this, &Node::changeResolution, preview, &WarpObject::setResolution);
     connect(this, &WarpNode::intensityChanged, preview, &WarpObject::setIntensity);
@@ -63,6 +62,10 @@ void WarpNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &WarpNode::getPreviewTexture() {
+    return preview->texture();
+}
+
 void WarpNode::serialize(QJsonObject &json) const{
     Node::serialize(json);
     json["type"] = 18;
@@ -90,12 +93,6 @@ void WarpNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void WarpNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void WarpNode::setOutput() {

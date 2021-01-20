@@ -219,9 +219,7 @@ void TransformRenderer::synchronize(QQuickFramebufferObject *item) {
             transformShader->release();
             transformateTexture();
             transformItem->setTexture(m_transformedTexture);
-            if(transformItem->selectedItem) {
-                transformItem->updatePreview(m_transformedTexture, true);
-            }
+            transformItem->updatePreview(m_transformedTexture);
         }
     }       
 }

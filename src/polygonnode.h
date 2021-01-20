@@ -32,6 +32,7 @@ public:
     PolygonNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int sides = 3, float polygonScale = 0.4f, float smooth = 0.0f, bool useAlpha = true);
     ~PolygonNode();
     void operation();
+    unsigned int &getPreviewTexture();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     int sides();
@@ -49,7 +50,6 @@ signals:
     void useAlphaChanged(bool use);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void setOutput();
     void previewGenerated();
     void updateSides(int sides);

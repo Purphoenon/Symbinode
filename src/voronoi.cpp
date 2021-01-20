@@ -263,8 +263,8 @@ void VoronoiRenderer::synchronize(QQuickFramebufferObject *item) {
         generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("useMask"), maskTexture);
         generateVoronoi->release();
         createVoronoi();
-        if(voronoiItem->selectedItem) voronoiItem->updatePreview(voronoiTexture, true);
         voronoiItem->setTexture(voronoiTexture);
+        voronoiItem->updatePreview(voronoiTexture);
     }    
 }
 

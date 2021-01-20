@@ -33,7 +33,6 @@ ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, float thr
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ThresholdNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ThresholdNode::updatePrev);
     connect(preview, &ThresholdObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &ThresholdObject::textureChanged, this, &ThresholdNode::setOutput);
     connect(this, &ThresholdNode::thresholdChanged, preview, &ThresholdObject::setThreshold);
@@ -57,6 +56,10 @@ void ThresholdNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &ThresholdNode::getPreviewTexture() {
+    return preview->texture();
 }
 
 void ThresholdNode::serialize(QJsonObject &json) const{
@@ -86,11 +89,6 @@ void ThresholdNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void ThresholdNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) updatePreview(preview->texture(), true);
 }
 
 void ThresholdNode::setOutput() {

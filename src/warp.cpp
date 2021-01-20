@@ -175,10 +175,8 @@ void WarpRenderer::synchronize(QQuickFramebufferObject *item) {
             warpShader->setUniformValue(warpShader->uniformLocation("useMask"), maskTexture);
             warpShader->release();
             createWarp();
-            warpItem->setTexture(m_warpedTexture);
-            if(warpItem->selectedItem) {
-                warpItem->updatePreview(m_warpedTexture, true);
-            }
+            warpItem->setTexture(m_warpedTexture);            
+            warpItem->updatePreview(m_warpedTexture);
         }
     }      
 }
