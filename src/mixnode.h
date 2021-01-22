@@ -32,6 +32,7 @@ public:
     ~MixNode();
     void operation();
     unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     float factor();
     void setFactor(float f);
     int mode();

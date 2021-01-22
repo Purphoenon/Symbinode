@@ -87,6 +87,10 @@ unsigned int &MixNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void MixNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 float MixNode::factor() {
     return m_factor;
 }

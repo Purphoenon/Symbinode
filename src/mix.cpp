@@ -26,7 +26,6 @@
 MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int mode, bool includingAlpha):
     QQuickFramebufferObject (parent), m_resolution(resolution), m_factor(factor), m_mode(mode), m_includingAlpha(includingAlpha)
 {
-     setMirrorVertically(true);
 }
 
 QQuickFramebufferObject::Renderer *MixObject::createRenderer() const {
@@ -55,6 +54,12 @@ unsigned int MixObject::secondTexture() {
 
 void MixObject::setSecondTexture(unsigned int texture) {
     m_secondTexture = texture;
+}
+
+void MixObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
 }
 
 QVariant MixObject::factor() {
@@ -203,6 +208,10 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
             mixItem->updatePreview(mixTexture);
         }
     }
+    if(mixItem->texSaving) {
+        mixItem->texSaving = false;
+        saveTexture(mixItem->saveName);
+    }
 }
 
 void MixRenderer::render() {
@@ -259,4 +268,45 @@ void MixRenderer::updateTextureRes() {
     glBindTexture(GL_TEXTURE_2D, mixTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void MixRenderer::saveTexture(QString fileName) {
+    qDebug("texture save");
+    unsigned int fbo;
+    unsigned int texture;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderTexture->bind();
+    glBindVertexArray(VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, mixTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    renderTexture->release();
+
+    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

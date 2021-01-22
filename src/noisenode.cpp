@@ -189,6 +189,10 @@ unsigned int &NoiseNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void NoiseNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void NoiseNode::operation() {
     preview->selectedItem = selected();
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());

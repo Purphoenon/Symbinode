@@ -24,6 +24,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class NoiseObject: public QQuickFramebufferObject
 {
@@ -34,6 +35,7 @@ public:
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     QString noiseType();
     void setNoiseType(QString type);
     float noiseScale();
@@ -57,6 +59,8 @@ public:
     bool generatedNoise = true;
     bool resUpdated = false;
     bool selectedItem = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void changedTexture();
@@ -84,6 +88,7 @@ public:
 private:
     void createNoise();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *generateNoise;
     QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;

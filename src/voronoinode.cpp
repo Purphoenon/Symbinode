@@ -90,6 +90,10 @@ unsigned int &VoronoiNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void VoronoiNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void VoronoiNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 13;

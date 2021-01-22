@@ -33,6 +33,7 @@ public:
     ~MappingNode();
     void operation();
     unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     float inputMin();

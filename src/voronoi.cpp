@@ -22,6 +22,7 @@
 #include <iostream>
 #include "voronoi.h"
 #include <QOpenGLFramebufferObjectFormat>
+#include "FreeImage.h"
 
 VoronoiObject::VoronoiObject(QQuickItem *parent, QVector2D resolution, QString voronoiType, int scale,
                              int scaleX, int scaleY, float jitter, bool inverse, float intensity,
@@ -54,6 +55,12 @@ unsigned int &VoronoiObject::texture() {
 void VoronoiObject::setTexture(unsigned int texture) {
     m_texture = texture;
     changedTexture();
+}
+
+void VoronoiObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
 }
 
 QString VoronoiObject::voronoiType() {
@@ -191,10 +198,10 @@ VoronoiRenderer::VoronoiRenderer(QVector2D res): m_resolution(res) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO2;
     glGenVertexArrays(1, &textureVAO);
     glBindVertexArray(textureVAO);
@@ -265,7 +272,11 @@ void VoronoiRenderer::synchronize(QQuickFramebufferObject *item) {
         createVoronoi();
         voronoiItem->setTexture(voronoiTexture);
         voronoiItem->updatePreview(voronoiTexture);
-    }    
+    }
+    if(voronoiItem->texSaving) {
+        voronoiItem->texSaving = false;
+        saveTexture(voronoiItem->saveName);
+    }
 }
 
 void VoronoiRenderer::render() {
@@ -315,4 +326,43 @@ void VoronoiRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, voronoiTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void VoronoiRenderer::saveTexture(QString fileName) {
+    unsigned int fbo;
+    unsigned int tex;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &tex);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindVertexArray(textureVAO);
+    renderTexture->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, voronoiTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    renderTexture->release();
+    glBindVertexArray(0);
+
+    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

@@ -68,6 +68,10 @@ unsigned int &ColorRampNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void ColorRampNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void ColorRampNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 0;

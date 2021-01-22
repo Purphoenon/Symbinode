@@ -66,6 +66,10 @@ unsigned int &WarpNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void WarpNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void WarpNode::serialize(QJsonObject &json) const{
     Node::serialize(json);
     json["type"] = 18;

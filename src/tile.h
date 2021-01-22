@@ -48,6 +48,7 @@ public:
     void setTile4(unsigned int texture);
     unsigned int tile5();
     void setTile5(unsigned int texture);
+    void saveTexture(QString fileName);
     float offsetX();
     void setOffsetX(float offset);
     float offsetY();
@@ -84,6 +85,8 @@ public:
     bool randUpdated = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void changedTexture();
@@ -125,6 +128,7 @@ private:
     void createTile();
     void createRandom();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int m_sourceTexture = 0;
     unsigned int m_tile1 = 0;

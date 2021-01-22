@@ -62,6 +62,10 @@ unsigned int &ColoringNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void ColoringNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void ColoringNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 2;

@@ -72,6 +72,10 @@ unsigned int &CircleNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void CircleNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void CircleNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 15;

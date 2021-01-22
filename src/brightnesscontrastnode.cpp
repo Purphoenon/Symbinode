@@ -65,6 +65,10 @@ unsigned int &BrightnessContrastNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void BrightnessContrastNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void BrightnessContrastNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 21;

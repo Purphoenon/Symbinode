@@ -37,6 +37,12 @@ unsigned int &AlbedoObject::texture() {
     else return m_colorTexture;
 }
 
+void AlbedoObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
+}
+
 QVariant AlbedoObject::albedo() {
     return m_albedo;
 }
@@ -68,10 +74,10 @@ AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
     renderAlbedo->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/albedo.frag");
     renderAlbedo->link();
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -157,7 +163,7 @@ void AlbedoRenderer::render() {
     renderAlbedo->release();
 }
 
-void AlbedoRenderer::saveTexture(QString dir) {
+void AlbedoRenderer::saveTexture(QString fileName) {
     qDebug("texture save");
     unsigned int fbo;
     unsigned int texture;
@@ -192,8 +198,7 @@ void AlbedoRenderer::saveTexture(QString dir) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
     FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    QString name = dir.append("/albedo.png");
-    if (FreeImage_Save(FIF_PNG, image, name.toUtf8().constData(), 0))
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
         printf("Successfully saved!\n");
     else
         printf("Failed saving!\n");

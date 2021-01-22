@@ -40,6 +40,7 @@ public:
     void setSourceTexture(unsigned int texture);
     unsigned int warpTexture();
     void setWarpTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     float intensity();
     void setIntensity(float intensity);
     QVector2D resolution();
@@ -47,6 +48,8 @@ public:
     bool warpedTex = false;
     bool resUpdated = false;
     bool selectedItem = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void changedTexture();
@@ -69,6 +72,7 @@ public:
 private:
     void createWarp();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int m_sourceTexture = 0;
     unsigned int m_warpTexture = 0;

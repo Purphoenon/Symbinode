@@ -122,10 +122,10 @@ PreviewRenderer::PreviewRenderer() {
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
     textureShader->release();
 
-    float vertQuadTex[] = {0.0f, 0.0f, 0.0f, 1.0f,
-                    0.0f, 1024.0f, 0.0f, 0.0f,
-                    1024.0f, 0.0f, 1.0f, 1.0f,
-                    1024.0f, 1024.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {0.0f, 0.0f, 0.0f, 0.0f,
+                    0.0f, 1024.0f, 0.0f, 1.0f,
+                    1024.0f, 0.0f, 1.0f, 0.0f,
+                    1024.0f, 1024.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);

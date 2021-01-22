@@ -407,6 +407,10 @@ unsigned int &Node::getPreviewTexture() {
     return previewTex;
 }
 
+void Node::saveTexture(QString fileName) {
+
+}
+
 void Node::scaleUpdate(float scale) {
     setWidth(196*static_cast<qreal>(scale));
     setHeight(207*static_cast<qreal>(scale));

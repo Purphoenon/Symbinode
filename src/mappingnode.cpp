@@ -74,6 +74,10 @@ unsigned int &MappingNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void MappingNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void MappingNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 3;

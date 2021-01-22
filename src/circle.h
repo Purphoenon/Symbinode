@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class CircleObject: public QQuickFramebufferObject
 {
@@ -36,6 +37,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int &texture();
     void setTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     int interpolation();
     void setInterpolation(int interpolation);
     float radius();
@@ -49,6 +51,8 @@ public:
     bool generatedCircle = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void changedTexture();
@@ -72,6 +76,7 @@ public:
 private:
     void createCircle();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *generateCircle;
     QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;

@@ -80,6 +80,10 @@ unsigned int &TransformNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void TransformNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void TransformNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 16;

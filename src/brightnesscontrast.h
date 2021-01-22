@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class BrightnessContrastObject: public QQuickFramebufferObject
 {
@@ -36,6 +37,7 @@ public:
     void setTexture(unsigned int texture);
     unsigned int sourceTexture();
     void setSourceTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     float brightness();
     void setBrightness(float value);
     float contrast();
@@ -45,6 +47,8 @@ public:
     bool created = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void textureChanged();
@@ -66,6 +70,7 @@ public:
 private:
     void create();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int brightnessContrastFBO;
     unsigned int m_brightnessContrastTexture = 0;

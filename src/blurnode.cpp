@@ -65,6 +65,10 @@ unsigned int &BlurNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void BlurNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void BlurNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 19;

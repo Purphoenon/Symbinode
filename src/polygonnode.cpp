@@ -73,6 +73,10 @@ unsigned int &PolygonNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void PolygonNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void PolygonNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 14;

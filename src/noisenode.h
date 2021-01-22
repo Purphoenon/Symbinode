@@ -59,6 +59,7 @@ public:
     int seed();
     void setSeed(int seed);
     unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void operation();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);

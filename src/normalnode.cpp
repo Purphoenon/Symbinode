@@ -55,6 +55,10 @@ unsigned int &NormalNode::getPreviewTexture() {
     return preview->normalTexture();
 }
 
+void NormalNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void NormalNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 12;
@@ -67,7 +71,5 @@ void NormalNode::updateScale(float scale) {
 }
 
 void NormalNode::saveNormal(QString dir) {
-    preview->texSaving = true;
-    preview->saveName = dir.append("/normal.png");
-    preview->update();
+    preview->saveTexture(dir.append("/normal.png"));
 }

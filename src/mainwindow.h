@@ -63,6 +63,7 @@ public:
     Q_INVOKABLE void saveSceneAs();
     Q_INVOKABLE void loadScene();
     Q_INVOKABLE void exportTextures();
+    Q_INVOKABLE void saveCurrentTexture();
     Q_INVOKABLE void changeResolution(QVector2D res);
     Q_INVOKABLE void changePrimitive(int id);
     Q_INVOKABLE void changeTilePreview3D(int id);

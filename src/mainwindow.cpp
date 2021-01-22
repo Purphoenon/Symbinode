@@ -176,7 +176,7 @@ void MainWindow::saveScene() {
 void MainWindow::saveSceneAs() {
     if(activeTab) {
         QString fileName = QFileDialog::getSaveFileName(nullptr,
-                tr("Open Node Scene"), "",
+                tr("Save Node Scene"), "",
                 tr("Node Scene (*.sne);"));
         if(fileName.isEmpty()) return;
         activeTab->scene()->saveScene(fileName);
@@ -211,6 +211,17 @@ void MainWindow::exportTextures() {
         if(folder.isEmpty()) return;
 
         activeTab->scene()->outputsSave(folder);
+    }
+}
+
+void MainWindow::saveCurrentTexture() {
+    if(m_pinnedNode || m_activeNode) {
+        QString fileName = QFileDialog::getSaveFileName(nullptr,
+                tr("Save Node Texture"), "",
+                tr("Node Texture (*.png);"));
+        if(fileName.isEmpty()) return;
+        if(m_pinnedNode) m_pinnedNode->saveTexture(fileName);
+        else if(m_activeNode) m_activeNode->saveTexture(fileName);
     }
 }
 

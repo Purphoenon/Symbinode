@@ -54,6 +54,10 @@ unsigned int &InverseNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void InverseNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void InverseNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 20;

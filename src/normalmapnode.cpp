@@ -63,6 +63,10 @@ unsigned int &NormalMapNode::getPreviewTexture() {
     return preview->normalTexture();
 }
 
+void NormalMapNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 float NormalMapNode::strenght() {
     return m_strenght;
 }

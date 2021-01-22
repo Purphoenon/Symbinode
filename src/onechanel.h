@@ -37,6 +37,7 @@ public:
     void setColorTexture(unsigned int texture);
     void setSourceTexture(unsigned int texture);
     unsigned int &texture();
+    void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool useTex = false;
@@ -63,7 +64,7 @@ public:
     void render();
 private:
     void createColor();
-    void saveTexture(QString dir);
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *renderChanel;
     float val = 0.0f;
     QVector2D m_resolution;

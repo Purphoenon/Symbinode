@@ -38,6 +38,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int sourceTexture();
     void setSourceTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     float threshold();
     void setThreshold(float value);
     QVector2D resolution();
@@ -45,6 +46,8 @@ public:
     bool created = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void textureChanged();
@@ -66,6 +69,7 @@ public:
 private:
     void create();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int thresholdFBO;
     unsigned int m_thresholdTexture = 0;

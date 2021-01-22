@@ -67,6 +67,10 @@ unsigned int &AlbedoNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void AlbedoNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void AlbedoNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 8;
@@ -104,7 +108,5 @@ void AlbedoNode::updateScale(float scale) {
 
 void AlbedoNode::saveAlbedo(QString dir) {
     qDebug("save albedo");
-    preview->texSaving = true;
-    preview->saveName = dir;
-    preview->update();
+    preview->saveTexture(dir.append("/albedo.png"));
 }

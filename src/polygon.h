@@ -36,6 +36,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int &texture();
     void setTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     int sides();
     void setSides(int sides);
     float polygonScale();
@@ -49,6 +50,8 @@ public:
     bool generatedPolygon = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void changedTexture();
@@ -72,6 +75,7 @@ public:
 private:
     void createPolygon();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *generatePolygon;
     QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;

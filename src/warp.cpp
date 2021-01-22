@@ -22,11 +22,12 @@
 #include "warp.h"
 #include <iostream>
 #include <QOpenGLFramebufferObjectFormat>
+#include "FreeImage.h"
 
 WarpObject::WarpObject(QQuickItem *parent, QVector2D resolution, float intensity):
     QQuickFramebufferObject (parent), m_resolution(resolution), m_intensity(intensity)
 {
-    setMirrorVertically(true);
+
 }
 
 QQuickFramebufferObject::Renderer *WarpObject::createRenderer() const {
@@ -69,6 +70,12 @@ unsigned int WarpObject::warpTexture() {
 void WarpObject::setWarpTexture(unsigned int texture) {
     m_warpTexture = texture;
     warpedTex = true;
+    update();
+}
+
+void WarpObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
     update();
 }
 
@@ -178,7 +185,11 @@ void WarpRenderer::synchronize(QQuickFramebufferObject *item) {
             warpItem->setTexture(m_warpedTexture);            
             warpItem->updatePreview(m_warpedTexture);
         }
-    }      
+    }
+    if(warpItem->texSaving) {
+        warpItem->texSaving = false;
+        saveTexture(warpItem->saveName);
+    }
 }
 
 void WarpRenderer::render() {
@@ -231,4 +242,43 @@ void WarpRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_warpedTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void WarpRenderer::saveTexture(QString fileName) {
+    unsigned int fbo;
+    unsigned int tex;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &tex);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindVertexArray(textureVAO);
+    textureShader->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_warpedTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    textureShader->release();
+    glBindVertexArray(0);
+
+    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

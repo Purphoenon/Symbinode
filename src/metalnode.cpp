@@ -66,6 +66,10 @@ unsigned int &MetalNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void MetalNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void MetalNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 9;
@@ -95,7 +99,5 @@ void MetalNode::updateScale(float scale) {
 }
 
 void MetalNode::saveMetal(QString dir) {
-    preview->texSaving = true;
-    preview->saveName = dir.append("/metalness.png");
-    preview->update();
+    preview->saveTexture(dir.append("/metalness.png"));
 }

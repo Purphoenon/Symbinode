@@ -64,6 +64,7 @@ public:
     void setTitle(QString title);
     virtual void operation();
     virtual unsigned int &getPreviewTexture();
+    virtual void saveTexture(QString fileName);
 public slots:
     void scaleUpdate(float scale);
     void propertyChanged(QString propName, QVariant newValue, QVariant oldValue);

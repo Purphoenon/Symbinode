@@ -133,6 +133,10 @@ unsigned int &TileNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void TileNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void TileNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 17;

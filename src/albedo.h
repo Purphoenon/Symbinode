@@ -37,6 +37,7 @@ public:
     void setColorTexture(unsigned int texture);
     void setAlbedoTexture(unsigned int texture);
     unsigned int &texture();
+    void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool useAlbedoTex = false;
@@ -61,7 +62,7 @@ public:
     void synchronize(QQuickFramebufferObject *item);
     void render();
 private:
-    void saveTexture(QString dir);
+    void saveTexture(QString fileName);
     void createColor();
     QOpenGLShaderProgram *renderAlbedo;
     unsigned int VAO = 0;

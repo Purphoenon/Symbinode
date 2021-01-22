@@ -63,6 +63,10 @@ unsigned int &MirrorNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void MirrorNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void MirrorNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 5;

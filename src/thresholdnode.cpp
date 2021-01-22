@@ -62,6 +62,10 @@ unsigned int &ThresholdNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void ThresholdNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void ThresholdNode::serialize(QJsonObject &json) const{
     Node::serialize(json);
     json["type"] = 22;

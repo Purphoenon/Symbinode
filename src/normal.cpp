@@ -49,6 +49,12 @@ void NormalObject::setNormalTexture(unsigned int texture) {
     m_normalMap = texture;
 }
 
+void NormalObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
+}
+
 NormalRenderer::NormalRenderer(QVector2D resolution): m_resolution(resolution) {
     initializeOpenGLFunctions();
 
@@ -61,10 +67,10 @@ NormalRenderer::NormalRenderer(QVector2D resolution): m_resolution(resolution) {
     renderNormal->setUniformValue(renderNormal->uniformLocation("textureSample"), 0);
     renderNormal->release();
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);

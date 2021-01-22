@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class ColorObject: public QQuickFramebufferObject
 {
@@ -34,12 +35,15 @@ public:
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     QVector3D color();
     void setColor(QVector3D color);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool createdTexture = true;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void textureChanged();
@@ -59,6 +63,7 @@ public:
 private:
     void createColor();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int colorFBO;
     unsigned int m_colorTexture = 0;

@@ -22,6 +22,7 @@
 #include "tile.h"
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
+#include "FreeImage.h"
 
 TileObject::TileObject(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
                        int rows, float scaleX, float scaleY, int rotation, float randPosition,
@@ -32,7 +33,7 @@ TileObject::TileObject(QQuickItem *parent, QVector2D resolution, float offsetX, 
     m_randRotation(randRotation), m_randScale(randScale), m_maskStrength(maskStrength),
     m_inputsCount(inputsCount), m_seed(seed), m_keepProportion(keepProportion), m_useAlpha(useAlpha)
 {
-    setMirrorVertically(true);
+
 }
 
 QQuickFramebufferObject::Renderer *TileObject::createRenderer() const {
@@ -115,6 +116,12 @@ unsigned int TileObject::tile5() {
 void TileObject::setTile5(unsigned int texture) {
     m_tile5 = texture;
     tiledTex = true;
+    update();
+}
+
+void TileObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
     update();
 }
 
@@ -427,6 +434,10 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
         createRandom();
         createTile();
     }
+    if(tileItem->texSaving) {
+        tileItem->texSaving = false;
+        saveTexture(tileItem->saveName);
+    }
 }
 
 void TileRenderer::render() {
@@ -502,4 +513,43 @@ void TileRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_tiledTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void TileRenderer::saveTexture(QString fileName) {
+    unsigned int fbo;
+    unsigned int tex;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &tex);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    textureShader->bind();
+    glBindVertexArray(textureVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_tiledTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    textureShader->release();
+
+    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

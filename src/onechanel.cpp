@@ -54,6 +54,12 @@ unsigned int &OneChanelObject::texture() {
     else return m_colorTexture;
 }
 
+void OneChanelObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
+}
+
 QVector2D OneChanelObject::resolution() {
     return m_resolution;
 }
@@ -70,10 +76,10 @@ OneChanelRenderer::OneChanelRenderer(QVector2D resolution): m_resolution(resolut
     renderChanel->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/onechanel.frag");
     renderChanel->link();
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -176,7 +182,7 @@ void OneChanelRenderer::createColor() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void OneChanelRenderer::saveTexture(QString dir) {
+void OneChanelRenderer::saveTexture(QString fileName) {
     unsigned int fbo;
     unsigned int tex;
     glGenFramebuffers(1, &fbo);
@@ -208,7 +214,7 @@ void OneChanelRenderer::saveTexture(QString dir) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
     FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, dir.toStdString().c_str(), 0))
+    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
         printf("Successfully saved!\n");
     else
         printf("Failed saving!\n");

@@ -54,6 +54,12 @@ void CircleObject::setTexture(unsigned int texture) {
     changedTexture();
 }
 
+void CircleObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
+}
+
 int CircleObject::interpolation() {
     return m_interpolation;
 }
@@ -139,10 +145,10 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO2;
     glGenVertexArrays(1, &textureVAO);
     glBindVertexArray(textureVAO);
@@ -208,7 +214,11 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
         createCircle();
         circleItem->setTexture(circleTexture);
         circleItem->updatePreview(circleTexture);
-    }      
+    }
+    if(circleItem->texSaving) {
+        circleItem->texSaving = false;
+        saveTexture(circleItem->saveName);
+    }
 }
 
 void CircleRenderer::render() {
@@ -255,4 +265,45 @@ void CircleRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, circleTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void CircleRenderer::saveTexture(QString fileName) {
+    qDebug("texture save");
+    unsigned int fbo;
+    unsigned int texture;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderTexture->bind();
+    glBindVertexArray(textureVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, circleTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    renderTexture->release();
+
+    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

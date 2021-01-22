@@ -36,6 +36,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int &texture();
     void setTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     QString voronoiType();
     void setVoronoiType(QString type);
     int voronoiScale();
@@ -59,6 +60,8 @@ public:
     bool generatedVoronoi = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void changedTexture();
@@ -88,6 +91,7 @@ public:
 private:
     void createVoronoi();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *generateVoronoi;
     QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;

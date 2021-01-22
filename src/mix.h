@@ -24,6 +24,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class MixObject: public QQuickFramebufferObject
 {
@@ -37,6 +38,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int secondTexture();
     void setSecondTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     QVariant factor();
     void setFactor(QVariant f);
     int mode();
@@ -51,6 +53,8 @@ public:
     bool selectedItem = false;
     bool useFactorTexture = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void textureChanged();
@@ -75,6 +79,7 @@ public:
 private:
     void mix();
     void updateTextureRes();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *mixShader;
     QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;

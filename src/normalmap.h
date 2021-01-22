@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class NormalMapObject: public QQuickFramebufferObject
 {
@@ -34,6 +35,7 @@ public:
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int grayscaleTexture();
     void setGrayscaleTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     float strenght();
     void setStrenght(float strenght);
     QVector2D resolution();
@@ -43,6 +45,8 @@ public:
     bool selectedItem = false;
     bool normalGenerated = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void textureChanged();
@@ -73,6 +77,7 @@ private:
 
     void createNormalMap();
     void updateTexResolution();
+    void saveTexture(QString fileName);
 };
 
 #endif // NORMALMAP_H

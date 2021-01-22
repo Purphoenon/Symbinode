@@ -67,6 +67,10 @@ unsigned int &RoughNode::getPreviewTexture() {
     return preview->texture();
 }
 
+void RoughNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void RoughNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 10;
@@ -96,7 +100,5 @@ void RoughNode::updateScale(float scale) {
 }
 
 void RoughNode::saveRough(QString dir) {
-    preview->texSaving = true;
-    preview->saveName = dir.append("/roughness.png");
-    preview->update();
+    preview->saveTexture(dir.append("/roughness.png"));
 }

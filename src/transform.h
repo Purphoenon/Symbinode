@@ -38,6 +38,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int sourceTexture();
     void setSourceTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     float translateX();
     void setTranslateX(float transX);
     float translateY();
@@ -55,6 +56,8 @@ public:
     bool transformedTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
     void textureChanged();
@@ -81,6 +84,7 @@ public:
 private:
     void transformateTexture();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int m_sourceTexture = 0;
     unsigned int m_transformedTexture = 0;

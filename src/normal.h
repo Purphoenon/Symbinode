@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class NormalObject: public QQuickFramebufferObject
 {
@@ -36,6 +37,7 @@ public:
     void setResolution(QVector2D res);
     unsigned int &normalTexture();
     void setNormalTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     bool selectedItem = false;
     bool texSaving = false;
     QString saveName = "";

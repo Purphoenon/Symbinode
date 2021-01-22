@@ -36,6 +36,7 @@ out vec4 FragColor;
 
 void main() {
     vec2 st = gl_FragCoord.xy/res;
+    st.y = 1.0 - st.y;
     vec4 color = vec4(0.0);
     float d = 0.0;
 
