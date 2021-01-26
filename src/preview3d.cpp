@@ -26,7 +26,7 @@
 Preview3DObject::Preview3DObject(QQuickItem *parent): QQuickFramebufferObject (parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
-    setMirrorVertically(true);
+    //setMirrorVertically(true);
 }
 
 QQuickFramebufferObject::Renderer *Preview3DObject::createRenderer() const {
@@ -75,7 +75,7 @@ void Preview3DObject::mouseMoveEvent(QMouseEvent *event) {
     }
     else if(event->buttons() == Qt::MidButton) {
         theta += 0.01f*(event->pos().x() - lastX);
-        phi -= 0.01f*(lastY - event->pos().y());
+        phi += 0.01f*(lastY - event->pos().y());
 
         float x = 0;
         float y = sin(theta/2);
@@ -734,7 +734,7 @@ void Preview3DRenderer::renderSphere() {
                 float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
 
                 positions.push_back(QVector3D(xPos, yPos, zPos));
-                uv.push_back(QVector2D(xSegment*2, 1.0f - ySegment));
+                uv.push_back(QVector2D(2.0f - xSegment*2, 1.0f - ySegment));
                 normals.push_back(QVector3D(xPos, yPos, zPos));
             }
         }

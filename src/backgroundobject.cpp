@@ -73,6 +73,7 @@ void BackgroundObject::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void BackgroundObject::wheelEvent(QWheelEvent *event) {
+    if(event->modifiers() != Qt::NoModifier) return;
     if(event->angleDelta().y() > 0) {
        if((m_scale + 0.001f*event->angleDelta().y()) > 2.0f) return;
        scaleStep = 0.001f*event->angleDelta().y();

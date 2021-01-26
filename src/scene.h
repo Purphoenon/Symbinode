@@ -34,6 +34,7 @@
 #include "commands.h"
 #include "clipboard.h"
 #include "preview3d.h"
+#include "cutline.h"
 
 class Scene: public QQuickItem
 {
@@ -96,7 +97,7 @@ public:
     Edge* dragEdge = nullptr;
     QQuickItem* rectSelect = nullptr;
     QQuickView* rectView = nullptr;
-    QQuickItem* cutLine = nullptr;    
+    CutLine* cutLine = nullptr;
 signals:
     void activeNodeChanged();
     void fileNameUpdate(QString fileName, bool modified);

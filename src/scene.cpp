@@ -298,12 +298,25 @@ void Scene::mousePressEvent(QMouseEvent *event) {
 }
 
 void Scene::mouseMoveEvent(QMouseEvent *event) {
-    if(event->buttons() == Qt::LeftButton && isEdgeDrag) {
+    /*if(event->buttons() == Qt::LeftButton && isEdgeDrag) {
         if(startSocket->type() == OUTPUTS && startSocket->countEdge() > 0) {
             dragEdge->setEndPosition(QVector2D(event->pos().x(), event->pos().y()));
         }
         else {
             dragEdge->setStartPosition(QVector2D(event->pos().x(), event->pos().y()));
+        }
+    }*/
+    if(event->buttons() == Qt::LeftButton && event->modifiers() == Qt::ControlModifier) {
+        if(cutLine) {
+            cutLine->addPoint(event->localPos());
+            cutLine->update();
+        }
+        else {
+            cutLine = new CutLine(this);
+            cutLine->setWidth(width());
+            cutLine->setHeight(height());
+            cutLine->addPoint(event->localPos());
+            cutLine->update();
         }
     }
     else if(event->buttons() == Qt::LeftButton) {
@@ -359,6 +372,22 @@ void Scene::mouseReleaseEvent(QMouseEvent *event) {
         rectSelect = nullptr;
         rectView = nullptr;
         selectedItems(QList<QQuickItem*>());
+    }
+    if(cutLine) {
+        QList<QQuickItem*> intersectedEdges;
+        int cutLineSize = cutLine->pointCount();
+        for(auto e: m_edges) {
+            for(int i = 0; i < cutLineSize - 1; ++i) {
+                bool intersected = e->intersectWith(cutLine->pointAt(i), cutLine->pointAt(i + 1));
+                if(intersected) {
+                    intersectedEdges.append(e);
+                    break;
+                }
+            }
+        }
+        if(intersectedEdges.size() > 0) deletedItems(intersectedEdges);
+        delete cutLine;
+        cutLine = nullptr;
     }
 }
 

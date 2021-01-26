@@ -653,6 +653,12 @@ MainWindow {
         }
     }
 
+    /*NodeFrame{
+        x: 400
+        y: 400
+        z: 1
+    }*/
+
     DockPanel {
         id: rightDock
         position: "right"

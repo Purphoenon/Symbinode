@@ -233,10 +233,8 @@ void Node::mousePressEvent(QMouseEvent *event) {
     oldY = y();
     if(event->button() == Qt::LeftButton && event->modifiers() == Qt::ControlModifier) {
         setSelected(!m_selected);
-
         if(m_selected) {
             QList<QQuickItem*> selected = scene->selectedList();
-
             scene->addSelected(this);
             scene->selectedItems(selected);
         }
@@ -260,8 +258,8 @@ void Node::mousePressEvent(QMouseEvent *event) {
 }
 
 void Node::mouseMoveEvent(QMouseEvent *event) {
-    if(event->buttons() == Qt::LeftButton) {
-        moved = true;        
+    if(event->buttons() == Qt::LeftButton && event->modifiers() == Qt::NoModifier) {
+        moved = true;
         Scene* scene = reinterpret_cast<Scene*>(parentItem());
         QPointF point = mapToItem(scene, QPointF(event->pos().x(), event->pos().y()));
         setX(point.x() - dragX);

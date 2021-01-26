@@ -151,18 +151,17 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                                 !connectedNodes);
                 if(dragAccepted) {
                     if(existEdge) {                        
-                        //scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
-                        //connect(this, &Socket::globalPosChanged, scene->dragEdge, &Edge::setEndPosition);
                         if(s != scene->startSocket) {      
-                            //scene->startSocket->deleteEdge(scene->dragEdge);
                             if(s->edges.count() > 0) {
                                 QList<QQuickItem*> deletedEdge;
                                 deletedEdge.append(s->edges[0]);
                                 scene->deletedItems(deletedEdge);
                             }
                             scene->movedEdge(scene->dragEdge, scene->startSocket, s);
-                            //s->edges.push_back(scene->dragEdge);
-                            //scene->dragEdge->setEndSocket(s);
+                        }
+                        else {
+                            scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
+                            connect(this, &Socket::globalPosChanged, scene->dragEdge, &Edge::setEndPosition);
                         }
                     }
                     else {
