@@ -37,6 +37,7 @@ public:
     void serialize(QJsonObject &json) const;
 public slots:
     void updateScale(float scale);
+    void previewGenerated();
     void setOutput();
 private:
     InverseObject *preview;

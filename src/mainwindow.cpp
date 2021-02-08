@@ -128,6 +128,18 @@ void MainWindow::createNode(float x, float y, int nodeType) {
     }
 }
 
+void MainWindow::createFrame(float x, float y) {
+    if(activeTab) {
+        Frame *frame = new Frame(activeTab->scene());
+        activeTab->scene()->addFrame(frame);
+        QVector2D pan = activeTab->scene()->background()->viewPan();
+        float scale = activeTab->scene()->background()->viewScale();
+        frame->setBaseX((x + pan.x())/scale);
+        frame->setBaseY((y + pan.y())/scale);
+        activeTab->scene()->addedFrame(frame);
+    }
+}
+
 void MainWindow::newDocument() {
     Tab *tab = new Tab(contentItem());
     tab->setParent(this);
@@ -313,6 +325,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         }
         redo();
     }
+    else if(event->key() == Qt::Key_F && event->modifiers() == Qt::AltModifier) {
+        removeFromFrame();
+    }
     else {
         QApplication::sendEvent(activeFocusItem(), event);
     }
@@ -320,6 +335,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
 void MainWindow::duplicate() {
     if(activeTab) {
       m_clipboard->duplicate(activeTab->scene());
+    }
+}
+
+void MainWindow::removeFromFrame() {
+    if(activeTab) {
+        activeTab->scene()->removeFromFrame();
     }
 }
 

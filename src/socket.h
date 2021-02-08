@@ -24,6 +24,7 @@
 #include <QQuickItem>
 #include <QQuickView>
 #include <QJsonObject>
+#include <QUuid>
 #include "edge.h"
 
 enum socketType {INPUTS, OUTPUTS};
@@ -49,6 +50,7 @@ public:
     void hoverEnterEvent(QHoverEvent *event);
     void hoverLeaveEvent(QHoverEvent *event);
     void serialize(QJsonObject &json) const;
+    void deserialize(const QJsonObject &json);
     void setTip(QString text);
     void setAdditional(bool additional);
     void setValue(const QVariant &value);
@@ -66,6 +68,7 @@ private:
     QVector2D m_globalPos;
     float m_scale = 1.0f;
     QString textTip = "Socket";
+    QUuid m_id;
 };
 
 #endif // SOCKET_H

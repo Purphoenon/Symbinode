@@ -34,6 +34,7 @@ ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, QJsonArra
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColorRampNode::updateScale);
+    connect(this, &Node::generatePreview, this, &ColorRampNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &ColorRampObject::setResolution);
     connect(preview, &ColorRampObject::textureChanged, this, &ColorRampNode::setOutput);
     connect(preview, &ColorRampObject::updatePreview, this, &ColorRampNode::updatePreview);
@@ -101,6 +102,11 @@ void ColorRampNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void ColorRampNode::previewGenerated() {
+    preview->rampedTex = true;
+    preview->update();
 }
 
 void ColorRampNode::setOutput() {

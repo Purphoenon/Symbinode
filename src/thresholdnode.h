@@ -42,6 +42,7 @@ signals:
     void thresholdChanged(float value);
 public slots:
     void updateScale(float scale);
+    void previewGenerated();
     void setOutput();
     void updateThreshold(qreal value);
 private:

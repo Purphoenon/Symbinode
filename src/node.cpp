@@ -24,7 +24,6 @@
 #include <iostream>
 #include <QQmlProperty>
 
-
 Node::Node(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
@@ -34,7 +33,7 @@ Node::Node(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_res
     grNode = qobject_cast<QQuickItem *>(view->rootObject());
     grNode->setParentItem(this);
     grNode->setX(8);
-    setZ(1);
+    setZ(2);
 }
 
 Node::Node(const Node &node):Node() {
@@ -82,6 +81,9 @@ void Node::setBaseX(float value) {
         QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
+    if(m_attachedFrame && !m_attachedFrame->selected()) {
+        m_attachedFrame->resizeByContent();
+    }
     emit changeBaseX(value);
 }
 
@@ -103,6 +105,9 @@ void Node::setBaseY(float value) {
     for(auto s: m_additionalInputs) {
         QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
+    }
+    if(m_attachedFrame && !m_attachedFrame->selected()) {
+        m_attachedFrame->resizeByContent();
     }
     emit changeBaseY(value);
 }
@@ -218,19 +223,28 @@ QQuickItem *Node::getPropertyPanel() {
     return propertiesPanel;
 }
 
-void Node::mousePressEvent(QMouseEvent *event) {
+Frame *Node::attachedFrame() {
+    return m_attachedFrame;
+}
 
+void Node::setAttachedFrame(Frame *frame) {
+    m_attachedFrame = frame;
+}
+
+void Node::mousePressEvent(QMouseEvent *event) {
     if(event->pos().x() < 8*m_scale || event->pos().x() > 186*m_scale || event->pos().y() > 207*m_scale) {
         event->setAccepted(false);
         return;
     }
+    setFocus(true);
+    setFocus(false);
     moved = false;
     Scene *scene = reinterpret_cast<Scene*>(parentItem());
     QPointF point = mapToItem(scene, QPointF(event->pos().x(), event->pos().y())); 
     dragX = event->pos().x();
     dragY = event->pos().y();
-    oldX = x();
-    oldY = y();
+    oldX = m_baseX;
+    oldY = m_baseY;
     if(event->button() == Qt::LeftButton && event->modifiers() == Qt::ControlModifier) {
         setSelected(!m_selected);
         if(m_selected) {
@@ -259,8 +273,12 @@ void Node::mousePressEvent(QMouseEvent *event) {
 
 void Node::mouseMoveEvent(QMouseEvent *event) {
     if(event->buttons() == Qt::LeftButton && event->modifiers() == Qt::NoModifier) {
-        moved = true;
+        if(!moved) {
+            moved = true;
+        }
+
         Scene* scene = reinterpret_cast<Scene*>(parentItem());
+        scene->isNodesDrag = true;
         QPointF point = mapToItem(scene, QPointF(event->pos().x(), event->pos().y()));
         setX(point.x() - dragX);
         setY(point.y() - dragY);
@@ -273,13 +291,18 @@ void Node::mouseMoveEvent(QMouseEvent *event) {
                 n->setBaseX(n->baseX() - offsetBaseX);
                 n->setBaseY(n->baseY() - offsetBaseY);
             }
+            else if(qobject_cast<Frame*>(item)) {
+                Frame *f = qobject_cast<Frame*>(item);
+                f->setBaseX(f->baseX() - offsetBaseX);
+                f->setBaseY(f->baseY() - offsetBaseY);
+            }
         }
     }
 }
 
 void Node::mouseReleaseEvent(QMouseEvent *event) {
     if(event->button() == Qt::LeftButton && event->modifiers() != Qt::ControlModifier) {
-        QVector2D offset(x() - oldX, y() - oldY);
+        QVector2D offset(m_baseX - oldX, m_baseY - oldY);
 
         Scene* scene = reinterpret_cast<Scene*>(parentItem());
         if(!moved && m_selected){
@@ -292,15 +315,24 @@ void Node::mouseReleaseEvent(QMouseEvent *event) {
             }
         }
         else {
-            QList<Node*> movedNodes;
-            for(int i = 0; i < scene->countSelected(); ++i) {
-                QQuickItem *item = scene->atSelected(i);
-                if(qobject_cast<Node*>(item)) {
-                    Node *n = qobject_cast<Node*>(item);
-                    movedNodes.append(n);
+
+            QPointF scenePoint = mapToItem(scene, QPointF(width()*0.5f, height()*0.16f));
+            Frame *frame = scene->frameAt(scenePoint.x(), scenePoint.y());
+            /*if(!attachedFrame() && frame) {
+                QList<QQuickItem*> nodesToFrame;
+                for(int i = 0; i < scene->countSelected(); ++i) {
+                    QQuickItem *item = scene->atSelected(i);
+                    if(qobject_cast<Node*>(item)) {
+                        Node *n = qobject_cast<Node*>(item);
+                        if(n->attachedFrame()) continue;
+                        nodesToFrame.push_back(n);
+                    }
                 }
-            }
-            scene->movedNodes(movedNodes, offset);
+                if(nodesToFrame.size() > 0) frame->addNodes(nodesToFrame);
+            }*/
+            if(!attachedFrame()) scene->movedNodes(scene->selectedList(), offset, frame);
+            else scene->movedNodes(scene->selectedList(), offset, nullptr);
+            scene->isNodesDrag = false;
         }
     }
 }
@@ -322,15 +354,57 @@ void Node::serialize(QJsonObject &json) const {
     json["name"] = objectName();
     json["baseX"] = m_baseX;
     json["baseY"] = m_baseY;
+    QJsonArray inputs;
+    for(Socket *s: m_socketsInput) {
+        QJsonObject socketObject;
+        s->serialize(socketObject);
+        inputs.push_back(socketObject);
+    }
+    json["inputs"] = inputs;
+    QJsonArray outputs;
+    for(Socket *s: m_socketOutput) {
+        QJsonObject socketObject;
+        s->serialize(socketObject);
+        outputs.push_back(socketObject);
+    }
+    json["outputs"] = outputs;
+    QJsonArray additionals;
+    for(Socket *s: m_additionalInputs) {
+        QJsonObject socketObject;
+        s->serialize(socketObject);
+        additionals.push_back(socketObject);
+    }
+    json["additionals"] = additionals;
 }
 
 void Node::deserialize(const QJsonObject &json) {
-    if(json.contains("baseX")) {
+    if(json.contains("baseX")) {        
         setBaseX(json["baseX"].toVariant().toFloat());
     }
     if(json.contains("baseY")) {
         setBaseY(json["baseY"].toVariant().toFloat());
-    }    
+    }
+    if(json.contains("inputs")) {
+        QJsonArray inputs = json["inputs"].toArray();
+        for(int i = 0; i < inputs.size(); ++i) {
+            QJsonObject inputObject = inputs[i].toObject();
+            m_socketsInput[i]->deserialize(inputObject);
+        }
+    }
+    if(json.contains("outputs")) {
+        QJsonArray outputs = json["outputs"].toArray();
+        for(int i = 0; i < outputs.size(); ++i) {
+            QJsonObject outputObject = outputs[i].toObject();
+            m_socketOutput[i]->deserialize(outputObject);
+        }
+    }
+    if(json.contains("additionals")) {
+        QJsonArray additionals = json["additionals"].toArray();
+        for(int i = 0; i < additionals.size(); ++i) {
+            QJsonObject additionalsObject = additionals[i].toObject();
+            m_additionalInputs[i]->deserialize(additionalsObject);
+        }
+    }
     operation();
 }
 

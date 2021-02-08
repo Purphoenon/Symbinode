@@ -34,6 +34,7 @@ BlurNode::BlurNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &BlurNode::updateScale);
+    connect(this, &Node::generatePreview, this, &BlurNode::previewGenerated);
     connect(preview, &BlurObject::textureChanged, this, &BlurNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BlurObject::setResolution);
     connect(this, &BlurNode::intensityChanged, preview, &BlurObject::setIntensity);
@@ -96,6 +97,11 @@ void BlurNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void BlurNode::previewGenerated() {
+    preview->bluredTex = true;
+    preview->update();
 }
 
 void BlurNode::setOutput() {

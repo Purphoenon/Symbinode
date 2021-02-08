@@ -33,6 +33,7 @@ WarpNode::WarpNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &WarpNode::updateScale);
+    connect(this, &Node::generatePreview, this, &WarpNode::previewGenerated);
     connect(preview, &WarpObject::changedTexture, this, &WarpNode::setOutput);
     connect(this, &Node::changeResolution, preview, &WarpObject::setResolution);
     connect(this, &WarpNode::intensityChanged, preview, &WarpObject::setIntensity);
@@ -97,6 +98,11 @@ void WarpNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void WarpNode::previewGenerated() {
+    preview->warpedTex = true;
+    preview->update();
 }
 
 void WarpNode::setOutput() {

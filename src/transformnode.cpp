@@ -34,6 +34,7 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float tra
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &TransformNode::updateScale);
+    connect(this, &Node::generatePreview, this, &TransformNode::previewGenerated);
     connect(preview, &TransformObject::textureChanged, this, &TransformNode::setOutput);
     connect(preview, &TransformObject::updatePreview, this, &TransformNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TransformObject::setResolution);
@@ -185,6 +186,11 @@ void TransformNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void TransformNode::previewGenerated() {
+    preview->transformedTex = true;
+    preview->update();
 }
 
 void TransformNode::updateTranslationX(qreal x) {

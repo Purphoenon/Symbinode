@@ -20,10 +20,12 @@
  */
 
 #include "voronoinode.h"
+#include <iostream>
 
 VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams crystals, VoronoiParams borders, VoronoiParams solid, VoronoiParams worley, QString voronoiType): Node(parent, resolution),
       m_voronoiType(voronoiType), m_crystals(crystals), m_borders(borders), m_solid(solid), m_worley(worley)
 {
+    std::cout << "voronoi create" << std::endl;
     preview = new VoronoiObject(grNode, m_resolution, m_voronoiType, voronoiScale(), scaleX(), scaleY(), jitter(), inverse(), intensity(), bordersSize());
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);

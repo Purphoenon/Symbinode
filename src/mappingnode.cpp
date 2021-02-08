@@ -34,6 +34,7 @@ MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, float inputMi
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &MappingNode::updateScale);
+    connect(this, &Node::generatePreview, this, &MappingNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &MappingObject::setResolution);
     connect(preview, &MappingObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MappingObject::textureChanged, this, &MappingNode::setOutput);
@@ -147,6 +148,11 @@ void MappingNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void MappingNode::previewGenerated() {
+    preview->mappedTex = true;
+    preview->update();
 }
 
 void MappingNode::setOutput() {

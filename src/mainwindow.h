@@ -46,6 +46,7 @@
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
+#include "frame.h"
 
 class MainWindow: public QQuickWindow
 {
@@ -54,6 +55,7 @@ class MainWindow: public QQuickWindow
     Q_PROPERTY(Node* pinnedNode READ pinnedNode)
 public:
     Q_INVOKABLE void createNode(float x, float y, int nodeType);
+    Q_INVOKABLE void createFrame(float x, float y);
     Q_INVOKABLE void newDocument();
     Q_INVOKABLE void copy();
     Q_INVOKABLE void paste();
@@ -74,6 +76,7 @@ public:
     ~MainWindow();
     void keyPressEvent(QKeyEvent *event);
     void duplicate();
+    void removeFromFrame();
     void setActiveTab(Tab *tab);
     void closeTab(Tab *tab);
     Node *pinnedNode();

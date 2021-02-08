@@ -38,6 +38,8 @@ void BackgroundObject::mousePressEvent(QMouseEvent *event) {
         lastY = event->pos().y();
     }
     else if(event->button() == Qt::LeftButton) {
+        setFocus(true);
+        setFocus(false);
         event->setAccepted(false);
     }
     else {

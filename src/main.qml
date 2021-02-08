@@ -582,6 +582,19 @@ MainWindow {
                   }
             }
         }
+        MenuSeparator {
+            contentItem: Rectangle {
+                implicitWidth: 200
+                implicitHeight: 1
+                color: "#3B3B3B"
+            }
+        }
+        Action {
+            text: "Frame"
+            onTriggered: {
+                mainWindow.createFrame(addNode.x, addNode.y)
+            }
+        }
     }
 
     MouseArea {
@@ -652,12 +665,6 @@ MainWindow {
             resGroup.checkedAction = res4096
         }
     }
-
-    /*NodeFrame{
-        x: 400
-        y: 400
-        z: 1
-    }*/
 
     DockPanel {
         id: rightDock

@@ -27,19 +27,25 @@
 
 class Node;
 class Edge;
+class Frame;
 class Scene;
 class Socket;
 
 class MoveCommand: public QUndoCommand {
 public:
-    MoveCommand(QList<Node*> nodes, QVector2D movVector, QUndoCommand *parent = nullptr);
+    MoveCommand(QList<QQuickItem*> nodes, QVector2D movVector, Frame *frame = nullptr, QUndoCommand *parent = nullptr);
     ~MoveCommand();
     void undo();
     void redo();
 private:
-    QList<Node*> m_nodes;
+    QList<QQuickItem*> m_nodes;
     QList<QVector2D> m_newPos;
     QVector2D m_movVector;
+    Frame *m_frame;
+    float m_oldFrameX;
+    float m_oldFrameY;
+    float m_oldFrameWidth;
+    float m_oldFrameHeight;
 };
 
 class AddNode: public QUndoCommand {
@@ -62,6 +68,17 @@ public:
 private:
     Scene *m_scene;
     Edge *m_edge;
+};
+
+class AddFrame: public QUndoCommand {
+public:
+    AddFrame(Frame *frame, Scene *scene, QUndoCommand *parent = nullptr);
+    ~AddFrame();
+    void undo();
+    void redo();
+private:
+    Scene *m_scene;
+    Frame *m_frame;
 };
 
 class DeleteCommand: public QUndoCommand {
@@ -121,6 +138,44 @@ private:
     Edge *m_edge = nullptr;
     Socket *m_oldSocket = nullptr;
     Socket *m_newSocket = nullptr;
+};
+
+class DetachFromFrameCommand: public QUndoCommand {
+public:
+    DetachFromFrameCommand(QList<QPair<QQuickItem*, Frame*>> data, QUndoCommand *parent = nullptr);
+    ~DetachFromFrameCommand();
+    void undo();
+    void redo();
+private:
+    QList<QPair<QQuickItem*, Frame*>> m_data;
+};
+
+class ResizeFrameCommand: public QUndoCommand {
+public:
+    ResizeFrameCommand(Frame *frame, float offsetX, float offsetY, float offsetWidth, float offsetHeight);
+    ~ResizeFrameCommand();
+    void undo();
+    void redo();
+    bool mergeWith(const QUndoCommand *command);
+    int id() const;
+private:
+    Frame *m_frame;
+    float m_offsetX;
+    float m_offsetY;
+    float m_offsetWidth;
+    float m_offsetHeight;
+};
+
+class ChangeTitleCommand: public QUndoCommand {
+public:
+    ChangeTitleCommand(Frame *frame, QString newTitle, QString oldTitle);
+    ~ChangeTitleCommand();
+    void undo();
+    void redo();
+private:
+    Frame *m_frame;
+    QString m_newTitle;
+    QString m_oldTitle;
 };
 
 #endif // COMMANDS_H

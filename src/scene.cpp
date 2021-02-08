@@ -74,6 +74,11 @@ Scene::~Scene() {
     }
     m_edges.clear();
 
+    for(Frame *frame: m_frames) {
+        delete frame;
+    }
+    m_frames.clear();
+
     delete m_background;
     delete m_undoStack;
     delete m_preview3d;
@@ -104,11 +109,19 @@ Preview3DObject *Scene::preview3d() const {
 }
 
 bool Scene::addSelected(QQuickItem *item) {
-    if(m_selectedItem.indexOf(item) >= 0) return false;
+    if(m_selectedItem.contains(item)) return false;
     m_selectedItem.push_back(item);
+    item->setParentItem(nullptr);
+    item->setParentItem(this);
     if(qobject_cast<Node*>(item)) {
-        m_activeNode = qobject_cast<Node*>(item);
+        Node *n = qobject_cast<Node*>(item);
+        n->generatePreview();
+        m_activeNode = n;
         activeNodeChanged();
+    }
+    else if(qobject_cast<Frame*>(item)) {
+        Frame *f = qobject_cast<Frame*>(item);
+        m_frames.move(m_frames.indexOf(f), 0);
     }
     return true;
 }
@@ -128,6 +141,10 @@ void Scene::clearSelected() {
         if(qobject_cast<Node*>(item)) {
             Node *n = qobject_cast<Node*>(item);
             n->setSelected(false);
+        }
+        else if(qobject_cast<Frame*>(item)) {
+            Frame *f = qobject_cast<Frame*>(item);
+            f->setSelected(false);
         }
         else if(qobject_cast<Edge*>(item)) {
             Edge *e = qobject_cast<Edge*>(item);
@@ -254,6 +271,16 @@ void Scene::addNode(Node *node) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);
     }
+    std::cout << "scene add node" << std::endl;
+}
+
+Node *Scene::nodeAt(float x, float y) {
+    for(Node *node: m_nodes) {
+        if(node->x() <= x && node->x() + node->width() >= x && node->y() <= y && node->y() + node->height() >= y) {
+            return node;
+        }
+    }
+    return nullptr;
 }
 
 void Scene::nodeDataChanged() {
@@ -278,6 +305,39 @@ void Scene::addEdge(Edge *edge) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);
     }
+}
+
+void Scene::deleteFrame(Frame *frame) {
+    m_frames.removeOne(frame);
+    disconnect(m_background, &BackgroundObject::panChanged, frame, &Frame::setPan);
+    disconnect(m_background, &BackgroundObject::scaleChanged, frame, &Frame::setScaleView);
+    if(!m_modified) {
+        m_modified = true;
+        fileNameUpdate(m_fileName, m_modified);
+    }
+}
+
+void Scene::addFrame(Frame *frame) {
+    if(m_frames.contains(frame)) return;
+    m_frames.insert(0, frame);
+    connect(m_background, &BackgroundObject::panChanged, frame, &Frame::setPan);
+    connect(m_background, &BackgroundObject::scaleChanged, frame, &Frame::setScaleView);
+    frame->setScaleView(m_background->viewScale());
+    frame->setPan(m_background->viewPan());
+    if(!m_modified) {
+        m_modified = true;
+        fileNameUpdate(m_fileName, m_modified);
+    }
+}
+
+Frame *Scene::frameAt(float x, float y) {
+    for(Frame *frame: m_frames) {
+        if(frame->selected()) continue;
+        if((frame->x() <= x && frame->x() + frame->width() >= x) && (frame->y() <= y && frame->y() + frame->height() >= y)){
+            return frame;
+        }
+    }
+    return nullptr;
 }
 
 QList<QQuickItem*> Scene::selectedList() const {
@@ -392,8 +452,16 @@ void Scene::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void Scene::serialize(QJsonObject &json) const {
+    QJsonArray framesArray;
+    for(auto f: m_frames) {
+        QJsonObject frameObject;
+        f->serialize(frameObject);
+        framesArray.append(frameObject);
+    }
+    json["frames"] = framesArray;
     QJsonArray nodesArray;
     for(auto n: m_nodes) {
+        if(n->attachedFrame()) continue;
         QJsonObject nodeObject;
         n->serialize(nodeObject);
         nodesArray.append(nodeObject);
@@ -421,12 +489,17 @@ void Scene::deserialize(const QJsonObject &json) {
         m_resolution = QVector2D(json["resX"].toInt(), json["resY"].toInt());
     }
 
+    if(json.contains("frames") && json["frames"].isArray()) {
+        QJsonArray frames = json["frames"].toArray();
+        for(int i = 0; i < frames.size(); ++i) {
+            QJsonObject framesObject = frames[i].toObject();
+            Frame *frame = new Frame(this);
+            addFrame(frame);
+            frame->deserialize(framesObject);            
+        }
+    }
     if(json.contains("nodes") && json["nodes"].isArray()) {
         QJsonArray nodes = json["nodes"].toArray();
-        for(auto n: m_nodes) {
-            delete n;
-        }
-        m_nodes.clear();
         for(int i = 0; i < nodes.size(); ++i) {
             QJsonObject nodesObject = nodes[i].toObject();
             if(nodesObject.contains("type")) {
@@ -512,10 +585,6 @@ void Scene::deserialize(const QJsonObject &json) {
 
     if(json.contains("edges") && json["edges"].isArray()) {
         QJsonArray edges = json["edges"].toArray();
-        for(auto e: m_edges) {
-            delete e;
-        }
-        m_edges.clear();
         for(int i = 0; i < edges.size(); ++i) {
             QJsonObject edgesObject = edges[i].toObject();
             Edge *e = new Edge(this);
@@ -602,8 +671,19 @@ void Scene::cut() {
     clearSelected();
 }
 
-void Scene::movedNodes(QList<Node *> nodes, QVector2D vec) {
-    m_undoStack->push(new MoveCommand(nodes, vec));
+void Scene::removeFromFrame() {
+    QList<QPair<QQuickItem*, Frame*>> data;
+    for(auto item: m_selectedItem) {
+        if(qobject_cast<Node*>(item)) {
+            Node *node = qobject_cast<Node*>(item);
+            if(node->attachedFrame()) data.push_back(QPair<QQuickItem*, Frame*>(node, node->attachedFrame()));
+        }
+    }
+    detachedFromFrame(data);
+}
+
+void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame) {
+    m_undoStack->push(new MoveCommand(nodes, vec, frame));
     if(!m_modified) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);
@@ -612,6 +692,10 @@ void Scene::movedNodes(QList<Node *> nodes, QVector2D vec) {
 
 void Scene::addedNode(Node *node) {
     m_undoStack->push(new AddNode(node, this));
+}
+
+void Scene::addedFrame(Frame *frame) {
+    m_undoStack->push(new AddFrame(frame, this));
 }
 
 void Scene::addedEdge(Edge *edge) {
@@ -636,6 +720,18 @@ void Scene::movedEdge(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket) {
 
 void Scene::nodePropertyChanged(Node *node, const char *propName, QVariant newValue, QVariant oldValue) {
     m_undoStack->push(new PropertyChangeCommand(node, propName, newValue, oldValue));
+}
+
+void Scene::detachedFromFrame(QList<QPair<QQuickItem *, Frame *> > data) {
+    m_undoStack->push(new DetachFromFrameCommand(data));
+}
+
+void Scene::resizedFrame(Frame *frame, float offsetX, float offsetY, float offsetWidth, float offsetHeight) {
+    m_undoStack->push(new ResizeFrameCommand(frame, offsetX, offsetY, offsetWidth, offsetHeight));
+}
+
+void Scene::changedTitle(Frame *frame, QString newTitle, QString oldTitle) {
+    m_undoStack->push(new ChangeTitleCommand(frame, newTitle, oldTitle));
 }
 
 bool Scene::albedoConnected() {

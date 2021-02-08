@@ -222,7 +222,7 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    createNoise();
+    //createNoise();
 }
 
 NoiseRenderer::~NoiseRenderer() {

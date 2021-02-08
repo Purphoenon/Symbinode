@@ -32,6 +32,7 @@ InverseNode::InverseNode(QQuickItem *parent, QVector2D resolution): Node(parent,
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &InverseNode::updateScale);
+    connect(this, &Node::generatePreview, this, &InverseNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &InverseObject::setResolution);
     connect(preview, &InverseObject::textureChanged, this, &InverseNode::setOutput);
     connect(preview, &InverseObject::updatePreview, this, &InverseNode::updatePreview);
@@ -67,6 +68,11 @@ void InverseNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void InverseNode::previewGenerated() {
+    preview->inversedTex = true;
+    preview->update();
 }
 
 void InverseNode::setOutput() {

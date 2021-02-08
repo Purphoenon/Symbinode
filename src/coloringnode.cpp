@@ -33,6 +33,7 @@ ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D c
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColoringNode::updateScale);
+    connect(this, &Node::generatePreview, this, &ColoringNode::previewGenerated);
     connect(preview, &ColoringObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &ColoringObject::setResolution);
     connect(preview, &ColoringObject::textureChanged, this, &ColoringNode::setOutput);
@@ -99,6 +100,11 @@ void ColoringNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void ColoringNode::previewGenerated() {
+    preview->colorizedTex = true;
+    preview->update();
 }
 
 void ColoringNode::setOutput() {

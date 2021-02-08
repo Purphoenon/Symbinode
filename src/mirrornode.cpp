@@ -33,6 +33,7 @@ MirrorNode::MirrorNode(QQuickItem *parent, QVector2D resolution, int dir): Node(
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &MirrorNode::updateScale);
+    connect(this, &Node::generatePreview, this, &MirrorNode::previewGenerated);
     connect(preview, &MirrorObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MirrorObject::textureChanged, this, &MirrorNode::setOutput);
     connect(this, &Node::changeResolution, preview, &MirrorObject::setResolution);
@@ -94,6 +95,11 @@ void MirrorNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void MirrorNode::previewGenerated() {
+    preview->mirroredTex = true;
+    preview->update();
 }
 
 void MirrorNode::setOutput() {

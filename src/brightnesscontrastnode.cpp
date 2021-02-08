@@ -34,6 +34,7 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &BrightnessContrastNode::updateScale);
+    connect(this, &Node::generatePreview, this, &BrightnessContrastNode::previewGenerated);
     connect(preview, &BrightnessContrastObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &BrightnessContrastObject::textureChanged, this, &BrightnessContrastNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BrightnessContrastObject::setResolution);
@@ -110,6 +111,11 @@ void BrightnessContrastNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void BrightnessContrastNode::previewGenerated() {
+    preview->created = true;
+    preview->update();
 }
 
 void BrightnessContrastNode::setOutput() {

@@ -25,6 +25,7 @@
 #include <QQuickItem>
 
 class Scene;
+class Frame;
 class Node;
 class Edge;
 
@@ -39,7 +40,9 @@ public:
     void duplicate(Scene *scene);
     void clear();
 private:
+    Node *nodeCopy(Node *node, Scene *scene, QQuickItem *parent = nullptr);
     QVector2D center;
+    QList<Frame*> clipboard_frames;
     QList<Node*> clipboard_nodes;
     QList<Edge*> clipboard_edges;
 };

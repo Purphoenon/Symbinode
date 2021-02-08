@@ -41,6 +41,7 @@ signals:
     void stopsChanged(QVariant gradients);
 public slots:
     void updateScale(float scale);
+    void previewGenerated();
     void setOutput();
 private:
     ColorRampObject *preview;

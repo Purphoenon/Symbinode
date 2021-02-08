@@ -30,6 +30,7 @@
 #include <QtWidgets/QMenu>
 #include "node.h"
 #include "edge.h"
+#include "frame.h"
 #include "backgroundobject.h"
 #include "commands.h"
 #include "clipboard.h"
@@ -56,9 +57,13 @@ public:
     Preview3DObject *preview3d() const;
     void deleteNode(Node* node);
     void addNode(Node *node);
+    Node *nodeAt(float x, float y);
     void nodeDataChanged();
     void deleteEdge(Edge* edge);
     void addEdge(Edge* edge);
+    void deleteFrame(Frame *frame);
+    void addFrame(Frame *frame);
+    Frame *frameAt(float x, float y);
     QList<QQuickItem*> selectedList() const;
     bool addSelected(QQuickItem *item);
     bool deleteSelected(QQuickItem *item);
@@ -77,14 +82,19 @@ public:
     void undo();
     void redo();
     void cut();
-    void movedNodes(QList<Node*> nodes, QVector2D vec);
+    void removeFromFrame();
+    void movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame = nullptr);
     void addedEdge(Edge *edge);
     void addedNode(Node *node);
+    void addedFrame(Frame *frame);
     void deletedItems(QList<QQuickItem*> items);
     void selectedItems(QList<QQuickItem*> items);
     void pastedItems(QList<QQuickItem*> items);
     void movedEdge(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket);
     void nodePropertyChanged(Node *node, const char *propName, QVariant newValue, QVariant oldValue);
+    void detachedFromFrame(QList<QPair<QQuickItem *, Frame *> > data);
+    void resizedFrame(Frame *frame, float offsetX, float offsetY, float offsetWidth, float offsetHeight);
+    void changedTitle(Frame *frame, QString newTitle, QString oldTitle);
     bool albedoConnected();
     bool metalConnected();
     bool roughConnected();
@@ -93,8 +103,10 @@ public:
     void setResolution(QVector2D res);
 
     bool isEdgeDrag = false;
+    bool isNodesDrag = false;
     Socket* startSocket = nullptr;
     Edge* dragEdge = nullptr;
+    Frame* dropFrame = nullptr;
     QQuickItem* rectSelect = nullptr;
     QQuickView* rectView = nullptr;
     CutLine* cutLine = nullptr;
@@ -110,6 +122,7 @@ private:
     Preview3DObject *m_preview3d = nullptr;
     QList<Node*> m_nodes;
     QList<Edge*> m_edges;
+    QList<Frame*> m_frames;
     QList<QQuickItem*> m_selectedItem;
     Node *m_activeNode = nullptr;
     QString m_fileName = "";

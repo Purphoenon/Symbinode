@@ -41,6 +41,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &TileNode::updateScale);
+    connect(this, &Node::generatePreview, this, &TileNode::previewGenerated);
     connect(preview, &TileObject::changedTexture, this, &TileNode::setOutput);
     connect(preview, &TileObject::updatePreview, this, &TileNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TileObject::setResolution);

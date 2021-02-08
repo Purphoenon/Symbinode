@@ -33,6 +33,7 @@ ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, float thr
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ThresholdNode::updateScale);
+    connect(this, &Node::generatePreview, this, &ThresholdNode::previewGenerated);
     connect(preview, &ThresholdObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &ThresholdObject::textureChanged, this, &ThresholdNode::setOutput);
     connect(this, &ThresholdNode::thresholdChanged, preview, &ThresholdObject::setThreshold);
@@ -93,6 +94,11 @@ void ThresholdNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
+}
+
+void ThresholdNode::previewGenerated() {
+    preview->created = true;
+    preview->update();
 }
 
 void ThresholdNode::setOutput() {
