@@ -62,7 +62,7 @@ public:
     void saveTexture(QString fileName);
     void operation();
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 signals:
     void noiseTypeChanged(QString type);
     void noiseScaleChanged(float scale);

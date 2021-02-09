@@ -77,8 +77,8 @@ void RoughNode::serialize(QJsonObject &json) const {
     json["rough"] = m_rough;
 }
 
-void RoughNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void RoughNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("rough")) {
         updateRough(json["rough"].toVariant().toFloat());
         propertiesPanel->setProperty("startRough", m_rough);

@@ -255,6 +255,10 @@ QVariant Socket::value() {
     return m_value;
 }
 
+QUuid Socket::id() {
+    return m_id;
+}
+
 void Socket::reset() {
     m_value = 0;
 }

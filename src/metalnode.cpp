@@ -76,8 +76,8 @@ void MetalNode::serialize(QJsonObject &json) const {
     json["metal"] = m_metal;
 }
 
-void MetalNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void MetalNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("metal")) {
         updateMetal(json["metal"].toVariant().toFloat());
         propertiesPanel->setProperty("startMetal", m_metal);

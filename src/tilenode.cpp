@@ -20,6 +20,7 @@
  */
 
 #include "tilenode.h"
+#include "frame.h"
 #include <iostream>
 
 TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
@@ -158,8 +159,8 @@ void TileNode::serialize(QJsonObject &json) const {
     json["useAlpha"] = m_useAlpha;
 }
 
-void TileNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void TileNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("offsetX")) {
         m_offsetX = json["offsetX"].toVariant().toFloat();
     }
@@ -395,6 +396,7 @@ void TileNode::updateScale(float scale) {
 
 void TileNode::previewGenerated() {
     preview->tiledTex = true;
+    preview->randUpdated = true;
     preview->update();
 }
 
@@ -466,6 +468,7 @@ void TileNode::updateMaskStrength(qreal mask) {
 
 void TileNode::updateInputsCount(int count) {
     setInputsCount(count);
+    if(attachedFrame()) attachedFrame()->resizeByContent();
     operation();
     dataChanged();
 }

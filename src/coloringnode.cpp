@@ -77,8 +77,8 @@ void ColoringNode::serialize(QJsonObject &json) const {
     json["color"] = color;
 }
 
-void ColoringNode::deserialize(const QJsonObject &json){
-    Node::deserialize(json);
+void ColoringNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash){
+    Node::deserialize(json, hash);
     if(json.contains("color")) {
         QJsonArray color = json["color"].toArray();
         QVector3D c = QVector3D(color[0].toVariant().toFloat(), color[1].toVariant().toFloat(), color[2].toVariant().toFloat());

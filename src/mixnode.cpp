@@ -130,8 +130,8 @@ void MixNode::serialize(QJsonObject &json) const {
     json["includingAlpha"] = m_includingAlpha;
 }
 
-void MixNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void MixNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("factor")) {
         setFactor(json["factor"].toVariant().toFloat());
         propertiesPanel->setProperty("startFactor", m_factor);

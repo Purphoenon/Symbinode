@@ -55,6 +55,7 @@ public:
     void setAdditional(bool additional);
     void setValue(const QVariant &value);
     QVariant value();
+    QUuid id();
     void reset();
     void updateScale(float scale);
 signals:

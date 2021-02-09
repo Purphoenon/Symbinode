@@ -61,7 +61,7 @@ public:
     void hoverMoveEvent(QHoverEvent *event);
     void hoverLeaveEvent(QHoverEvent *event);
     virtual void serialize(QJsonObject &json) const;
-    virtual void deserialize(const QJsonObject &json);
+    virtual void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     void setPropertyOnPanel(const char* name, QVariant value);
     void createSockets(int inputCount, int outputCount);
     void createAdditionalInputs(int count);

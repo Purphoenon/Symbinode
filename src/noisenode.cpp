@@ -222,8 +222,8 @@ void NoiseNode::serialize(QJsonObject &json) const {
     json["noiseType"] = m_noiseType;
 }
 
-void NoiseNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void NoiseNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("perlinParams")) {
         QJsonObject perlinParams = json["perlinParams"].toObject();
         if(perlinParams.contains("scale")) {

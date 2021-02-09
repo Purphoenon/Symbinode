@@ -79,8 +79,8 @@ void ColorRampNode::serialize(QJsonObject &json) const {
     json["gradientsStops"] = stops();
 }
 
-void ColorRampNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void ColorRampNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("gradientsStops")) {
         QJsonArray gradientStops = json["gradientsStops"].toVariant().toJsonArray();
         stopsChanged(QVariant(gradientStops));

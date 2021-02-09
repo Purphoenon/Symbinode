@@ -74,8 +74,8 @@ void MirrorNode::serialize(QJsonObject &json) const {
     json["direction"] = m_direction;
 }
 
-void MirrorNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void MirrorNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("direction")) {
         updateDirection(json["direction"].toInt());
         propertiesPanel->setProperty("startDirection", m_direction);

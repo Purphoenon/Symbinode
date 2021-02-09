@@ -75,6 +75,7 @@ public:
     void mouseReleaseEvent(QMouseEvent *event);
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
+    Node *deserializeNode(const QJsonObject &json);
     void deleteItems();
     bool saveScene(QString fileName);
     bool loadScene(QString fileName);

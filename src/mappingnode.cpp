@@ -88,8 +88,8 @@ void MappingNode::serialize(QJsonObject &json) const {
     json["outputMax"] = m_outputMax;
 }
 
-void MappingNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void MappingNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("inputMin")) {
         updateInputMin(json["inputMin"].toVariant().toReal());
         propertiesPanel->setProperty("startInputMin", m_inputMin);

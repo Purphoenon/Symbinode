@@ -77,8 +77,8 @@ void NormalMapNode::serialize(QJsonObject &json) const {
     json["strength"] = m_strenght;
 }
 
-void NormalMapNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void NormalMapNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("strength")) {
         updateStrenght(json["strength"].toVariant().toFloat());
         propertiesPanel->setProperty("startStrenght", m_strenght/30.0f);

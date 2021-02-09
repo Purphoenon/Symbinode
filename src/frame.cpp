@@ -220,19 +220,11 @@ void Frame::mouseMoveEvent(QMouseEvent *event) {
         switch (currentResize) {
         case LEFT:
             if(width() - offsetX > m_minWidth*m_scale) {
-                /*setX(point.x());
-                m_baseX = (x() + m_pan.x())/m_scale;
-                setWidth(width() - offsetX);
-                m_baseWidth = width()/m_scale;*/
-                offX = (point.x() - m_pan.x())/m_scale - m_baseX;
+                offX = (point.x() + m_pan.x())/m_scale - m_baseX;
                 offW = (width() - offsetX)/m_scale - m_baseWidth;
             }
             else {
                 offsetX = width() - m_minWidth*m_scale;
-                /*setX(x() + offsetX);
-                m_baseX = (x() + m_pan.x())/m_scale;
-                setWidth(width() - offsetX);
-                m_baseWidth = width()/m_scale;*/
                 offX = (x() + offsetX + m_pan.x())/m_scale - m_baseX;
                 offW = (width() - offsetX)/m_scale - m_baseWidth;
             }
@@ -240,26 +232,16 @@ void Frame::mouseMoveEvent(QMouseEvent *event) {
             break;
         case RIGHT:
             if(offsetX < m_minWidth*m_scale) offsetX = m_minWidth*m_scale;
-            /*setWidth(offsetX);
-            m_baseWidth = width()/m_scale;*/
             offW = offsetX/m_scale - m_baseWidth;
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case TOP:
             if(height() - offsetY > m_minHeight*m_scale) {
-                /*setY(point.y());
-                m_baseY = (y() + m_pan.y())/m_scale;
-                setHeight(height() - offsetY);
-                m_baseHeight = height()/m_scale;*/
                 offY = (point.y() + m_pan.y())/m_scale - m_baseY;
                 offH = (height() - offsetY)/m_scale - m_baseHeight;
             }
             else {
                 offsetY = height() - m_minHeight*m_scale;
-                /*setY(y() + offsetY);
-                m_baseY = (y() + m_pan.y())/m_scale;
-                setHeight(height() - offsetY);
-                m_baseHeight = height()/m_scale;*/
                 offY = (y() + offsetY + m_pan.y())/m_scale - m_baseY;
                 offH = (height() - offsetY)/m_scale - m_baseHeight;
             }
@@ -267,43 +249,25 @@ void Frame::mouseMoveEvent(QMouseEvent *event) {
             break;
         case BOTTOM:
             if(offsetY < m_minHeight*m_scale) offsetY = m_minHeight*m_scale;
-            /*setHeight(offsetY);
-            m_baseHeight = height()/m_scale;*/
             offH = offsetY/m_scale - m_baseHeight;
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case TOPLEFT:
             if(width() - offsetX > m_minWidth*m_scale) {
-                /*setX(point.x());
-                m_baseX = (x() + m_pan.x())/m_scale;
-                setWidth(width() - offsetX);
-                m_baseWidth = width()/m_scale;*/
                 offX = (point.x() + m_pan.x())/m_scale - m_baseX;
                 offW = (width() - offsetX)/m_scale - m_baseWidth;
             }
             else {
                 offsetX = width() - m_minWidth*m_scale;
-                /*setX(x() + offsetX);
-                m_baseX = (x() + m_pan.x())/m_scale;
-                setWidth(width() - offsetX);
-                m_baseWidth = width()/m_scale;*/
                 offX = (x() + offsetX + m_pan.x())/m_scale - m_baseX;
                 offW = (width() - offsetX)/m_scale - m_baseWidth;
             }
             if(height() - offsetY > m_minHeight*m_scale) {
-                /*setY(point.y());
-                m_baseY = (y() + m_pan.y())/m_scale;
-                setHeight(height() - offsetY);
-                m_baseHeight = height()/m_scale;*/
                 offY = (point.y() + m_pan.y())/m_scale - m_baseY;
                 offH = (height() - offsetY)/m_scale - m_baseHeight;
             }
             else {
                 offsetY = height() - m_minHeight*m_scale;
-                /*setY(y() + offsetY);
-                m_baseY = (y() + m_pan.y())/m_scale;
-                setHeight(height() - offsetY);
-                m_baseHeight = height()/m_scale;*/
                 offY = (y() + offsetY + m_pan.y())/m_scale - m_baseY;
                 offH = (height() - offsetY)/m_scale - m_baseHeight;
             }
@@ -311,23 +275,13 @@ void Frame::mouseMoveEvent(QMouseEvent *event) {
             break;
         case TOPRIGHT:
             if(offsetX < m_minWidth*m_scale) offsetX = m_minWidth*m_scale;
-            /*setWidth(offsetX);
-            m_baseWidth = width()/m_scale;*/
             offW = offsetX/m_scale - m_baseWidth;
             if(height() - offsetY > m_minHeight*m_scale) {
-                /*setY(point.y());
-                m_baseY = (y() + m_pan.y())/m_scale;
-                setHeight(height() - offsetY);
-                m_baseHeight = height()/m_scale;*/
                 offY = (point.y() + m_pan.y())/m_scale - m_baseY;
                 offH = (height() - offsetY)/m_scale - m_baseHeight;
             }
             else {
                 offsetY = height() - m_minHeight*m_scale;
-                /*setY(y() + offsetY);
-                m_baseY = (y() + m_pan.y())/m_scale;
-                setHeight(height() - offsetY);
-                m_baseHeight = height()/m_scale;*/
                 offY = (y() + offsetY + m_pan.y())/m_scale - m_baseY;
                 offH = (height() - offsetY)/m_scale - m_baseHeight;
             }
@@ -335,36 +289,22 @@ void Frame::mouseMoveEvent(QMouseEvent *event) {
             break;
         case BOTTOMLEFT:
             if(width() - offsetX > m_minWidth*m_scale) {
-                /*setX(point.x());
-                m_baseX = (x() + m_pan.x())/m_scale;
-                setWidth(width() - offsetX);
-                m_baseWidth = width()/m_scale;*/
                 offX = (point.x() + m_pan.x())/m_scale - m_baseX;
                 offW = (width() - offsetX)/m_scale - m_baseWidth;
             }
             else {
                 offsetX = width() - m_minWidth*m_scale;
-                /*setX(x() + offsetX);
-                m_baseX = (x() + m_pan.x())/m_scale;
-                setWidth(width() - offsetX);
-                m_baseWidth = width()/m_scale;*/
                 offX = (x() + offsetX + m_pan.x())/m_scale - m_baseX;
                 offW = (width() - offsetX)/m_scale - m_baseWidth;
             }
             if(offsetY < m_minHeight*m_scale) offsetY = m_minHeight*m_scale;
-            /*setHeight(offsetY);
-            m_baseHeight = height()/m_scale;*/
             offH = offsetY/m_scale - m_baseHeight;
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case BOTTOMRIGHT:
             if(offsetX < m_minWidth*m_scale) offsetX = m_minWidth*m_scale;
-            /*setWidth(offsetX);
-            m_baseWidth = width()/m_scale;*/
             offW = offsetX/m_scale - m_baseWidth;
             if(offsetY < m_minHeight*m_scale) offsetY = m_minHeight*m_scale;
-            /*setHeight(offsetY);
-            m_baseHeight = height()/m_scale;*/
             offH = offsetY/m_scale - m_baseHeight;
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
@@ -522,7 +462,7 @@ void Frame::serialize(QJsonObject &json) const {
     json["nodes"] = nodesArray;
 }
 
-void Frame::deserialize(const QJsonObject &json) {
+void Frame::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
     if(json.contains("baseX")) {
         setBaseX(json["baseX"].toVariant().toFloat());
     }
@@ -547,81 +487,10 @@ void Frame::deserialize(const QJsonObject &json) {
         for(int i = 0; i < nodes.size(); ++i) {
             QJsonObject nodesObject = nodes[i].toObject();
             if(nodesObject.contains("type")) {
-                int nodeType = nodesObject["type"].toInt();
-                Node *node = nullptr;
-                switch (nodeType) {
-                case 0:
-                    node = new ColorRampNode(scene, scene->resolution());
-                    break;
-                case 1:
-                    node = new ColorNode(scene, scene->resolution());
-                    break;
-                case 2:
-                    node = new ColoringNode(scene, scene->resolution());
-                    break;
-                case 3:
-                    node = new MappingNode(scene, scene->resolution());
-                    break;
-                case 5:
-                    node = new MirrorNode(scene, scene->resolution());
-                    break;
-                case 6:
-                    node = new NoiseNode(scene, scene->resolution());
-                    break;
-                case 7:
-                    node = new MixNode(scene, scene->resolution());
-                    break;
-                case 8:
-                    node = new AlbedoNode(scene, scene->resolution());
-                    break;
-                case 9:
-                    node = new MetalNode(scene, scene->resolution());
-                    break;
-                case 10:
-                    node = new RoughNode(scene, scene->resolution());
-                    break;
-                case 11:
-                    node = new NormalMapNode(scene, scene->resolution());
-                    break;
-                case 12:
-                    node = new NormalNode(scene, scene->resolution());
-                    break;
-                case 13:
-                    node = new VoronoiNode(scene, scene->resolution());
-                    break;
-                case 14:
-                    node = new PolygonNode(scene, scene->resolution());
-                    break;
-                case 15:
-                    node = new CircleNode(scene, scene->resolution());
-                    break;
-                case 16:
-                    node = new TransformNode(scene, scene->resolution());
-                    break;
-                case 17:
-                    node = new TileNode(scene, scene->resolution());
-                    break;
-                case 18:
-                    node = new WarpNode(scene, scene->resolution());
-                    break;
-                case 19:
-                    node = new BlurNode(scene, scene->resolution());
-                    break;
-                case 20:
-                    node = new InverseNode(scene, scene->resolution());
-                    break;
-                case 21:
-                    node = new BrightnessContrastNode(scene, scene->resolution());
-                    break;
-                case 22:
-                    node = new ThresholdNode(scene, scene->resolution());
-                    break;
-                default:
-                    std::cout << "nonexistent type" << std::endl;
-                }
-                if(node) {                    
+                Node *node = scene->deserializeNode(nodesObject);
+                if(node) {
                     scene->addNode(node);
-                    node->deserialize(nodesObject);
+                    node->deserialize(nodesObject, hash);
                     m_content.push_back(node);
                     node->setAttachedFrame(this);
                 }

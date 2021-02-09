@@ -77,8 +77,8 @@ void BrightnessContrastNode::serialize(QJsonObject &json) const {
     json["contrast"] = m_contrast;
 }
 
-void BrightnessContrastNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void BrightnessContrastNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("brightness")) {
         updateBrightness(json["brightness"].toVariant().toReal());
         propertiesPanel->setProperty("startBrightness", m_brightness);

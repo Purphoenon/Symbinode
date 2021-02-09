@@ -34,7 +34,7 @@ public:
     unsigned int &getPreviewTexture();
     void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 signals:
     void albedoChanged(QVariant albedo, bool useTexture);
 public slots:

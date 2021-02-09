@@ -81,8 +81,8 @@ void AlbedoNode::serialize(QJsonObject &json) const {
     json["albedo"] = albedo;
 }
 
-void AlbedoNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void AlbedoNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("albedo") && json["albedo"].isArray()) {
         QJsonArray albedo = json["albedo"].toArray();
         QVector3D color = QVector3D(albedo[0].toVariant().toFloat(), albedo[1].toVariant().toFloat(),

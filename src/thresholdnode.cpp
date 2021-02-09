@@ -73,8 +73,8 @@ void ThresholdNode::serialize(QJsonObject &json) const{
     json["threshold"] = m_threshold;
 }
 
-void ThresholdNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void ThresholdNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("threshold")) {
         updateThreshold(json["threshold"].toVariant().toReal());
         propertiesPanel->setProperty("startThreshold", m_threshold);

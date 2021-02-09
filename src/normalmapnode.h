@@ -37,7 +37,7 @@ public:
     float strenght();
     void setOutput();
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
     void updateStrenght(qreal strenght);
     void previewGenerated();

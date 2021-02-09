@@ -116,6 +116,7 @@ bool Scene::addSelected(QQuickItem *item) {
     if(qobject_cast<Node*>(item)) {
         Node *n = qobject_cast<Node*>(item);
         n->generatePreview();
+        m_nodes.move(m_nodes.indexOf(n), 0);
         m_activeNode = n;
         activeNodeChanged();
     }
@@ -489,95 +490,26 @@ void Scene::deserialize(const QJsonObject &json) {
         m_resolution = QVector2D(json["resX"].toInt(), json["resY"].toInt());
     }
 
+    QHash<QUuid, Socket*> socketsHash;
     if(json.contains("frames") && json["frames"].isArray()) {
         QJsonArray frames = json["frames"].toArray();
         for(int i = 0; i < frames.size(); ++i) {
             QJsonObject framesObject = frames[i].toObject();
             Frame *frame = new Frame(this);
             addFrame(frame);
-            frame->deserialize(framesObject);            
+            frame->deserialize(framesObject, socketsHash);
         }
     }
+
     if(json.contains("nodes") && json["nodes"].isArray()) {
         QJsonArray nodes = json["nodes"].toArray();
         for(int i = 0; i < nodes.size(); ++i) {
             QJsonObject nodesObject = nodes[i].toObject();
             if(nodesObject.contains("type")) {
-                int nodeType = nodesObject["type"].toInt();
-                Node *node = nullptr;
-                switch (nodeType) {
-                case 0:
-                    node = new ColorRampNode(this, m_resolution);
-                    break;
-                case 1:
-                    node = new ColorNode(this, m_resolution);
-                    break;
-                case 2:
-                    node = new ColoringNode(this, m_resolution);
-                    break;
-                case 3:
-                    node = new MappingNode(this, m_resolution);
-                    break;
-                case 5:
-                    node = new MirrorNode(this, m_resolution);
-                    break;
-                case 6:
-                    node = new NoiseNode(this, m_resolution);
-                    break;
-                case 7:
-                    node = new MixNode(this, m_resolution);
-                    break;
-                case 8:
-                    node = new AlbedoNode(this, m_resolution);
-                    break;
-                case 9:
-                    node = new MetalNode(this, m_resolution);
-                    break;
-                case 10:
-                    node = new RoughNode(this, m_resolution);
-                    break;
-                case 11:
-                    node = new NormalMapNode(this, m_resolution);
-                    break;
-                case 12:
-                    node = new NormalNode(this, m_resolution);
-                    break;
-                case 13:
-                    node = new VoronoiNode(this, m_resolution);
-                    break;
-                case 14:
-                    node = new PolygonNode(this, m_resolution);
-                    break;
-                case 15:
-                    node = new CircleNode(this, m_resolution);
-                    break;
-                case 16:
-                    node = new TransformNode(this, m_resolution);
-                    break;
-                case 17:
-                    node = new TileNode(this, m_resolution);
-                    break;
-                case 18:
-                    node = new WarpNode(this, m_resolution);
-                    break;
-                case 19:
-                    node = new BlurNode(this, m_resolution);
-                    break;
-                case 20:
-                    node = new InverseNode(this, m_resolution);
-                    break;
-                case 21:
-                    node = new BrightnessContrastNode(this, m_resolution);
-                    break;
-                case 22:
-                    node = new ThresholdNode(this, m_resolution);
-                    break;
-                default:
-                    std::cout << "nonexistent type" << std::endl;
-                }
+                Node *node = deserializeNode(nodesObject);
                 if(node) {
                     addNode(node);
-                    node->deserialize(nodesObject);     
+                    node->deserialize(nodesObject, socketsHash);
                 }
             }
         }
@@ -588,10 +520,87 @@ void Scene::deserialize(const QJsonObject &json) {
         for(int i = 0; i < edges.size(); ++i) {
             QJsonObject edgesObject = edges[i].toObject();
             Edge *e = new Edge(this);
-            e->deserialize(edgesObject);
-            m_edges.append(e);
+            e->deserialize(edgesObject, socketsHash);
+            if(e->startSocket() && e->endSocket()) m_edges.append(e);
+            else delete e;
         }
     }
+}
+
+Node *Scene::deserializeNode(const QJsonObject &json) {
+    int nodeType = json["type"].toInt();
+    Node *node = nullptr;
+    switch (nodeType) {
+    case 0:
+        node = new ColorRampNode(this, m_resolution);
+        break;
+    case 1:
+        node = new ColorNode(this, m_resolution);
+        break;
+    case 2:
+        node = new ColoringNode(this, m_resolution);
+        break;
+    case 3:
+        node = new MappingNode(this, m_resolution);
+        break;
+    case 5:
+        node = new MirrorNode(this, m_resolution);
+        break;
+    case 6:
+        node = new NoiseNode(this, m_resolution);
+        break;
+    case 7:
+        node = new MixNode(this, m_resolution);
+        break;
+    case 8:
+        node = new AlbedoNode(this, m_resolution);
+        break;
+    case 9:
+        node = new MetalNode(this, m_resolution);
+        break;
+    case 10:
+        node = new RoughNode(this, m_resolution);
+        break;
+    case 11:
+        node = new NormalMapNode(this, m_resolution);
+        break;
+    case 12:
+        node = new NormalNode(this, m_resolution);
+        break;
+    case 13:
+        node = new VoronoiNode(this, m_resolution);
+        break;
+    case 14:
+        node = new PolygonNode(this, m_resolution);
+        break;
+    case 15:
+        node = new CircleNode(this, m_resolution);
+        break;
+    case 16:
+        node = new TransformNode(this, m_resolution);
+        break;
+    case 17:
+        node = new TileNode(this, m_resolution);
+        break;
+    case 18:
+        node = new WarpNode(this, m_resolution);
+        break;
+    case 19:
+        node = new BlurNode(this, m_resolution);
+        break;
+    case 20:
+        node = new InverseNode(this, m_resolution);
+        break;
+    case 21:
+        node = new BrightnessContrastNode(this, m_resolution);
+        break;
+    case 22:
+        node = new ThresholdNode(this, m_resolution);
+        break;
+    default:
+        std::cout << "nonexistent type" << std::endl;
+    }
+    return node;
 }
 
 void Scene::deleteItems() {

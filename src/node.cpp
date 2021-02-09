@@ -377,7 +377,7 @@ void Node::serialize(QJsonObject &json) const {
     json["additionals"] = additionals;
 }
 
-void Node::deserialize(const QJsonObject &json) {
+void Node::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
     if(json.contains("baseX")) {        
         setBaseX(json["baseX"].toVariant().toFloat());
     }
@@ -388,21 +388,27 @@ void Node::deserialize(const QJsonObject &json) {
         QJsonArray inputs = json["inputs"].toArray();
         for(int i = 0; i < inputs.size(); ++i) {
             QJsonObject inputObject = inputs[i].toObject();
-            m_socketsInput[i]->deserialize(inputObject);
+            Socket *s = m_socketsInput[i];
+            s->deserialize(inputObject);
+            hash[s->id()] = s;
         }
     }
     if(json.contains("outputs")) {
         QJsonArray outputs = json["outputs"].toArray();
         for(int i = 0; i < outputs.size(); ++i) {
             QJsonObject outputObject = outputs[i].toObject();
-            m_socketOutput[i]->deserialize(outputObject);
+            Socket *s = m_socketOutput[i];
+            s->deserialize(outputObject);
+            hash[s->id()] = s;
         }
     }
     if(json.contains("additionals")) {
         QJsonArray additionals = json["additionals"].toArray();
         for(int i = 0; i < additionals.size(); ++i) {
             QJsonObject additionalsObject = additionals[i].toObject();
-            m_additionalInputs[i]->deserialize(additionalsObject);
+            Socket *s = m_additionalInputs[i] ;
+            s->deserialize(additionalsObject);
+            hash[s->id()] = s;
         }
     }
     operation();
