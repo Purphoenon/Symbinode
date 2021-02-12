@@ -164,11 +164,11 @@ void Frame::resizeByContent() {
         maxY = std::max(maxY, item->y() + item->height());
     }
     setX(minX - 10*m_scale);
-    setY(minY - 35*m_scale);
+    setY(minY - 45*m_scale);
     m_baseX = (x() + m_pan.x())/m_scale;
     m_baseY = (y() + m_pan.y())/m_scale;
     setWidth(maxX - minX + 20*m_scale);
-    setHeight(maxY - minY + 55*m_scale);
+    setHeight(maxY - minY + 65*m_scale);
     m_baseWidth = width()/m_scale;
     m_baseHeight = height()/m_scale;
 }
@@ -370,44 +370,45 @@ void Frame::hoverMoveEvent(QHoverEvent *event) {
     float mouseAreaSize = 3.0f;
     if(event->pos().x() < mouseAreaSize && (event->pos().y() > mouseAreaSize && event->pos().y() < height() - mouseAreaSize)) {
         currentResize = LEFT;
-        setCursor(QCursor(Qt::SizeHorCursor));
+        window()->setCursor(QCursor(Qt::SizeHorCursor));
     }
     else if(event->pos().x() > width() - mouseAreaSize && (event->pos().y() > mouseAreaSize && event->pos().y() < height() - mouseAreaSize)) {
         currentResize = RIGHT;
-        setCursor(QCursor(Qt::SizeHorCursor));
+        window()->setCursor(QCursor(Qt::SizeHorCursor));
     }
     else if((event->pos().x() > mouseAreaSize && event->pos().x() < width() - mouseAreaSize) && event->pos().y() < mouseAreaSize) {
         currentResize = TOP;
-        setCursor(QCursor(Qt::SizeVerCursor));
+        window()->setCursor(QCursor(Qt::SizeVerCursor));
     }
     else if((event->pos().x() > mouseAreaSize && event->pos().x() < width() - mouseAreaSize) && event->pos().y() > height() - mouseAreaSize) {
         currentResize = BOTTOM;
-        setCursor(QCursor(Qt::SizeVerCursor));
+        window()->setCursor(QCursor(Qt::SizeVerCursor));
     }
     else if(event->pos().x() < mouseAreaSize && event->pos().y() < mouseAreaSize) {
         currentResize = TOPLEFT;
-        setCursor(QCursor(Qt::SizeFDiagCursor));
+        window()->setCursor(QCursor(Qt::SizeFDiagCursor));
     }
     else if(event->pos().x() > width() - mouseAreaSize && event->pos().y() < mouseAreaSize) {
         currentResize = TOPRIGHT;
-        setCursor(QCursor(Qt::SizeBDiagCursor));
+        window()->setCursor(QCursor(Qt::SizeBDiagCursor));
     }
     else if(event->pos().x() < mouseAreaSize && event->pos().y() > height() - mouseAreaSize) {
         currentResize = BOTTOMLEFT;
-        setCursor(QCursor(Qt::SizeBDiagCursor));
+        window()->setCursor(QCursor(Qt::SizeBDiagCursor));
     }
     else if(event->pos().x() > width() - mouseAreaSize && event->pos().y() > height() - mouseAreaSize) {
         currentResize = BOTTOMRIGHT;
-        setCursor(QCursor(Qt::SizeFDiagCursor));
+        window()->setCursor(QCursor(Qt::SizeFDiagCursor));
     }
     else {
         currentResize = NOT;
-        setCursor(QCursor(Qt::ArrowCursor));
+        window()->setCursor(QCursor(Qt::ArrowCursor));
     }
 }
 
 void Frame::hoverLeaveEvent(QHoverEvent *event) {
     m_grFrame->setProperty("hovered", false);
+    window()->setCursor(QCursor(Qt::ArrowCursor));
 }
 
 void Frame::addNodes(QList<QQuickItem *> nodes) {

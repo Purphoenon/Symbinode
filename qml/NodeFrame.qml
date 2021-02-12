@@ -44,6 +44,7 @@ Rectangle {
                                             horizontalAlignment: TextInput.AlignHCenter;
                                             color: "#C8C8C8";
                                             selectByMouse: true;
+                                            selectionColor: "#7E7E7E"
                                             clip: true
                                             onFocusChanged: {if(!focus) accepted()}}',
                                            frame,

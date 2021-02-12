@@ -33,7 +33,7 @@ Node::Node(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_res
     grNode = qobject_cast<QQuickItem *>(view->rootObject());
     grNode->setParentItem(this);
     grNode->setX(8);
-    setZ(2);
+    setZ(3);
 }
 
 Node::Node(const Node &node):Node() {

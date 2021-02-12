@@ -52,6 +52,7 @@ Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_r
     m_preview3d = new Preview3DObject();
     m_undoStack = new QUndoStack(this);
     m_undoStack->setUndoLimit(32);   
+    rectView = new QQuickView();
     setClip(true);
     connect(this, &Scene::resolutionUpdate, m_preview3d, &Preview3DObject::setTexResolution);
 }
@@ -111,18 +112,20 @@ Preview3DObject *Scene::preview3d() const {
 bool Scene::addSelected(QQuickItem *item) {
     if(m_selectedItem.contains(item)) return false;
     m_selectedItem.push_back(item);
-    item->setParentItem(nullptr);
-    item->setParentItem(this);
+    //item->setParentItem(nullptr);
+    //item->setParentItem(this);
     if(qobject_cast<Node*>(item)) {
         Node *n = qobject_cast<Node*>(item);
-        n->generatePreview();
-        m_nodes.move(m_nodes.indexOf(n), 0);
+        n->setZ(4);
+        //n->generatePreview();
+        //m_nodes.move(m_nodes.indexOf(n), 0);
         m_activeNode = n;
         activeNodeChanged();
     }
     else if(qobject_cast<Frame*>(item)) {
         Frame *f = qobject_cast<Frame*>(item);
-        m_frames.move(m_frames.indexOf(f), 0);
+        f->setZ(1);
+        //m_frames.move(m_frames.indexOf(f), 0);
     }
     return true;
 }
@@ -130,9 +133,15 @@ bool Scene::addSelected(QQuickItem *item) {
 bool Scene::deleteSelected(QQuickItem *item) {
     if(m_selectedItem.indexOf(item) < 0) return false;
     m_selectedItem.removeOne(item);
-    if(qobject_cast<Node*>(item) && qobject_cast<Node*>(item) == m_activeNode) {
-        m_activeNode = nullptr;
-        activeNodeChanged();
+    if(qobject_cast<Node*>(item) ) {
+        if(qobject_cast<Node*>(item) == m_activeNode) {
+            m_activeNode = nullptr;
+            activeNodeChanged();
+        }
+        item->setZ(3);
+    }
+    else if(qobject_cast<Frame*>(item)) {
+        item->setZ(0);
     }
     return true;
 }
@@ -142,10 +151,12 @@ void Scene::clearSelected() {
         if(qobject_cast<Node*>(item)) {
             Node *n = qobject_cast<Node*>(item);
             n->setSelected(false);
+            n->setZ(3);
         }
         else if(qobject_cast<Frame*>(item)) {
             Frame *f = qobject_cast<Frame*>(item);
             f->setSelected(false);
+            f->setZ(0);
         }
         else if(qobject_cast<Edge*>(item)) {
             Edge *e = qobject_cast<Edge*>(item);
@@ -382,7 +393,7 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
     }
     else if(event->buttons() == Qt::LeftButton) {
         if(!rectSelect) {
-            rectView = new QQuickView();
+           // rectView = new QQuickView();
             rectView->setSource(QUrl(QStringLiteral("qrc:/qml/RectSelection.qml")));
             rectSelect = qobject_cast<QQuickItem*>(rectView->rootObject());
             rectSelect->setParentItem(this);
@@ -429,9 +440,9 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
 void Scene::mouseReleaseEvent(QMouseEvent *event) {
     if(rectSelect) {
         delete rectSelect;
-        delete rectView;
+        //delete rectView;
         rectSelect = nullptr;
-        rectView = nullptr;
+        //rectView = nullptr;
         selectedItems(QList<QQuickItem*>());
     }
     if(cutLine) {
@@ -488,6 +499,7 @@ void Scene::deserialize(const QJsonObject &json) {
     background()->setViewPan(QVector2D(0, 0));
     if(json.contains("resX") && json.contains("resY")) {
         m_resolution = QVector2D(json["resX"].toInt(), json["resY"].toInt());
+        m_preview3d->setTexResolution(m_resolution);
     }
 
     QHash<QUuid, Socket*> socketsHash;

@@ -238,6 +238,7 @@ SelectCommand::~SelectCommand() {
     m_items.clear();
     m_oldSelected.clear();
     m_scene = nullptr;
+    std::cout << "select command delete" << std::endl;
 }
 
 void SelectCommand::undo() {

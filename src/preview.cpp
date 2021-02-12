@@ -38,6 +38,9 @@ void PreviewObject::mousePressEvent(QMouseEvent *event) {
         lastX = event->pos().x();
         lastY = event->pos().y();
     }
+    else {
+        event->setAccepted(false);
+    }
 }
 
 void PreviewObject::mouseMoveEvent(QMouseEvent *event) {

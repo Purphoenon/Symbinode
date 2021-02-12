@@ -34,6 +34,7 @@ Rectangle {
     color: flowContainer.contain ? "#3A3C3E" : "transparent"
     MouseArea {
         anchors.fill: parent
+        enabled: flowContainer.contain
         acceptedButtons: Qt.AllButtons
         onClicked: {
             focus = true

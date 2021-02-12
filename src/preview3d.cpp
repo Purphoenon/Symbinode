@@ -65,7 +65,7 @@ void Preview3DObject::mouseMoveEvent(QMouseEvent *event) {
         QVector3D z = QVector3D(0, 0, 0).project(model*view, projection, QRect(0, 0, width(), height()));
         QVector3D viewPosNew = QVector3D(event->pos().x(), event->pos().y(), z.z());
         QVector3D worldPosNew = viewPosNew.unproject(model*view, projection, QRect(0, 0, width(), height()));
-        QVector3D offset = QVector3D(worldPosNew.x() - lastWorldPos.x(), lastWorldPos.y() - worldPosNew.y(), 0);
+        QVector3D offset = QVector3D(worldPosNew.x() - lastWorldPos.x(), worldPosNew.y() - lastWorldPos.y(), 0);
         m_posCam += offset;
         lastX = event->pos().x();
         lastY = event->pos().y();
@@ -171,7 +171,7 @@ void Preview3DObject::setTexResolution(QVector2D res) {
 }
 
 void Preview3DObject::updateAlbedo(QVariant albedo, bool useTexture) {
-    useAlbedoTex = useTexture;
+    useAlbedoTex = useTexture;    
     m_albedo = albedo;
     changedAlbedo = useTexture;
     update();
@@ -855,7 +855,7 @@ void Preview3DRenderer::updateOutputsTexture(unsigned int &dst, const unsigned i
     GLubyte *pixels = new GLubyte[m_texResolution.x()*m_texResolution.y()*4];
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glBindTexture(GL_TEXTURE_2D, dst);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
     delete [] pixels;

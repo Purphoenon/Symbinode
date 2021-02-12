@@ -742,91 +742,100 @@ MainWindow {
                     }
                 }                
             }
-            Rectangle{
-                id: itemNodeViewParams
-                x: 5
-                y: 30
-                z: 1
-                width: 24
-                height: 24
-                radius: 2
-                visible: tabsList.children.length > 0
-                color: "#303133"
-                Image {
-                    x: 4
-                    y: 4
-                    parent: nodeViewParams.opened ? nodeViewParamsClose : itemNodeViewParams
-                    source: "qrc:/icons/params (2).svg"
-                }
-                MouseArea {
-                    z: 1
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        nodeViewParams.open()
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onPressed: {
+                    if(mouse.buttons == Qt.RightButton){
+                        nodeViewParams.popup()
                     }
-                }
-                Popup {
-                    id: nodeViewParams
-                    x: 0
-                    z: 0
-                    width: 150
-                    height: contentItem.implicitHeight
-                    padding: 0
-
-                    MouseArea {
-                        id: nodeViewParamsClose
-                        x: 0
-                        z: 1
-                        width: 24
-                        height: 24
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            nodeViewParams.close()
-                        }
+                    else {
+                        mouse.accepted = false
                     }
-
-                    contentItem: Item {
-                        width: 100
-                        implicitHeight: 100
-                        Rectangle {
-                            id: saveTextureItem
-                            y: 20
-                            height: 30
-                            width: parent.width
-                            color: "transparent"
-                            Text {
-                                height: 30
-                                x: 28
-                                verticalAlignment: Text.AlignVCenter
-                                text: qsTr("Save texture")
-                                color: "#A2A2A2"
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                onEntered: {
-                                    saveTextureItem.color = "#404347"
-                                }
-                                onExited: {
-                                    saveTextureItem.color = "transparent"
-                                }
-                                onClicked:  {
-                                    mainWindow.saveCurrentTexture()
-                                    nodeViewParams.close()
-                                }
-                            }
-                        }
-                    }
-
-                    background:
-                        Rectangle {
-                            width: 150
-                            radius: 2
-                            color: "#2C2D2F"
-                        }
                 }
             }
+            Menu {
+                id: nodeViewParams
+                Action {
+                    text: "Save texture"
+                    onTriggered: {
+                        mainWindow.saveCurrentTexture()
+                    }
+                }
+                background: Rectangle {
+                                implicitWidth: 120
+                                implicitHeight: 30
+                                color: "#2C2D2F"
+                            }
+                delegate: MenuItem {
+                    id: menuNodeView
+                    width: 120
+                    height: 30
+                    leftPadding: 15
+                    contentItem: Text {
+                                leftPadding: 10
+                                rightPadding: 10
+                                text: menuNodeView.text
+                                color: "#A2A2A2"
+                                horizontalAlignment: Text.AlignLeft
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+                    background: Rectangle {
+                          implicitWidth: 120
+                          implicitHeight: 30
+                          color: menuNodeView.highlighted ? "#404347" : "transparent"
+                      }
+                }
+            }
+            /*Popup {
+                id: nodeViewParams
+                //x: 0
+                z: 0
+                width: 150
+                height: contentItem.implicitHeight
+                padding: 0
+
+                contentItem: Item {
+                    width: 100
+                    implicitHeight: 100
+                    Rectangle {
+                        id: saveTextureItem
+                        y: 20
+                        height: 30
+                        width: parent.width
+                        color: "transparent"
+                        Text {
+                            height: 30
+                            x: 28
+                            verticalAlignment: Text.AlignVCenter
+                            text: qsTr("Save texture")
+                            color: "#A2A2A2"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onEntered: {
+                                saveTextureItem.color = "#404347"
+                            }
+                            onExited: {
+                                saveTextureItem.color = "transparent"
+                            }
+                            onClicked:  {
+                                mainWindow.saveCurrentTexture()
+                                nodeViewParams.close()
+                            }
+                        }
+                    }
+                }
+
+                background:
+                    Rectangle {
+                        width: 150
+                        radius: 2
+                        color: "#2C2D2F"
+                    }
+            }*/
         }
     }
     DockPanel {

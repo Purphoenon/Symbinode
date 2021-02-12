@@ -59,7 +59,7 @@ void main() {
     }
     float s = strength == 0 ? 0.05 : strength;
     vec3 norm = normalize(vec3(dx, dy, 1.0/abs(s))) * 0.5 + 0.5;
-    if(strength < 0) {
+    if(strength > 0) {
        norm.y = 1.0 - norm.y;
     }
     FragColor = vec4(norm, 1.0);
