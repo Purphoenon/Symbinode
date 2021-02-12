@@ -39,6 +39,7 @@ public:
     Edge(QQuickItem *parent = nullptr);
     Edge(const Edge &edge);
     ~Edge();
+    bool intersectWith(QPointF p1, QPointF p2);
     QVector2D startPosition();
     void setStartPosition(QVector2D pos);
     QVector2D endPosition();
@@ -51,7 +52,7 @@ public:
     bool selected();
     void setSelected(bool selected);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 signals:
     void startPositionChanged(QVector2D pos);
     void endPositionChanged(QVector2D pos);

@@ -62,18 +62,13 @@ vec3 getNormalFromMap()
 
     vec3 Q1  = dFdx(WorldPos);
     vec3 Q2  = dFdy(WorldPos);
-    vec2 st1 = dFdx(coords);
-    vec2 st2 = dFdy(coords);
-    float f = 1.0/(st1.x*st2.y - st2.x*st1.y);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
 
-    vec3 N = normalize(Normal);
-    vec3 dp2perp = cross(Q2, N);
-    vec3 dp1perp = cross(N, Q1);
-
-    vec3 T = normalize(dp2perp*st1.x + dp1perp*st2.x);
-    vec3 B = normalize(dp2perp*st1.y + dp1perp*st2.y);
-    float invmax = inversesqrt(max(dot(T, T), dot(B, B)));
-    mat3 TBN = mat3(T*invmax, B*invmax, N);
+    vec3 N   = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
 
     return normalize(TBN * tangentNormal);
 }

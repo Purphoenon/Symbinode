@@ -33,7 +33,7 @@ MirrorNode::MirrorNode(QQuickItem *parent, QVector2D resolution, int dir): Node(
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &MirrorNode::updateScale);
-    connect(this, &Node::changeSelected, this, &MirrorNode::updatePrev);
+    connect(this, &Node::generatePreview, this, &MirrorNode::previewGenerated);
     connect(preview, &MirrorObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MirrorObject::textureChanged, this, &MirrorNode::setOutput);
     connect(this, &Node::changeResolution, preview, &MirrorObject::setResolution);
@@ -43,6 +43,7 @@ MirrorNode::MirrorNode(QQuickItem *parent, QVector2D resolution, int dir): Node(
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startDirection", m_direction);
     connect(propertiesPanel, SIGNAL(directionChanged(int)), this, SLOT(updateDirection(int)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Mirror");
     m_socketsInput[0]->setTip("Texture");
@@ -59,14 +60,22 @@ void MirrorNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &MirrorNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void MirrorNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void MirrorNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 5;
     json["direction"] = m_direction;
 }
 
-void MirrorNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void MirrorNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("direction")) {
         updateDirection(json["direction"].toInt());
         propertiesPanel->setProperty("startDirection", m_direction);
@@ -88,11 +97,9 @@ void MirrorNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void MirrorNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void MirrorNode::previewGenerated() {
+    preview->mirroredTex = true;
+    preview->update();
 }
 
 void MirrorNode::setOutput() {

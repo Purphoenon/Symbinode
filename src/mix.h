@@ -24,12 +24,13 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class MixObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int mode = 0);
+    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int mode = 0, bool includingAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int firstTexture();
     void setFirstTexture(unsigned int texture);
@@ -37,10 +38,13 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int secondTexture();
     void setSecondTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     QVariant factor();
     void setFactor(QVariant f);
     int mode();
     void setMode(int mode);
+    bool includingAlpha();
+    void setIncludingAlpha(bool including);
     QVector2D resolution();
     void setResolution(QVector2D res);
     unsigned int &texture();
@@ -49,14 +53,17 @@ public:
     bool selectedItem = false;
     bool useFactorTexture = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     unsigned int m_firstTexture = 0;
     unsigned int m_secondTexture = 0;
     QVariant m_factor = QVariant(0.5f);
     int m_mode = 0;
+    bool m_includingAlpha = true;
     QVector2D m_resolution;
     unsigned int m_texture = 0;
     unsigned int m_maskTexture = 0;
@@ -72,7 +79,9 @@ public:
 private:
     void mix();
     void updateTextureRes();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *mixShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     unsigned int firstTexture = 0;
     unsigned int secondTexture = 0;

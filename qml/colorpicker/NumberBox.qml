@@ -60,7 +60,7 @@ Item {
         verticalAlignment: TextInput.AlignVCenter
         horizontalAlignment: TextInput.AlignLeft
         onFocusChanged: {
-            if(!focus) accepted()
+            if(!focus ) accepted()
         }
         onAccepted: {
             focus = false

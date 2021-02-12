@@ -26,6 +26,7 @@ uniform vec2 res;
 uniform float radius = 0.5;
 uniform float smoothValue = 0.01;
 uniform int interpolation = 1; //0 - linear, 1 - Hermite
+uniform bool useAlpha = true;
 uniform bool useMask = false;
 
 out vec4 FragColor;
@@ -49,6 +50,7 @@ void main()
     float circle = 1.0 - t;
 
     vec4 color = vec4(circle);
+    if(!useAlpha) color.a = 1.0;
 
     if(useMask) {
         vec4 maskColor = texture(maskTexture, gl_FragCoord.xy/res);

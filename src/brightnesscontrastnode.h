@@ -32,8 +32,10 @@ public:
     BrightnessContrastNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float brightness = 0.0f, float contrast = 0.0f);
     ~BrightnessContrastNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     float brightness();
     void setBrightness(float value);
     float contrast();
@@ -43,7 +45,7 @@ signals:
     void contrastChanged(float value);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
+    void previewGenerated();
     void setOutput();
     void updateBrightness(qreal value);
     void updateContrast(qreal value);

@@ -23,10 +23,9 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int mode):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_factor(factor), m_mode(mode)
+MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int mode, bool includingAlpha):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_factor(factor), m_mode(mode), m_includingAlpha(includingAlpha)
 {
-     setMirrorVertically(true);
 }
 
 QQuickFramebufferObject::Renderer *MixObject::createRenderer() const {
@@ -57,6 +56,12 @@ void MixObject::setSecondTexture(unsigned int texture) {
     m_secondTexture = texture;
 }
 
+void MixObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
+}
+
 QVariant MixObject::factor() {
     return m_factor;
 }
@@ -71,6 +76,14 @@ int MixObject::mode() {
 
 void MixObject::setMode(int mode) {
     m_mode = mode;
+}
+
+bool MixObject::includingAlpha() {
+    return m_includingAlpha;
+}
+
+void MixObject::setIncludingAlpha(bool including) {
+    m_includingAlpha = including;
 }
 
 QVector2D MixObject::resolution() {
@@ -94,6 +107,7 @@ void MixObject::setTexture(unsigned int texture) {
 
 MixRenderer::~MixRenderer() {
     delete mixShader;
+    delete checkerShader;
     delete renderTexture;
 }
 
@@ -104,6 +118,11 @@ MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
     mixShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     mixShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/mix.frag");
     mixShader->link();
+
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
 
     renderTexture = new QOpenGLShaderProgram();
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -175,6 +194,7 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
             mixShader->bind();
             mixShader->setUniformValue(mixShader->uniformLocation("useFactorTex"), mixItem->useFactorTexture);
             mixShader->setUniformValue(mixShader->uniformLocation("mode"), mixItem->mode());
+            mixShader->setUniformValue(mixShader->uniformLocation("includingAlpha"), mixItem->includingAlpha());
             mixShader->setUniformValue(mixShader->uniformLocation("useMask"), maskTexture);
             mixShader->release();
             if(mixItem->useFactorTexture) {
@@ -185,20 +205,29 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
             }
             mix();
             mixItem->setTexture(mixTexture);
-            if(mixItem->selectedItem) {
-               mixItem->updatePreview(mixTexture, true);
-            }
+            mixItem->updatePreview(mixTexture);
         }
-    }    
+    }
+    if(mixItem->texSaving) {
+        mixItem->texSaving = false;
+        saveTexture(mixItem->saveName);
+    }
 }
 
 void MixRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    if(mixTexture) {
+
+    checkerShader->bind();
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
+    if(firstTexture || secondTexture) {
         renderTexture->bind();
         glBindVertexArray(VAO);
         glActiveTexture(GL_TEXTURE0);
@@ -239,4 +268,45 @@ void MixRenderer::updateTextureRes() {
     glBindTexture(GL_TEXTURE_2D, mixTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void MixRenderer::saveTexture(QString fileName) {
+    qDebug("texture save");
+    unsigned int fbo;
+    unsigned int texture;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderTexture->bind();
+    glBindVertexArray(VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, mixTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    renderTexture->release();
+
+    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

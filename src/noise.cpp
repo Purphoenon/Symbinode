@@ -24,10 +24,10 @@
 #include <iostream>
 
 NoiseObject::NoiseObject(QQuickItem *parent, QVector2D resolution, QString type, float noiseScale,
-                         float scaleX, float scaleY, int layers, float persistence, float amplitude):
-    QQuickFramebufferObject (parent), m_noiseType(type), m_noiseScale(noiseScale), m_scaleX(scaleX),
-    m_scaleY(scaleY), m_layers(layers), m_persistence(persistence), m_amplitude(amplitude),
-    m_resolution(resolution)
+                         float scaleX, float scaleY, int layers, float persistence, float amplitude,
+                         int seed): QQuickFramebufferObject (parent), m_noiseType(type),
+    m_noiseScale(noiseScale), m_scaleX(scaleX), m_scaleY(scaleY), m_layers(layers),
+    m_persistence(persistence), m_amplitude(amplitude), m_seed(seed), m_resolution(resolution)
 {
 
 }
@@ -43,6 +43,12 @@ unsigned int NoiseObject::maskTexture() {
 void NoiseObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     generatedNoise = true;
+    update();
+}
+
+void NoiseObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
     update();
 }
 
@@ -116,6 +122,16 @@ void NoiseObject::setAmplitude(float value) {
     update();
 }
 
+int NoiseObject::seed() {
+    return m_seed;
+}
+
+void NoiseObject::setSeed(int seed) {
+    m_seed = seed;
+    generatedNoise = true;
+    update();
+}
+
 QVector2D NoiseObject::resolution() {
     return m_resolution;
 }
@@ -142,6 +158,11 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
     generateNoise->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
     generateNoise->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/noise.frag");
     generateNoise->link();
+
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
 
     renderTexture = new QOpenGLShaderProgram();
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -171,10 +192,10 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO2;
     glGenVertexArrays(1, &textureVAO);
     glBindVertexArray(textureVAO);
@@ -201,11 +222,12 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    createNoise();
+    //createNoise();
 }
 
 NoiseRenderer::~NoiseRenderer() {
     delete generateNoise;
+    delete checkerShader;
     delete renderTexture;
 }
 
@@ -238,20 +260,32 @@ void NoiseRenderer::synchronize(QQuickFramebufferObject *item) {
         generateNoise->setUniformValue(generateNoise->uniformLocation("octaves"), noiseItem->layers());
         generateNoise->setUniformValue(generateNoise->uniformLocation("persistence"), noiseItem->persistence());
         generateNoise->setUniformValue(generateNoise->uniformLocation("amplitude"), noiseItem->amplitude());
+        generateNoise->setUniformValue(generateNoise->uniformLocation("seed"), noiseItem->seed());
         generateNoise->setUniformValue(generateNoise->uniformLocation("res"), m_resolution);
         generateNoise->setUniformValue(generateNoise->uniformLocation("useMask"), m_maskTexture);
         createNoise();
-        if(noiseItem->selectedItem) noiseItem->updatePreview(noiseTexture, true);
         noiseItem->setTexture(noiseTexture);
+        noiseItem->updatePreview(noiseTexture);
+    }
+    if(noiseItem->texSaving) {
+        noiseItem->texSaving = true;
+        saveTexture(noiseItem->saveName);
     }
 }
 
 void NoiseRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(noiseVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     renderTexture->bind();
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
@@ -286,4 +320,46 @@ void NoiseRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, noiseTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void NoiseRenderer::saveTexture(QString fileName) {
+    qDebug("texture save");
+    unsigned int fbo;
+    unsigned int texture;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderTexture->bind();
+    glBindVertexArray(textureVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, noiseTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    renderTexture->release();
+
+    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

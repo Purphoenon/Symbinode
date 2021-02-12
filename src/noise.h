@@ -24,16 +24,18 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class NoiseObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
     NoiseObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString type = "noisePerlin", float noiseScale = 5.0f, float scaleX = 1.0f, float scaleY = 1.0f, int layers = 8, float persistence = 0.5f,
-                float amplitude = 1.0f);
+                float amplitude = 1.0f, int seed = 1);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     QString noiseType();
     void setNoiseType(QString type);
     float noiseScale();
@@ -48,6 +50,8 @@ public:
     void setPersistence(float value);
     float amplitude();
     void setAmplitude(float value);
+    int seed();
+    void setSeed(int seed);
     QVector2D resolution();
     void setResolution(QVector2D res);
     unsigned int &texture();
@@ -55,8 +59,10 @@ public:
     bool generatedNoise = true;
     bool resUpdated = false;
     bool selectedItem = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void changedTexture();
 private:
     QString m_noiseType = "noisePerlin";
@@ -66,6 +72,7 @@ private:
     int m_layers = 8;
     float m_persistence = 0.5f;
     float m_amplitude = 1.0f;
+    int m_seed = 1;
     unsigned int m_texture = 0;
     QVector2D m_resolution;
     unsigned int m_maskTexture = 0;
@@ -81,7 +88,9 @@ public:
 private:
     void createNoise();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *generateNoise;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     unsigned int noiseFBO;
     unsigned int noiseVAO, textureVAO;

@@ -34,6 +34,10 @@ public:
     QQuickFramebufferObject::Renderer *createRenderer() const;
     QVariant value();
     void setValue(QVariant val);
+    void setColorTexture(unsigned int texture);
+    void setSourceTexture(unsigned int texture);
+    unsigned int &texture();
+    void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool useTex = false;
@@ -41,10 +45,12 @@ public:
     bool texSaving = false;
     QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void updateValue(QVariant data, bool useTexture);
 private:
     QVariant m_value;
+    unsigned int m_colorTexture = 0;
+    unsigned int m_sourceTexture = 0;
     QVector2D m_resolution;
 };
 
@@ -57,11 +63,14 @@ public:
     void synchronize(QQuickFramebufferObject *item);
     void render();
 private:
-    void saveTexture(QString dir);
+    void createColor();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *renderChanel;
     float val = 0.0f;
     QVector2D m_resolution;
-    unsigned int texture = 0;
+    unsigned int m_colorFBO = 0;
+    unsigned int m_colorTexture = 0;
+    unsigned int texture = 0;    
     unsigned int VAO = 0;
 };
 

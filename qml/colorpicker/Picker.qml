@@ -29,6 +29,8 @@ Item {
     property real proportionX: 0
     property real proportionY: 0
     signal sbChanged(real s, real b)
+    signal sbChangingFinished()
+    signal sbChangingStarted()
     width: 250; height: 120
     clip: true
 
@@ -92,15 +94,20 @@ Item {
                 if (mouse.buttons & Qt.LeftButton) {
                     proportionX = Math.max(0, Math.min(1,  mouse.x/(parent.width)));
                     proportionY = Math.max(0, Math.min(1, mouse.y/parent.height));
-                    saturation = proportionX
-                    brightness = 1 - proportionY
+                    //saturation = proportionX
+                    //brightness = 1 - proportionY
                 }
             }
             onPositionChanged: {
                 handleMouse(mouse)
                 sbChanged(saturation, brightness)
             }
-            onPressed: handleMouse(mouse)
+            onPressed: {
+                sbChangingStarted()
+                handleMouse(mouse)
+                sbChanged(saturation, brightness)
+            }
+            onReleased: sbChangingFinished()
         }
     }
 }

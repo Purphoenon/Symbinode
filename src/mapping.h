@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class MappingObject: public QQuickFramebufferObject
 {
@@ -38,6 +39,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int sourceTexture();
     void setSourceTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     float inputMin();
     void setInputMin(float value);
     float inputMax();
@@ -51,8 +53,10 @@ public:
     bool mappedTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     QVector2D m_resolution;
@@ -75,6 +79,7 @@ public:
 private:
     void map();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int mappingFBO;
     unsigned int m_mappingTexture = 0;
@@ -82,6 +87,7 @@ private:
     unsigned int maskTexture = 0;
     unsigned int textureVAO = 0;
     QOpenGLShaderProgram *mappingShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

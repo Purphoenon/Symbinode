@@ -26,31 +26,37 @@ Item {
     height: childrenRect.height + 30
     width: parent.width
     property alias startMode: control.currentIndex
+    property alias startincludingAlpha: includingAlphaParam.checked
     property real startFactor
     signal modeChanged(int mode)
     signal factorChanged(real f)
+    signal includingAlphaChanged(bool including)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
         id: control
         y: 15
         model: ["Mix", "Add", "Multiply", "Substract", "Divide"]
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 modeChanged(0)
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 modeChanged(1)
             }
-            else if(index == 2) {
+            else if(currentIndex == 2) {
                 modeChanged(2)
             }
-            else if(index == 3) {
+            else if(currentIndex == 3) {
                 modeChanged(3)
             }
-            else if(index == 4) {
+            else if(currentIndex == 4) {
                 modeChanged(4)
             }
             focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startMode", currentIndex, oldIndex)
         }
     }
 
@@ -61,6 +67,57 @@ Item {
         propertyValue: startFactor
         onPropertyValueChanged: {
             factorChanged(factorParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startFactor", propertyValue, oldValue)
+        }
+    }
+
+    CheckBox {
+        id: includingAlphaParam
+        y: 86
+        leftPadding: 30
+        height: 25
+        width: 135
+        text: qsTr("Including alpha")
+        checked: true
+        onCheckedChanged: {
+            includingAlphaChanged(checked)
+        }
+        onToggled: {
+            propertyChangingFinished("startIncludingAlpha", checked, !checked)
+            focus = false
+        }
+
+        indicator: Item {
+                       implicitWidth: 30
+                       implicitHeight: 30
+                       x: includingAlphaParam.contentItem.width + 5
+                       anchors.verticalCenter: parent.verticalCenter
+                       Rectangle {
+                           width: 14
+                           height: 14
+                           anchors.centerIn: parent
+                           color: "transparent"
+                           border.color: "#A2A2A2"
+                           Rectangle {
+                               width: 6
+                               height: 6
+                               anchors.centerIn: parent
+                               visible: includingAlphaParam.checked
+                               color: "#A2A2A2"
+                           }
+                       }
+                   }
+
+        contentItem: Text {
+            topPadding: 0
+            text: includingAlphaParam.text
+            color: "#A2A2A2"
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+            renderType: Text.NativeRendering
         }
     }
 }

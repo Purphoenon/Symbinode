@@ -26,7 +26,7 @@
 Preview3DObject::Preview3DObject(QQuickItem *parent): QQuickFramebufferObject (parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
-    setMirrorVertically(true);
+    //setMirrorVertically(true);
 }
 
 QQuickFramebufferObject::Renderer *Preview3DObject::createRenderer() const {
@@ -65,7 +65,7 @@ void Preview3DObject::mouseMoveEvent(QMouseEvent *event) {
         QVector3D z = QVector3D(0, 0, 0).project(model*view, projection, QRect(0, 0, width(), height()));
         QVector3D viewPosNew = QVector3D(event->pos().x(), event->pos().y(), z.z());
         QVector3D worldPosNew = viewPosNew.unproject(model*view, projection, QRect(0, 0, width(), height()));
-        QVector3D offset = QVector3D(worldPosNew.x() - lastWorldPos.x(), lastWorldPos.y() - worldPosNew.y(), 0);
+        QVector3D offset = QVector3D(worldPosNew.x() - lastWorldPos.x(), worldPosNew.y() - lastWorldPos.y(), 0);
         m_posCam += offset;
         lastX = event->pos().x();
         lastY = event->pos().y();
@@ -75,7 +75,7 @@ void Preview3DObject::mouseMoveEvent(QMouseEvent *event) {
     }
     else if(event->buttons() == Qt::MidButton) {
         theta += 0.01f*(event->pos().x() - lastX);
-        phi -= 0.01f*(lastY - event->pos().y());
+        phi += 0.01f*(lastY - event->pos().y());
 
         float x = 0;
         float y = sin(theta/2);
@@ -160,26 +160,40 @@ unsigned int Preview3DObject::normal() {
     return m_normal;
 }
 
+QVector2D Preview3DObject::texResolution() {
+    return m_texResolution;
+}
+
+void Preview3DObject::setTexResolution(QVector2D res) {
+    m_texResolution = res;
+    updateRes = true;
+    update();
+}
+
 void Preview3DObject::updateAlbedo(QVariant albedo, bool useTexture) {
-    useAlbedoTex = useTexture;
+    useAlbedoTex = useTexture;    
     m_albedo = albedo;
+    changedAlbedo = useTexture;
     update();
 }
 
 void Preview3DObject::updateMetal(QVariant metal, bool useTexture) {
     useMetalTex = useTexture;
     m_metalness = metal;
+    changedMetal = useTexture;
     update();
 }
 
 void Preview3DObject::updateRough(QVariant rough, bool useTexture) {
     useRoughTex = useTexture;
     m_roughness = rough;
+    changedRough = useTexture;
     update();
 }
 
 void Preview3DObject::updateNormal(unsigned int normal) {
     m_normal = normal;
+    changedNormal = true;
     update();
 }
 
@@ -417,6 +431,42 @@ Preview3DRenderer::Preview3DRenderer() {
     brdfShader->release();
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glGenTextures(1, &albedoTexture);
+    glBindTexture(GL_TEXTURE_2D, albedoTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenTextures(1, &normalTexture);
+    glBindTexture(GL_TEXTURE_2D, normalTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenTextures(1, &metalTexture);
+    glBindTexture(GL_TEXTURE_2D, metalTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenTextures(1, &roughTexture);
+    glBindTexture(GL_TEXTURE_2D, roughTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 Preview3DRenderer::~Preview3DRenderer() {
@@ -457,31 +507,49 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
         rotQuat = previewItem->rotQuat();
         updateMatrix();
     }
+    if(previewItem->updateRes) {
+        previewItem->updateRes = false;
+        m_texResolution = previewItem->texResolution();
+        updateTexResolution();
+    }
     pbrShader->bind();
     pbrShader->setUniformValue(pbrShader->uniformLocation("tilesSize"), previewItem->tilesSize());
     pbrShader->setUniformValue(pbrShader->uniformLocation("useAlbMap"), previewItem->useAlbedoTex);
     if(previewItem->useAlbedoTex) {
-        albedoTexture = previewItem->albedo().toUInt();
+        if(previewItem->changedAlbedo) {
+            previewItem->changedAlbedo = false;
+            updateOutputsTexture(albedoTexture, previewItem->albedo().toUInt());
+        }
     }
     else {
         pbrShader->setUniformValue(pbrShader->uniformLocation("albedoVal"), qvariant_cast<QVector3D>(previewItem->albedo()));
     }
     pbrShader->setUniformValue(pbrShader->uniformLocation("useMetalMap"), previewItem->useMetalTex);
     if(previewItem->useMetalTex) {
-        metalTexture = previewItem->metalness().toUInt();
+        if(previewItem->changedMetal) {
+            previewItem->changedMetal = false;
+            updateOutputsTexture(metalTexture, previewItem->metalness().toUInt());
+        }
     }
     else {
         pbrShader->setUniformValue(pbrShader->uniformLocation("metallicVal"), previewItem->metalness().toFloat());
     }
     pbrShader->setUniformValue(pbrShader->uniformLocation("useRoughMap"), previewItem->useRoughTex);
     if(previewItem->useRoughTex) {
-        roughTexture = previewItem->roughness().toUInt();
+        if(previewItem->changedRough) {
+            previewItem->changedRough = false;
+            updateOutputsTexture(roughTexture, previewItem->roughness().toUInt());
+        }
     }
     else {
         pbrShader->setUniformValue(pbrShader->uniformLocation("roughnessVal"), previewItem->roughness().toFloat());
     }
-    normalTexture = previewItem->normal();
-    bool useNorm = normalTexture ? true : false;
+
+    if(previewItem->changedNormal) {
+        previewItem->changedNormal = false;
+        updateOutputsTexture(normalTexture, previewItem->normal());
+    }
+    bool useNorm = previewItem->normal() ? true : false;
     pbrShader->setUniformValue(pbrShader->uniformLocation("useNormMap"), useNorm);
     pbrShader->release();
 }
@@ -666,7 +734,7 @@ void Preview3DRenderer::renderSphere() {
                 float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
 
                 positions.push_back(QVector3D(xPos, yPos, zPos));
-                uv.push_back(QVector2D(xSegment*2, 1.0f - ySegment));
+                uv.push_back(QVector2D(2.0f - xSegment*2, 1.0f - ySegment));
                 normals.push_back(QVector3D(xPos, yPos, zPos));
             }
         }
@@ -770,3 +838,25 @@ void Preview3DRenderer::updateMatrix() {
     model.rotate(rotQuat);
 }
 
+void Preview3DRenderer::updateTexResolution() {
+    glBindTexture(GL_TEXTURE_2D, albedoTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, roughTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, metalTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, normalTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Preview3DRenderer::updateOutputsTexture(unsigned int &dst, const unsigned int &src) {
+    glBindTexture(GL_TEXTURE_2D, src);
+    GLubyte *pixels = new GLubyte[m_texResolution.x()*m_texResolution.y()*4];
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glBindTexture(GL_TEXTURE_2D, dst);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    delete [] pixels;
+}

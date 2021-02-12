@@ -29,11 +29,13 @@ class TileNode: public Node
 {
     Q_OBJECT
 public:
-    TileNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, bool keepProportion = false);
+    TileNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true);
     ~TileNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     float offsetX();
     void setOffsetX(float offset);
     float offsetY();
@@ -58,8 +60,12 @@ public:
     void setMaskStrength(float mask);
     int inputsCount();
     void setInputsCount(int count);
+    int seed();
+    void setSeed(int seed);
     bool keepProportion();
     void setKeepProportion(bool keep);
+    bool useAlpha();
+    void setUseAlpha(bool use);
     void setOutput();
 signals:
     void offsetXChanged(float offset);
@@ -74,10 +80,11 @@ signals:
     void randScaleChanged(float rand);
     void maskStrengthChanged(float mask);
     void inputsCountChanged(int count);
+    void seedChanged(int seed);
     void keepProportionChanged(bool keep);
+    void useAlphaChanged(bool use);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void previewGenerated();
     void updateOffsetX(qreal offset);
     void updateOffsetY(qreal offset);
@@ -91,7 +98,9 @@ public slots:
     void updateRandScale(qreal rand);
     void updateMaskStrength(qreal mask);
     void updateInputsCount(int count);
+    void updateSeed(int seed);
     void updateKeepProportion(bool keep);
+    void updateUseAlpha(bool use);
 private:
     TileObject *preview;
     float m_offsetX = 0.0f;
@@ -106,7 +115,9 @@ private:
     float m_randScale = 0.0f;
     float m_maskStrength = 0.0f;
     int m_inputsCount = 1;
+    int m_seed = 1;
     bool m_keepProportion = false;
+    bool m_useAlpha = true;
 };
 
 #endif // TILENODE_H

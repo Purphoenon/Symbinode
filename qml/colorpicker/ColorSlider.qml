@@ -26,6 +26,8 @@ Item {
     property real value: (1 - pickerCursor.x/width)
     property real proportionX: 0
     signal hueChanged(real hueValue)
+    signal hueChangingStarted()
+    signal hueChangingFinished()
     width: 300; height: 15
     Item {
         id: pickerCursor
@@ -59,6 +61,10 @@ Item {
             handleMouse(mouse)
             hueChanged(colorSlider.value)
         }
-        onPressed: handleMouse(mouse)
+        onPressed: {
+            hueChangingStarted()
+            handleMouse(mouse)
+        }
+        onReleased: hueChangingFinished()
     }
 }

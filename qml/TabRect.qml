@@ -83,7 +83,7 @@ Rectangle {
         y: 8
         anchors.right: parent.right
         anchors.rightMargin: 8
-        source: "qrc:/icons/tab-close.svg"
+        source: "qrc:/icons/tab-close-3.png"
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor

@@ -30,7 +30,6 @@ bool gradientSort(QVector4D f, QVector4D s) {
 ColorRampObject::ColorRampObject(QQuickItem *parent, QVector2D resolution, QJsonArray stops):
     QQuickFramebufferObject (parent), m_resolution(resolution)
 {
-    setMirrorVertically(true);
     m_stops.clear();
     for(auto s: stops) {
         QJsonArray g = s.toArray();
@@ -59,6 +58,12 @@ unsigned int ColorRampObject::maskTexture() {
 void ColorRampObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     rampedTex = true;
+    update();
+}
+
+void ColorRampObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
     update();
 }
 
@@ -96,10 +101,10 @@ void ColorRampObject::setResolution(QVector2D res) {
     update();
 }
 
-void ColorRampObject::gradientAdd(QVector3D color, qreal pos) {
+void ColorRampObject::gradientAdd(QVector3D color, qreal pos, int index) {
     rampedTex = true;
     QVector4D grad = QVector4D(color, pos);
-    m_stops.push_back(grad);
+    m_stops.insert(m_stops.begin() + index, grad);
     update();
 }
 
@@ -129,6 +134,10 @@ ColorRampRenderer::ColorRampRenderer(QVector2D res): m_resolution(res) {
     colorRampShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     colorRampShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/colorramp.frag");
     colorRampShader->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -178,6 +187,7 @@ ColorRampRenderer::ColorRampRenderer(QVector2D res): m_resolution(res) {
 
 ColorRampRenderer::~ColorRampRenderer() {
     delete colorRampShader;
+    delete checkerShader;
     delete textureShader;
 }
 
@@ -202,18 +212,29 @@ void ColorRampRenderer::synchronize(QQuickFramebufferObject *item) {
         if(m_sourceTexture) {
             maskTexture = colorRampItem->maskTexture();
             colorRamp(colorRampItem->stops());
-            if(colorRampItem->selectedItem) colorRampItem->updatePreview(m_colorTexture, true);
             colorRampItem->setTexture(m_colorTexture);
+            colorRampItem->updatePreview(m_colorTexture);
         }
-    }    
+    }
+    if(colorRampItem->texSaving)  {
+        colorRampItem->texSaving = false;
+        saveTexture(colorRampItem->saveName);
+    }
 }
 
 void ColorRampRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(textureVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     if(m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();
@@ -260,5 +281,47 @@ void ColorRampRenderer::updateTexResolution() {
         GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void ColorRampRenderer::saveTexture(QString fileName) {
+    qDebug("texture save");
+    unsigned int fbo;
+    unsigned int texture;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindVertexArray(textureVAO);
+    textureShader->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    textureShader->release();
+    glBindVertexArray(0);
+
+    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

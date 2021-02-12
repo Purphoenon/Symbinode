@@ -38,6 +38,9 @@ void PreviewObject::mousePressEvent(QMouseEvent *event) {
         lastX = event->pos().x();
         lastY = event->pos().y();
     }
+    else {
+        event->setAccepted(false);
+    }
 }
 
 void PreviewObject::mouseMoveEvent(QMouseEvent *event) {
@@ -94,27 +97,8 @@ QVector2D PreviewObject::previewPan() {
     return m_pan;
 }
 
-bool PreviewObject::pinned() {
-    return m_pinned;
-}
-
-void PreviewObject::setPinned(bool pin) {
-    m_pinned = pin;
-    pinnedChanged(pin);
-    update();
-}
-
-bool PreviewObject::canUpdatePreview() {
-    return m_canUpdatePreview;
-}
-
-void PreviewObject::setCanUpdatePreview(bool can) {
-    m_canUpdatePreview = can;
-}
-
-void PreviewObject::setPreviewData(QVariant previewData, bool useTexture) {
-    m_data = previewData;
-    this->useTexture = useTexture;
+void PreviewObject::setPreviewData(unsigned int previewData) {
+    m_previewTexture = previewData;
     update();
 }
 
@@ -123,25 +107,28 @@ void PreviewObject::resetView() {
     m_pan = QVector2D(0, 0);
 }
 
-QVariant &PreviewObject::previewData() {
-    return m_data;
+unsigned int &PreviewObject::previewData() {
+    return m_previewTexture;
 }
 
 PreviewRenderer::PreviewRenderer() {
     initializeOpenGLFunctions();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texmatrix.vert");
-    textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/albedo.frag");
+    textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
     textureShader->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     textureShader->bind();
-    textureShader->setUniformValue(textureShader->uniformLocation("useAlbedoTex"), false);
-    textureShader->setUniformValue(textureShader->uniformLocation("albedoTex"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
     textureShader->release();
 
-    float vertQuadTex[] = {0.0f, 0.0f, 0.0f, 1.0f,
-                    0.0f, 1024.0f, 0.0f, 0.0f,
-                    1024.0f, 0.0f, 1.0f, 1.0f,
-                    1024.0f, 1024.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {0.0f, 0.0f, 0.0f, 0.0f,
+                    0.0f, 1024.0f, 0.0f, 1.0f,
+                    1024.0f, 0.0f, 1.0f, 0.0f,
+                    1024.0f, 1024.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -154,6 +141,68 @@ PreviewRenderer::PreviewRenderer() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    float vertQuad[] = {-1.0f, -1.0f,
+                        -1.0f, 1.0f,
+                        1.0f, -1.0f,
+                        1.0f, 1.0f};
+
+    unsigned int VBO2, VAO2;
+    glGenVertexArrays(1, &VAO2);
+    glBindVertexArray(VAO2);
+    glGenBuffers(1, &VBO2);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertQuad), vertQuad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), nullptr);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    float vertChecker[] = {0.0f, 0.0f, 0.0f, 1.0f,
+                           0.0f, 1024.0f, 0.0f, 0.0f,
+                           1024.0f, 0.0f, 1.0f, 1.0f,
+                           1024.0f, 1024.0f, 1.0f, 0.0f};
+
+    unsigned int checkerVBO;
+    glGenVertexArrays(1, &checkerVAO);
+    glBindVertexArray(checkerVAO);
+    glGenBuffers(1, &checkerVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, checkerVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertChecker), vertChecker, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), nullptr);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float)));
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    unsigned int checkerFBO;
+    glGenFramebuffers(1, &checkerFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, checkerFBO);
+    glGenTextures(1, &checkerTexture);
+    glBindTexture(GL_TEXTURE_2D, checkerTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, checkerTexture, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, checkerFBO);
+    glViewport(0, 0, 32, 32);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    checkerShader->bind();
+    glBindVertexArray(VAO2);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, checkerTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 PreviewRenderer::~PreviewRenderer() {
@@ -171,24 +220,9 @@ void PreviewRenderer::synchronize(QQuickFramebufferObject *item) {
     PreviewObject *previewItem = static_cast<PreviewObject*>(item);
     wWidth = previewItem->width();
     wHeight = previewItem->height();
-
-    if(previewItem->canUpdatePreview()) {
-        textureShader->bind();
-        textureShader->setUniformValue(textureShader->uniformLocation("useAlbedoTex"), previewItem->useTexture);
-        textureShader->release();
-        if(previewItem->useTexture) {
-            if(previewItem->previewData().toUInt() != texture) {
-                texture = previewItem->previewData().toUInt();
-                previewItem->resetView();
-            }
-
-        }
-        else {
-            if(color != qvariant_cast<QVector3D>(previewItem->previewData())) {
-                color = qvariant_cast<QVector3D>(previewItem->previewData());
-                previewItem->resetView();
-            }
-        }
+    if(previewItem->previewData() != texture) {
+        texture = previewItem->previewData();
+        previewItem->resetView();
     }
     scale = previewItem->previewScale();
     pan = previewItem->previewPan();
@@ -197,7 +231,7 @@ void PreviewRenderer::synchronize(QQuickFramebufferObject *item) {
 void PreviewRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.227f, 0.235f, 0.243f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     QMatrix4x4 matrix;
@@ -206,17 +240,26 @@ void PreviewRenderer::render() {
     matrix.scale(scale);
     matrix.translate(0.0f, 0.0f, 0.0f);
 
-    textureShader->bind();
-    textureShader->setUniformValue(textureShader->uniformLocation("matrix"), matrix);
-    textureShader->setUniformValue(textureShader->uniformLocation("albedoVal"), color);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    if(texture) {
+        textureShader->bind();
+        textureShader->setUniformValue(textureShader->uniformLocation("matrix"), matrix);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, checkerTexture);
+        glBindVertexArray(checkerVAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    textureShader->release();
+        glBindVertexArray(0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->release();
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindVertexArray(0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->release();
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }

@@ -28,7 +28,6 @@ BrightnessContrastObject::BrightnessContrastObject(QQuickItem *parent, QVector2D
     QQuickFramebufferObject (parent), m_resolution(resolution), m_brightness(brightness),
     m_contrast(contrast)
 {
-    setMirrorVertically(true);
 }
 
 QQuickFramebufferObject::Renderer *BrightnessContrastObject::createRenderer() const {
@@ -51,6 +50,12 @@ unsigned int BrightnessContrastObject::sourceTexture() {
 void BrightnessContrastObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     created = true;
+    update();
+}
+
+void BrightnessContrastObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
     update();
 }
 
@@ -90,6 +95,10 @@ BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res): m_resolut
     brightnessContrastShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     brightnessContrastShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/brightnesscontrast.frag");
     brightnessContrastShader->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -133,6 +142,7 @@ BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res): m_resolut
 
 BrightnessContrastRenderer::~BrightnessContrastRenderer() {
     delete brightnessContrastShader;
+    delete checkerShader;
     delete textureShader;
 }
 
@@ -159,18 +169,29 @@ void BrightnessContrastRenderer::synchronize(QQuickFramebufferObject *item) {
             brightnessContrastShader->setUniformValue(brightnessContrastShader->uniformLocation("contrast"), brightnessContrastItem->contrast());
             brightnessContrastShader->release();
             create();
-            if(brightnessContrastItem->selectedItem) brightnessContrastItem->updatePreview(m_brightnessContrastTexture, true);
             brightnessContrastItem->setTexture(m_brightnessContrastTexture);
+            brightnessContrastItem->updatePreview(m_brightnessContrastTexture);
         }
-    }    
+    }
+    if(brightnessContrastItem->texSaving) {
+        brightnessContrastItem->texSaving = false;
+        saveTexture(brightnessContrastItem->saveName);
+    }
 }
 
 void BrightnessContrastRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(textureVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     if(m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();
@@ -205,4 +226,46 @@ void BrightnessContrastRenderer::updateTexResolution(){
         GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void BrightnessContrastRenderer::saveTexture(QString fileName) {
+    qDebug("texture save");
+    unsigned int fbo;
+    unsigned int texture;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindVertexArray(textureVAO);
+    textureShader->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_brightnessContrastTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    textureShader->release();
+    glBindVertexArray(0);
+
+    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

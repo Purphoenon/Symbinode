@@ -27,6 +27,7 @@
 #include <QOpenGLShaderProgram>
 #include <vector>
 #include <QJsonArray>
+#include "FreeImage.h"
 
 class ColorRampObject: public QQuickFramebufferObject
 {
@@ -41,19 +42,22 @@ public:
     std::vector<QVector4D> &stops();
     unsigned int sourceTexture();
     void setSourceTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     void setGradientsStops(QJsonArray stops);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool rampedTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 public slots:
-    void gradientAdd(QVector3D color, qreal pos);
+    void gradientAdd(QVector3D color, qreal pos, int index);
     void positionUpdate(qreal pos, int index);
     void colorUpdate(QVector3D color, int index);
     void gradientDelete(int index);
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     QVector2D m_resolution;
@@ -73,6 +77,7 @@ public:
 private:
     void colorRamp(const std::vector<QVector4D> &stops);
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int colorFBO;
     unsigned int m_colorTexture = 0;
@@ -81,6 +86,7 @@ private:
     unsigned int textureVAO = 0;
     unsigned int gradientsSSBO;
     QOpenGLShaderProgram *colorRampShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

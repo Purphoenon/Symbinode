@@ -32,14 +32,16 @@ public:
     ColorRampNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QJsonArray stops = {QJsonArray{1, 1, 1, 1}, QJsonArray{0, 0, 0, 0}});
     ~ColorRampNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     QJsonArray stops() const;
 signals:
     void stopsChanged(QVariant gradients);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
+    void previewGenerated();
     void setOutput();
 private:
     ColorRampObject *preview;

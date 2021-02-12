@@ -25,30 +25,36 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class CircleObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    CircleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f);
+    CircleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
     unsigned int &texture();
     void setTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     int interpolation();
     void setInterpolation(int interpolation);
     float radius();
     void setRadius(float radius);
     float smooth();
     void setSmooth(float smooth);
+    bool useAlpha();
+    void setUseAlpha(bool use);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool generatedCircle = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void changedTexture();
 private:
     QVector2D m_resolution;
@@ -57,6 +63,7 @@ private:
     int m_interpolation = 1;
     float m_radius = 0.5f;
     float m_smooth = 0.01f;
+    bool m_useAlpha = true;
 };
 
 class CircleRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -69,7 +76,9 @@ public:
 private:
     void createCircle();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *generateCircle;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     unsigned int circleFBO;
     unsigned int circleVAO, textureVAO;

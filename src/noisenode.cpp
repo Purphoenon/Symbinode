@@ -25,7 +25,7 @@
 NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perlin, NoiseParams simple, QString noiseType):
     Node(parent, resolution), m_noiseType(noiseType), perlinNoise(perlin), simpleNoise(simple)
 {
-    preview = new NoiseObject(grNode, m_resolution, m_noiseType, noiseScale(), scaleX(), scaleY(), layers(), persistence(), amplitude());
+    preview = new NoiseObject(grNode, m_resolution, m_noiseType, noiseScale(), scaleX(), scaleY(), layers(), persistence(), amplitude(), seed());
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -33,7 +33,6 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &NoiseNode::changeSelected, this, &NoiseNode::updatePrev);
     connect(this, &NoiseNode::generatePreview, this, &NoiseNode::previewGenerated);
     connect(this, &NoiseNode::noiseTypeChanged, preview, &NoiseObject::setNoiseType);
     connect(this, &NoiseNode::noiseScaleChanged, preview, &NoiseObject::setNoiseScale);
@@ -42,6 +41,7 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     connect(this, &NoiseNode::layersChanged, preview, &NoiseObject::setLayers);
     connect(this, &NoiseNode::persistenceChanged, preview, &NoiseObject::setPersistence);
     connect(this, &NoiseNode::amplitudeChanged, preview, &NoiseObject::setAmplitude);
+    connect(this, &NoiseNode::seedChanged, preview, &NoiseObject::setSeed);
     connect(preview, &NoiseObject::updatePreview, this, &NoiseNode::updatePreview);
     connect(preview, &NoiseObject::changedTexture, this, &NoiseNode::setOutput);
     connect(this, &Node::changeScaleView, this, &NoiseNode::updateScale);
@@ -61,13 +61,16 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     propertiesPanel->setProperty("startLayers", layers());
     propertiesPanel->setProperty("startPersistence", persistence());
     propertiesPanel->setProperty("startAmplitude", amplitude());
+    propertiesPanel->setProperty("startSeed", seed());
     connect(propertiesPanel, SIGNAL(noiseScaleChanged(qreal)), this, SLOT(updateNoiseScale(qreal)));
     connect(propertiesPanel, SIGNAL(scaleXChanged(qreal)), this, SLOT(updateScaleX(qreal)));
     connect(propertiesPanel, SIGNAL(scaleYChanged(qreal)), this, SLOT(updateScaleY(qreal)));
     connect(propertiesPanel, SIGNAL(layersChanged(int)), this, SLOT(updateLayers(int)));
     connect(propertiesPanel, SIGNAL(persistenceChanged(qreal)), this, SLOT(updatePersistence(qreal)));
     connect(propertiesPanel, SIGNAL(amplitudeChanged(qreal)), this, SLOT(updateAmplitude(qreal)));
+    connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
     connect(propertiesPanel, SIGNAL(noiseTypeChanged(QString)), this, SLOT(updateNoiseType(QString)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 NoiseNode::~NoiseNode() {
@@ -86,6 +89,7 @@ void NoiseNode::setNoiseType(QString type) {
     propertiesPanel->setProperty("startLayers", layers());
     propertiesPanel->setProperty("startPersistence", persistence());
     propertiesPanel->setProperty("startAmplitude", amplitude());
+    propertiesPanel->setProperty("startSeed", seed());
     noiseTypeChanged(type);
 }
 
@@ -169,8 +173,24 @@ void NoiseNode::setAmplitude(float value) {
     amplitudeChanged(value);
 }
 
+int NoiseNode::seed() {
+    if(m_noiseType == "noisePerlin") return perlinNoise.seed;
+    else if(m_noiseType == "noiseSimple") return simpleNoise.seed;
+    return perlinNoise.seed;
+}
+
+void NoiseNode::setSeed(int seed) {
+    if(m_noiseType == "noisePerlin") perlinNoise.seed = seed;
+    else if(m_noiseType == "noiseSimple") simpleNoise.seed = seed;
+    seedChanged(seed);
+}
+
 unsigned int &NoiseNode::getPreviewTexture() {
     return preview->texture();
+}
+
+void NoiseNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
 }
 
 void NoiseNode::operation() {
@@ -188,6 +208,7 @@ void NoiseNode::serialize(QJsonObject &json) const {
     perlinParams["persistence"] = perlinNoise.persistence;
     perlinParams["amplitude"] = perlinNoise.amplitude;
     perlinParams["layers"] = perlinNoise.layers;
+    perlinParams["seed"] = perlinNoise.seed;
     json["perlinParams"] = perlinParams;
     QJsonObject simpleParams;
     simpleParams["scale"] = simpleNoise.scale;
@@ -196,12 +217,13 @@ void NoiseNode::serialize(QJsonObject &json) const {
     simpleParams["persistence"] = simpleNoise.persistence;
     simpleParams["amplitude"] = simpleNoise.amplitude;
     simpleParams["layers"] = simpleNoise.layers;
+    simpleParams["seed"] = simpleNoise.seed;
     json["simpleParams"] = simpleParams;
     json["noiseType"] = m_noiseType;
 }
 
-void NoiseNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void NoiseNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("perlinParams")) {
         QJsonObject perlinParams = json["perlinParams"].toObject();
         if(perlinParams.contains("scale")) {
@@ -221,6 +243,9 @@ void NoiseNode::deserialize(const QJsonObject &json) {
         }
         if(perlinParams.contains("layers")) {
             perlinNoise.layers = perlinParams["layers"].toVariant().toInt();
+        }
+        if(perlinParams.contains("seed")) {
+            perlinNoise.seed = perlinParams["seed"].toInt();
         }
     }
     if(json.contains("simpleParams")) {
@@ -243,6 +268,9 @@ void NoiseNode::deserialize(const QJsonObject &json) {
         if(simpleParams.contains("layers")) {
             simpleNoise.layers = simpleParams["layers"].toVariant().toInt();
         }
+        if(simpleParams.contains("seed")) {
+            simpleNoise.seed = simpleParams["seed"].toInt();
+        }
     }
     if(json.contains("noiseType")) {
         m_noiseType = json["noiseType"].toVariant().toString();
@@ -256,11 +284,12 @@ void NoiseNode::deserialize(const QJsonObject &json) {
         propertiesPanel->setProperty("startLayers", layers());
         propertiesPanel->setProperty("startPersistence", persistence());
         propertiesPanel->setProperty("startAmplitude", amplitude());
+        propertiesPanel->setProperty("startSeed", seed());
     }
 }
 
 void NoiseNode::updateNoiseType(QString type) {
-    setNoiseType(type);
+    setNoiseType(type);    
     dataChanged();
 }
 
@@ -294,16 +323,14 @@ void NoiseNode::updateAmplitude(qreal value) {
     dataChanged();
 }
 
+void NoiseNode::updateSeed(int seed) {
+    setSeed(seed);
+    dataChanged();
+}
+
 void NoiseNode::previewGenerated() {
     preview->generatedNoise = true;
     preview->update();
-}
-
-void NoiseNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void NoiseNode::updateScale(float scale) {

@@ -33,7 +33,7 @@ WarpNode::WarpNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &WarpNode::updateScale);
-    connect(this, &WarpNode::changeSelected, this, &WarpNode::updatePrev);
+    connect(this, &Node::generatePreview, this, &WarpNode::previewGenerated);
     connect(preview, &WarpObject::changedTexture, this, &WarpNode::setOutput);
     connect(this, &Node::changeResolution, preview, &WarpObject::setResolution);
     connect(this, &WarpNode::intensityChanged, preview, &WarpObject::setIntensity);
@@ -43,6 +43,7 @@ WarpNode::WarpNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startIntensity", m_intensity);
     connect(propertiesPanel, SIGNAL(intensityChanged(qreal)), this, SLOT(updateIntensity(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(3, 1);
     setTitle("Warp");
     m_socketsInput[0]->setTip("Source");
@@ -62,14 +63,22 @@ void WarpNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &WarpNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void WarpNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void WarpNode::serialize(QJsonObject &json) const{
     Node::serialize(json);
     json["type"] = 18;
     json["intensity"] = m_intensity;
 }
 
-void WarpNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void WarpNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("intensity")) {
         m_intensity = json["intensity"].toVariant().toFloat();
     }
@@ -91,10 +100,9 @@ void WarpNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void WarpNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void WarpNode::previewGenerated() {
+    preview->warpedTex = true;
+    preview->update();
 }
 
 void WarpNode::setOutput() {

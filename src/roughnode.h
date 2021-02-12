@@ -32,11 +32,12 @@ public:
     RoughNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
     ~RoughNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
     void updateRough(qreal rough);
-    void updatePrev(bool sel);
     void updateScale(float scale);
     void saveRough(QString dir);
 signals:

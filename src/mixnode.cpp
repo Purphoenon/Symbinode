@@ -22,10 +22,10 @@
 #include "mixnode.h"
 #include <iostream>
 
-MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int mode):
-    Node(parent, resolution), m_factor(factor), m_mode(mode)
+MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int mode, bool includingAlpha):
+    Node(parent, resolution), m_factor(factor), m_mode(mode), m_includingAlpha(includingAlpha)
 {
-    preview = new MixObject(grNode, m_resolution, m_factor, m_mode);
+    preview = new MixObject(grNode, m_resolution, m_factor, m_mode, m_includingAlpha);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -39,7 +39,6 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int mod
     m_socketsInput[1]->setTip("Color2");
     m_socketsInput[2]->setTip("Factor");
     m_socketsInput[3]->setTip("Mask");
-    connect(this, &MixNode::changeSelected, this, &MixNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &MixNode::updateScale);
     connect(preview, &MixObject::textureChanged, this, &MixNode::setOutput);
     connect(this, &MixNode::generatePreview, this, &MixNode::previewGenerated);
@@ -50,8 +49,11 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int mod
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(factorChanged(qreal)), this, SLOT(updateFactor(qreal)));
     connect(propertiesPanel, SIGNAL(modeChanged(int)), this, SLOT(updateMode(int)));
+    connect(propertiesPanel, SIGNAL(includingAlphaChanged(bool)), this, SLOT(updateIncludingAlpha(bool)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     propertiesPanel->setProperty("startFactor", m_factor);
     propertiesPanel->setProperty("startMode", m_mode);
+    propertiesPanel->setProperty("startIncludingAlpha", m_includingAlpha);
 }
 
 MixNode::~MixNode() {
@@ -73,11 +75,20 @@ void MixNode::operation() {
         preview->setFactor(m_factor);
     }
     preview->setMode(m_mode);
+    preview->setIncludingAlpha(m_includingAlpha);
     preview->mixedTex = true;
     preview->selectedItem = selected();
     preview->update();
 
     if(m_socketsInput[0]->countEdge() == 0 && m_socketsInput[1]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+}
+
+unsigned int &MixNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void MixNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
 }
 
 float MixNode::factor() {
@@ -98,6 +109,15 @@ void MixNode::setMode(int mode) {
     modeChanged(mode);
 }
 
+bool MixNode::includingAlpha() {
+    return m_includingAlpha;
+}
+
+void MixNode::setIncludingAlpha(bool including) {
+    m_includingAlpha = including;
+    includingAlphaChanged(including);
+}
+
 void MixNode::setOutput() {
     m_socketOutput[0]->setValue(preview->texture());
 }
@@ -107,10 +127,11 @@ void MixNode::serialize(QJsonObject &json) const {
     json["type"] = 7;
     json["factor"] = m_factor;
     json["mode"] = m_mode;
+    json["includingAlpha"] = m_includingAlpha;
 }
 
-void MixNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void MixNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("factor")) {
         setFactor(json["factor"].toVariant().toFloat());
         propertiesPanel->setProperty("startFactor", m_factor);
@@ -118,6 +139,10 @@ void MixNode::deserialize(const QJsonObject &json) {
     if(json.contains("mode")) {
         setMode(json["mode"].toInt());
         propertiesPanel->setProperty("startMode", m_mode);
+    }
+    if(json.contains("includingAlpha")) {
+        setIncludingAlpha(json["includingAlpha"].toBool());
+        propertiesPanel->setProperty("startIncludingAlpha", m_includingAlpha);
     }
 }
 
@@ -135,16 +160,16 @@ void MixNode::updateMode(int mode) {
     dataChanged();
 }
 
+void MixNode::updateIncludingAlpha(bool including) {
+    setIncludingAlpha(including);
+    operation();
+    dataChanged();
+}
+
 void MixNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void MixNode::updatePrev(bool sel) {
-    if(sel) {
-         updatePreview(preview->texture(), true);
-    }
 }
 
 void MixNode::previewGenerated() {

@@ -28,12 +28,16 @@ Item {
     width: parent.width
     property real startMetal: 0
     signal metalChanged(real val)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: metalParam
         propertyName: "Metalness"
         propertyValue: startMetal
         onPropertyValueChanged: {
             metalChanged(metalParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startMetal", propertyValue, oldValue)
         }
     }
 }

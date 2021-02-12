@@ -35,7 +35,6 @@ MetalNode::MetalNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     preview->setY(30*s);
     preview->setScale(s);
     connect(preview, &OneChanelObject::updatePreview, this, &MetalNode::updatePreview);
-    connect(this, &MetalNode::changeSelected, this, &MetalNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &MetalNode::updateScale);
     connect(preview, &OneChanelObject::updateValue, this, &MetalNode::metalChanged);
     connect(this, &Node::changeResolution, preview, &OneChanelObject::setResolution);
@@ -43,6 +42,7 @@ MetalNode::MetalNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/MetalProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(metalChanged(qreal)), this, SLOT(updateMetal(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 MetalNode::~MetalNode() {
@@ -62,14 +62,22 @@ void MetalNode::operation() {
     preview->update();
 }
 
+unsigned int &MetalNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void MetalNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void MetalNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 9;
     json["metal"] = m_metal;
 }
 
-void MetalNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void MetalNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("metal")) {
         updateMetal(json["metal"].toVariant().toFloat());
         propertiesPanel->setProperty("startMetal", m_metal);
@@ -84,17 +92,6 @@ void MetalNode::updateMetal(qreal metal) {
     dataChanged();
 }
 
-void MetalNode::updatePrev(bool sel) {
-    if(sel) {
-        if(m_socketsInput[0]->countEdge() > 0) {
-            updatePreview(m_socketsInput[0]->value(), true);
-        }
-        else {
-            updatePreview(QVector3D(m_metal, m_metal, m_metal), false);
-        }
-    }
-}
-
 void MetalNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
@@ -102,7 +99,5 @@ void MetalNode::updateScale(float scale) {
 }
 
 void MetalNode::saveMetal(QString dir) {
-    preview->texSaving = true;
-    preview->saveName = dir.append("/metalness.png");
-    preview->update();
+    preview->saveTexture(dir.append("/metalness.png"));
 }

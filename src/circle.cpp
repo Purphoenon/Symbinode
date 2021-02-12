@@ -24,8 +24,9 @@
 #include <iostream>
 
 CircleObject::CircleObject(QQuickItem *parent, QVector2D resolution, int interpolation, float radius,
-                           float smooth): QQuickFramebufferObject (parent), m_resolution(resolution),
-    m_interpolation(interpolation), m_radius(radius), m_smooth(smooth)
+                           float smooth, bool useAlpha): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_interpolation(interpolation), m_radius(radius), m_smooth(smooth),
+    m_useAlpha(useAlpha)
 {
 
 }
@@ -51,6 +52,12 @@ unsigned int &CircleObject::texture() {
 void CircleObject::setTexture(unsigned int texture) {
     m_texture = texture;
     changedTexture();
+}
+
+void CircleObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
 }
 
 int CircleObject::interpolation() {
@@ -83,6 +90,16 @@ void CircleObject::setSmooth(float smooth) {
     update();
 }
 
+bool CircleObject::useAlpha() {
+    return m_useAlpha;
+}
+
+void CircleObject::setUseAlpha(bool use) {
+    m_useAlpha = use;
+    generatedCircle = true;
+    update();
+}
+
 QVector2D CircleObject::resolution() {
     return m_resolution;
 }
@@ -99,6 +116,10 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
     generateCircle->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
     generateCircle->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/circle.frag");
     generateCircle->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     renderTexture = new QOpenGLShaderProgram();
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     renderTexture->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -124,10 +145,10 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO2;
     glGenVertexArrays(1, &textureVAO);
     glBindVertexArray(textureVAO);
@@ -158,6 +179,7 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
 
 CircleRenderer::~CircleRenderer() {
     delete generateCircle;
+    delete checkerShader;
     delete renderTexture;
 }
 
@@ -186,20 +208,32 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
         generateCircle->setUniformValue(generateCircle->uniformLocation("interpolation"), circleItem->interpolation());
         generateCircle->setUniformValue(generateCircle->uniformLocation("radius"), circleItem->radius());
         generateCircle->setUniformValue(generateCircle->uniformLocation("smoothValue"), circleItem->smooth());
+        generateCircle->setUniformValue(generateCircle->uniformLocation("useAlpha"), circleItem->useAlpha());
         generateCircle->setUniformValue(generateCircle->uniformLocation("useMask"), maskTexture);
         generateCircle->release();
         createCircle();
-        if(circleItem->selectedItem) circleItem->updatePreview(circleTexture, true);
         circleItem->setTexture(circleTexture);
-    }      
+        circleItem->updatePreview(circleTexture);
+    }
+    if(circleItem->texSaving) {
+        circleItem->texSaving = false;
+        saveTexture(circleItem->saveName);
+    }
 }
 
 void CircleRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(circleVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     renderTexture->bind();
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
@@ -231,4 +265,46 @@ void CircleRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, circleTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void CircleRenderer::saveTexture(QString fileName) {
+    qDebug("texture save");
+    unsigned int fbo;
+    unsigned int texture;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderTexture->bind();
+    glBindVertexArray(textureVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, circleTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    renderTexture->release();
+
+    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

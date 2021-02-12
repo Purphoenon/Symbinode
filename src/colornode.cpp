@@ -33,16 +33,17 @@ ColorNode::ColorNode(QQuickItem *parent, QVector2D resolution, QVector3D color):
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColorNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ColorNode::updatePrev);
     connect(this, &Node::changeResolution, preview, &ColorObject::setResolution);
     connect(this, &ColorNode::generatePreview, this, &ColorNode::previewGenerated);
     connect(this, &ColorNode::colorChanged, preview, &ColorObject::setColor);
+    connect(preview, &ColorObject::updatePreview, this, &ColorNode::updatePreview);
     connect(preview, &ColorObject::textureChanged, this, &ColorNode::operation);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startColor", m_color);
     connect(propertiesPanel, SIGNAL(colorChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(0, 1);
     setTitle("Color");
 }
@@ -55,6 +56,14 @@ void ColorNode::operation() {
     m_socketOutput[0]->setValue(preview->texture());
 }
 
+unsigned int &ColorNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void ColorNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void ColorNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 1;
@@ -65,8 +74,8 @@ void ColorNode::serialize(QJsonObject &json) const {
     json["color"] = color;
 }
 
-void ColorNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void ColorNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("color")) {
         QJsonArray color = json["color"].toVariant().toJsonArray();
         QVector3D colorValue = QVector3D(color[0].toVariant().toFloat(), color[1].toVariant().toFloat(), color[2].toVariant().toFloat());
@@ -82,19 +91,12 @@ QVector3D ColorNode::color() {
 void ColorNode::setColor(QVector3D color) {
     m_color = color;
     colorChanged(color);
-    updatePreview(m_color, false);
 }
 
 void ColorNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void ColorNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(m_color, false);
-    }
 }
 
 void ColorNode::previewGenerated() {

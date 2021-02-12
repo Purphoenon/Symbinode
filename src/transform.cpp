@@ -21,13 +21,14 @@
 
 #include "transform.h"
 #include "QOpenGLFramebufferObjectFormat"
+#include "FreeImage.h"
 
 TransformObject::TransformObject(QQuickItem *parent, QVector2D resolution, float transX, float transY,
                                  float scaleX, float scaleY, int angle, bool clamp):
     QQuickFramebufferObject (parent), m_resolution(resolution), m_translateX(transX), m_translateY(transY),
     m_scaleX(scaleX), m_scaleY(scaleY), m_angle(angle), m_clamp(clamp)
 {
-    setMirrorVertically(true);
+
 }
 
 QQuickFramebufferObject::Renderer *TransformObject::createRenderer() const {
@@ -60,6 +61,12 @@ unsigned int TransformObject::sourceTexture() {
 void TransformObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     transformedTex = true;
+    update();
+}
+
+void TransformObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
     update();
 }
 
@@ -139,6 +146,10 @@ TransformRenderer::TransformRenderer(QVector2D resolution): m_resolution(resolut
     transformShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     transformShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/transform.frag");
     transformShader->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -182,6 +193,7 @@ TransformRenderer::TransformRenderer(QVector2D resolution): m_resolution(resolut
 
 TransformRenderer::~TransformRenderer() {
     delete transformShader;
+    delete checkerShader;
     delete textureShader;
 }
 
@@ -214,19 +226,28 @@ void TransformRenderer::synchronize(QQuickFramebufferObject *item) {
             transformShader->release();
             transformateTexture();
             transformItem->setTexture(m_transformedTexture);
-            if(transformItem->selectedItem) {
-                transformItem->updatePreview(m_transformedTexture, true);
-            }
+            transformItem->updatePreview(m_transformedTexture);
         }
-    }       
+    }
+    if(transformItem->texSaving) {
+        transformItem->texSaving = false;
+        saveTexture(transformItem->saveName);
+    }
 }
 
 void TransformRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(textureVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     if (m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();
@@ -261,4 +282,43 @@ void TransformRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_transformedTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void TransformRenderer::saveTexture(QString fileName) {
+    unsigned int fbo;
+    unsigned int tex;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &tex);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindVertexArray(textureVAO);
+    textureShader->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_transformedTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    textureShader->release();
+    glBindVertexArray(0);
+
+    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

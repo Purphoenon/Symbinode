@@ -28,29 +28,35 @@ class MixNode: public Node
 {
     Q_OBJECT
 public:
-    MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int mode = 0);
+    MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int mode = 0, bool includingAlpha = true);
     ~MixNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     float factor();
     void setFactor(float f);
     int mode();
     void setMode(int mode);
+    bool includingAlpha();
+    void setIncludingAlpha(bool including);
     void setOutput();
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 signals:
     void factorChanged(float f);
     void modeChanged(int mode);
+    void includingAlphaChanged(bool including);
 public slots:
-    void updatePrev(bool sel);
     void previewGenerated();
     void updateFactor(qreal f);
     void updateMode(int mode);
+    void updateIncludingAlpha(bool including);
     void updateScale(float scale);
 private:
     MixObject *preview = nullptr;
     float m_factor = 0.5;
     int m_mode = 0;
+    bool m_includingAlpha = true;
 };
 
 #endif // MIXNODE_H

@@ -28,22 +28,28 @@ Item {
     property alias startInterpolation: control.currentIndex
     property alias startRadius: radiusParam.propertyValue
     property alias startSmooth: smoothParam.propertyValue
+    property alias startUseAlpha: useAlphaParam.checked
     signal interpolationChanged(int interpolation)
     signal radiusChanged(real radius)
     signal smoothValueChanged(real smooth)
+    signal useAlphaChanged(bool use)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
         id: control
         y: 15
         model: ["Linear", "Hermite"]
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 interpolationChanged(0)
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 interpolationChanged(1)
             }
             focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startInterpolation", currentIndex, oldIndex)
         }
     }
     ParamSlider {
@@ -53,6 +59,9 @@ Item {
         onPropertyValueChanged: {
             radiusChanged(radiusParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRadius", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: smoothParam
@@ -60,6 +69,56 @@ Item {
         propertyName: "Smooth"
         onPropertyValueChanged: {
             smoothValueChanged(smoothParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startSmooth", propertyValue, oldValue)
+        }
+    }
+    CheckBox {
+        id: useAlphaParam
+        y: 119
+        leftPadding: 30
+        height: 25
+        width: 110
+        text: qsTr("Use alpha")
+        checked: true
+        onCheckedChanged: {
+            useAlphaChanged(checked)
+        }
+        onToggled: {
+            propertyChangingFinished("startUseAlpha", checked, !checked)
+            focus = false
+        }
+
+        indicator: Item {
+                       implicitWidth: 30
+                       implicitHeight: 30
+                       x: useAlphaParam.contentItem.width + 5
+                       anchors.verticalCenter: parent.verticalCenter
+                       Rectangle {
+                           width: 14
+                           height: 14
+                           anchors.centerIn: parent
+                           color: "transparent"
+                           border.color: "#A2A2A2"
+                           Rectangle {
+                               width: 6
+                               height: 6
+                               anchors.centerIn: parent
+                               visible: useAlphaParam.checked
+                               color: "#A2A2A2"
+                           }
+                       }
+                   }
+
+        contentItem: Text {
+            topPadding: 0
+            text: useAlphaParam.text
+            color: "#A2A2A2"
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+            renderType: Text.NativeRendering
         }
     }
 }

@@ -33,7 +33,6 @@ AlbedoNode::AlbedoNode(QQuickItem *parent, QVector2D resolution): Node(parent, r
     preview->setY(30*s);
     preview->setScale(s);
     connect(preview, &AlbedoObject::updatePreview, this, &AlbedoNode::updatePreview);
-    connect(this, &AlbedoNode::changeSelected, this, &AlbedoNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &AlbedoNode::updateScale);
     connect(preview, &AlbedoObject::updateAlbedo, this, &AlbedoNode::albedoChanged);
     connect(this, &Node::changeResolution, preview, &AlbedoObject::setResolution);
@@ -44,6 +43,7 @@ AlbedoNode::AlbedoNode(QQuickItem *parent, QVector2D resolution): Node(parent, r
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/AlbedoProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(albedoChanged(QVector3D)), this, SLOT(updateAlbedo(QVector3D)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 AlbedoNode::~AlbedoNode() {
@@ -63,6 +63,14 @@ void AlbedoNode::operation() {
     preview->update();
 }
 
+unsigned int &AlbedoNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void AlbedoNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void AlbedoNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 8;
@@ -73,8 +81,8 @@ void AlbedoNode::serialize(QJsonObject &json) const {
     json["albedo"] = albedo;
 }
 
-void AlbedoNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void AlbedoNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("albedo") && json["albedo"].isArray()) {
         QJsonArray albedo = json["albedo"].toArray();
         QVector3D color = QVector3D(albedo[0].toVariant().toFloat(), albedo[1].toVariant().toFloat(),
@@ -92,17 +100,6 @@ void AlbedoNode::updateAlbedo(QVector3D color) {
     dataChanged();
 }
 
-void AlbedoNode::updatePrev(bool sel) {
-    if(sel) {
-        if(m_socketsInput[0]->countEdge() > 0) {
-            updatePreview(m_socketsInput[0]->value(), true);
-        }
-        else {
-            updatePreview(m_albedo, false);
-        }
-    }
-}
-
 void AlbedoNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
@@ -111,7 +108,5 @@ void AlbedoNode::updateScale(float scale) {
 
 void AlbedoNode::saveAlbedo(QString dir) {
     qDebug("save albedo");
-    preview->texSaving = true;
-    preview->saveName = dir;
-    preview->update();
+    preview->saveTexture(dir.append("/albedo.png"));
 }

@@ -29,34 +29,40 @@ class PolygonNode: public Node
 {
     Q_OBJECT
 public:
-    PolygonNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int sides = 3, float polygonScale = 0.4f, float smooth = 0.0f);
+    PolygonNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int sides = 3, float polygonScale = 0.4f, float smooth = 0.0f, bool useAlpha = true);
     ~PolygonNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     int sides();
     void setSides(int sides);
     float polygonScale();
     void setPolygonScale(float scale);
     float smooth();
     void setSmooth(float smooth);
+    bool useAlpha();
+    void setUseAlpha(bool use);
 signals:
     void sidesChanged(int sides);
     void polygonScaleChanged(float scale);
     void smoothChanged(float smooth);
+    void useAlphaChanged(bool use);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
     void setOutput();
     void previewGenerated();
     void updateSides(int sides);
     void updatePolygonScale(qreal scale);
     void updateSmooth(qreal smooth);
+    void updateUseAlpha(bool use);
 private:
     PolygonObject *preview;
     int m_sides = 3;
     float m_polygonScale = 0.4f;
     float m_smooth = 0.0f;
+    bool m_useAlpha = true;
 };
 
 #endif // POLYGONNODE_H

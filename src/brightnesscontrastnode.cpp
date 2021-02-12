@@ -34,8 +34,8 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &BrightnessContrastNode::updateScale);
+    connect(this, &Node::generatePreview, this, &BrightnessContrastNode::previewGenerated);
     connect(preview, &BrightnessContrastObject::updatePreview, this, &Node::updatePreview);
-    connect(this, &Node::changeSelected, this, &BrightnessContrastNode::updatePrev);
     connect(preview, &BrightnessContrastObject::textureChanged, this, &BrightnessContrastNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BrightnessContrastObject::setResolution);
     connect(this, &BrightnessContrastNode::brightnessChanged, preview, &BrightnessContrastObject::setBrightness);
@@ -47,6 +47,7 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     propertiesPanel->setProperty("startContrast", m_contrast);
     connect(propertiesPanel, SIGNAL(brightnessChanged(qreal)), this, SLOT(updateBrightness(qreal)));
     connect(propertiesPanel, SIGNAL(contrastChanged(qreal)), this, SLOT(updateContrast(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(1, 1);
     setTitle("Brightness-Contrast");
     m_socketsInput[0]->setTip("Texture");
@@ -61,6 +62,14 @@ void BrightnessContrastNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &BrightnessContrastNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void BrightnessContrastNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void BrightnessContrastNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 21;
@@ -68,8 +77,8 @@ void BrightnessContrastNode::serialize(QJsonObject &json) const {
     json["contrast"] = m_contrast;
 }
 
-void BrightnessContrastNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void BrightnessContrastNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("brightness")) {
         updateBrightness(json["brightness"].toVariant().toReal());
         propertiesPanel->setProperty("startBrightness", m_brightness);
@@ -104,11 +113,9 @@ void BrightnessContrastNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void BrightnessContrastNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void BrightnessContrastNode::previewGenerated() {
+    preview->created = true;
+    preview->update();
 }
 
 void BrightnessContrastNode::setOutput() {

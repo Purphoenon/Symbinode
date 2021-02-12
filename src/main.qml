@@ -582,6 +582,19 @@ MainWindow {
                   }
             }
         }
+        MenuSeparator {
+            contentItem: Rectangle {
+                implicitWidth: 200
+                implicitHeight: 1
+                color: "#3B3B3B"
+            }
+        }
+        Action {
+            text: "Frame"
+            onTriggered: {
+                mainWindow.createFrame(addNode.x, addNode.y)
+            }
+        }
     }
 
     MouseArea {
@@ -618,15 +631,9 @@ MainWindow {
         if(oldPanel) oldPanel.parent = null
 
     }
-    onPreviewUpdate: {
-        if((preview.pinned && mainWindow.activeNode == mainWindow.pinnedNode) || !preview.pinned) {
-            preview.canUpdatePreview = true
-        }
-        else {
-            preview.canUpdatePreview = false
-        }
 
-        preview.setPreviewData(previewData, useTexture)
+    onPreviewUpdate: {
+        preview.setPreviewData(previewData)
     }
 
     onPreview3DChanged: {
@@ -713,6 +720,7 @@ MainWindow {
             }
 
             Rectangle {
+                property bool pinned: false
                 id: pin
                 x: parent.width - width - 5
                 y: 30
@@ -723,25 +731,112 @@ MainWindow {
                 Image {
                     x: 2
                     y: 2
-                    source: preview.pinned ? "qrc:/icons/pin-active (1).svg" : "qrc:/icons/pin (2).svg"
+                    source: pin.pinned ? "qrc:/icons/pin-active (1).svg" : "qrc:/icons/pin (2).svg"
                 }
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        preview.pinned = !preview.pinned
-                        mainWindow.pin(preview.pinned)
-                        if((preview.pinned && mainWindow.activeNode == mainWindow.pinnedNode) ||
-                                !preview.pinned) {
-                            preview.canUpdatePreview = true
-                        }
-                        else {
-                            preview.canUpdatePreview = false
-                        }
+                        pin.pinned = !pin.pinned
+                        mainWindow.pin(pin.pinned)
                     }
                 }                
             }
-        }        
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onPressed: {
+                    if(mouse.buttons == Qt.RightButton){
+                        nodeViewParams.popup()
+                    }
+                    else {
+                        mouse.accepted = false
+                    }
+                }
+            }
+            Menu {
+                id: nodeViewParams
+                Action {
+                    text: "Save texture"
+                    onTriggered: {
+                        mainWindow.saveCurrentTexture()
+                    }
+                }
+                background: Rectangle {
+                                implicitWidth: 120
+                                implicitHeight: 30
+                                color: "#2C2D2F"
+                            }
+                delegate: MenuItem {
+                    id: menuNodeView
+                    width: 120
+                    height: 30
+                    leftPadding: 15
+                    contentItem: Text {
+                                leftPadding: 10
+                                rightPadding: 10
+                                text: menuNodeView.text
+                                color: "#A2A2A2"
+                                horizontalAlignment: Text.AlignLeft
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+                    background: Rectangle {
+                          implicitWidth: 120
+                          implicitHeight: 30
+                          color: menuNodeView.highlighted ? "#404347" : "transparent"
+                      }
+                }
+            }
+            /*Popup {
+                id: nodeViewParams
+                //x: 0
+                z: 0
+                width: 150
+                height: contentItem.implicitHeight
+                padding: 0
+
+                contentItem: Item {
+                    width: 100
+                    implicitHeight: 100
+                    Rectangle {
+                        id: saveTextureItem
+                        y: 20
+                        height: 30
+                        width: parent.width
+                        color: "transparent"
+                        Text {
+                            height: 30
+                            x: 28
+                            verticalAlignment: Text.AlignVCenter
+                            text: qsTr("Save texture")
+                            color: "#A2A2A2"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onEntered: {
+                                saveTextureItem.color = "#404347"
+                            }
+                            onExited: {
+                                saveTextureItem.color = "transparent"
+                            }
+                            onClicked:  {
+                                mainWindow.saveCurrentTexture()
+                                nodeViewParams.close()
+                            }
+                        }
+                    }
+                }
+
+                background:
+                    Rectangle {
+                        width: 150
+                        radius: 2
+                        color: "#2C2D2F"
+                    }
+            }*/
+        }
     }
     DockPanel {
         id: leftDock

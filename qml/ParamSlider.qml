@@ -28,6 +28,9 @@ Item {
     property alias step: slider.stepSize
     property alias propertyName: label.text
     property alias propertyValue: slider.value
+    property bool interacted: slider.pressed
+    property real oldValue
+    signal changingFinished()
 
     width: parent.width
     height: childrenRect.height
@@ -54,6 +57,10 @@ Item {
         onValueChanged: {
             valueBox.value = value.toFixed(2)
             focus = false
+        }
+        onPressedChanged: {
+            if(pressed) oldValue = value
+            if(!pressed && (oldValue != value)) changingFinished()
         }
 
         Rectangle {
@@ -129,7 +136,10 @@ Item {
         step: slider.stepSize
         value: slider.value
         onNewValueChanged: {
+            if(slider.value == value) return
+            oldValue = slider.value
             slider.value = value
+            changingFinished()
         }
     }
 }

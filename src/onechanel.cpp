@@ -41,6 +41,25 @@ void OneChanelObject::setValue(QVariant val) {
     m_value = val;
 }
 
+void OneChanelObject::setColorTexture(unsigned int texture) {
+    m_colorTexture = texture;
+}
+
+void OneChanelObject::setSourceTexture(unsigned int texture) {
+    m_sourceTexture = texture;
+}
+
+unsigned int &OneChanelObject::texture() {
+    if(useTex) return m_sourceTexture;
+    else return m_colorTexture;
+}
+
+void OneChanelObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
+}
+
 QVector2D OneChanelObject::resolution() {
     return m_resolution;
 }
@@ -57,10 +76,10 @@ OneChanelRenderer::OneChanelRenderer(QVector2D resolution): m_resolution(resolut
     renderChanel->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/onechanel.frag");
     renderChanel->link();
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -79,6 +98,20 @@ OneChanelRenderer::OneChanelRenderer(QVector2D resolution): m_resolution(resolut
     renderChanel->setUniformValue(renderChanel->uniformLocation("tex"), 0);
     renderChanel->setUniformValue(renderChanel->uniformLocation("val"), val);
     renderChanel->release();
+
+    glGenFramebuffers(1, &m_colorFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_colorFBO);
+    glGenTextures(1, &m_colorTexture);
+    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    createColor();
 }
 
 OneChanelRenderer::~OneChanelRenderer() {
@@ -99,17 +132,16 @@ void OneChanelRenderer::synchronize(QQuickFramebufferObject *item) {
     m_resolution = oneChanelItem->resolution();
     if(oneChanelItem->useTex) {
         texture = oneChanelItem->value().toUInt();
-        if(oneChanelItem->selectedItem) {
-            oneChanelItem->updatePreview(texture, true);
-        }
+        oneChanelItem->setSourceTexture(texture);
+        oneChanelItem->updatePreview(texture);
         oneChanelItem->updateValue(texture, true);
     }
     else {
         val = oneChanelItem->value().toFloat();
         renderChanel->setUniformValue(renderChanel->uniformLocation("val"), val);
-        if(oneChanelItem->selectedItem) {
-            oneChanelItem->updatePreview(QVector3D(val, val, val), false);
-        }
+        createColor();
+        oneChanelItem->setColorTexture(m_colorTexture);
+        oneChanelItem->updatePreview(m_colorTexture);
         oneChanelItem->updateValue(val, false);
     }
 
@@ -136,7 +168,21 @@ void OneChanelRenderer::render() {
     renderChanel->release();
 }
 
-void OneChanelRenderer::saveTexture(QString dir) {
+void OneChanelRenderer::createColor() {
+    glBindFramebuffer(GL_FRAMEBUFFER, m_colorFBO);
+    glViewport(0, 0, 8, 8);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderChanel->bind();
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    renderChanel->release();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void OneChanelRenderer::saveTexture(QString fileName) {
     unsigned int fbo;
     unsigned int tex;
     glGenFramebuffers(1, &fbo);
@@ -168,7 +214,7 @@ void OneChanelRenderer::saveTexture(QString dir) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
     FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, dir.toStdString().c_str(), 0))
+    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
         printf("Successfully saved!\n");
     else
         printf("Failed saving!\n");

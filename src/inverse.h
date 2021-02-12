@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class InverseObject: public QQuickFramebufferObject
 {
@@ -36,13 +37,16 @@ public:
     void setTexture(unsigned int texture);
     unsigned int sourceTexture();
     void setSourceTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool inversedTex = false;
     bool resUpdated = false;
     bool selectedItem = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     QVector2D m_resolution;
@@ -60,12 +64,14 @@ public:
 private:
     void inverte();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int inverseFBO;
     unsigned int m_inversedTexture = 0;
     unsigned int m_sourceTexture = 0;
     unsigned int textureVAO = 0;
     QOpenGLShaderProgram *inverseShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

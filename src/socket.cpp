@@ -23,6 +23,7 @@
 #include "scene.h"
 #include "backgroundobject.h"
 #include <iostream>
+#include <QTime>
 
 Socket::Socket(QQuickItem *parent):QQuickItem (parent)
 {
@@ -32,6 +33,7 @@ Socket::Socket(QQuickItem *parent):QQuickItem (parent)
     view->setSource(QUrl(QStringLiteral("qrc:/qml/Socket.qml")));
     grSocket = qobject_cast<QQuickItem *>(view->rootObject());
     grSocket->setParentItem(this);
+    m_id = QUuid::createUuid();
 }
 
 Socket::~Socket() {
@@ -62,7 +64,7 @@ void Socket::addEdge(Edge *edge) {
         edge->setVisible(isVisible());
     }
     if(edges.contains(edge)) return;
-    edges.append(edge);    
+    edges.append(edge);
 }
 
 void Socket::deleteEdge(Edge *edge) {
@@ -131,9 +133,8 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
         bool dragAccepted = false;
         bool connectedNodes = false;
         QPointF childPos = mapToItem(scene, QPointF(event->pos().x(), event->pos().y()));
-        QQuickItem *item = scene->childAt(childPos.x(), childPos.y());
-        if(qobject_cast<Node*>(item)) {
-            Node *n = qobject_cast<Node*>(item);
+        Node *n = scene->nodeAt(childPos.x(), childPos.y());
+        if(n) {
             QPointF nodePos = mapToItem(n, QPointF(event->pos().x(), event->pos().y()));
             QQuickItem *child = n->childAt(nodePos.x(), nodePos.y());
             Node *parentNode = qobject_cast<Node*>(parentItem());
@@ -150,18 +151,18 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                                 scene->startSocket->parentItem() != s->parentItem()) &&
                                 !connectedNodes);
                 if(dragAccepted) {
-                    if(existEdge) {
-                        scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
-                        connect(this, &Socket::globalPosChanged, scene->dragEdge, &Edge::setEndPosition);
+                    if(existEdge) {                        
                         if(s != scene->startSocket) {      
-                            scene->startSocket->edges.removeOne(scene->dragEdge);
                             if(s->edges.count() > 0) {
                                 QList<QQuickItem*> deletedEdge;
                                 deletedEdge.append(s->edges[0]);
                                 scene->deletedItems(deletedEdge);
                             }
-                            s->edges.push_back(scene->dragEdge);
-                            scene->dragEdge->setEndSocket(s);
+                            scene->movedEdge(scene->dragEdge, scene->startSocket, s);
+                        }
+                        else {
+                            scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
+                            connect(this, &Socket::globalPosChanged, scene->dragEdge, &Edge::setEndPosition);
                         }
                     }
                     else {
@@ -182,9 +183,9 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                             scene->dragEdge->setStartPosition(QVector2D(globalPos.x(), globalPos.y()));
                             scene->dragEdge->setStartSocket(s);
                         }
-                    }
-                    scene->addEdge(scene->dragEdge);
-                    scene->addedEdge(scene->dragEdge);
+                        scene->addEdge(scene->dragEdge);
+                        scene->addedEdge(scene->dragEdge);
+                    }                   
                 }
             }
             else {
@@ -192,7 +193,7 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
             }
         }
         else {
-            qDebug("edge decline");
+            qDebug("edge decline not node");
         }
 
         if(!dragAccepted) {
@@ -214,11 +215,17 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
         }
 
         scene->isEdgeDrag = false;
-    }
+     }
 }
 
 void Socket::serialize(QJsonObject &json) const{
-    json["name"] = objectName();
+    json["id"] = m_id.toString();
+}
+
+void Socket::deserialize(const QJsonObject &json) {
+    if(json.contains("id")) {
+        m_id = QUuid(json["id"].toString());
+    }
 }
 
 void Socket::setTip(QString text) {
@@ -246,6 +253,10 @@ void Socket::setValue(const QVariant &value) {
 
 QVariant Socket::value() {
     return m_value;
+}
+
+QUuid Socket::id() {
+    return m_id;
 }
 
 void Socket::reset() {

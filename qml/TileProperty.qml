@@ -37,7 +37,9 @@ Item {
     property alias startRandScale: randScaleParam.propertyValue
     property alias startMask: maskStrengthParam.propertyValue
     property alias startInputsCount: inputsCountParam.propertyValue
+    property alias startSeed: seedParam.propertyValue
     property alias startKeepProportion: keepProportionParam.checked
+    property alias startUseAlpha: useAlphaParam.checked
     signal offsetXChanged(real offset)
     signal offsetYChanged(real offset)
     signal columnsChanged(int columns)
@@ -50,7 +52,10 @@ Item {
     signal randScaleChanged(real rand)
     signal maskChanged(real mask)
     signal inputsCountChanged(int count)
+    signal seedChanged(int seed)
     signal keepProportionChanged(bool keep)
+    signal useAlphaChanged(bool use)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: columnsParam
         propertyName: "Columns"
@@ -59,6 +64,9 @@ Item {
         step: 1
         onPropertyValueChanged: {
             columnsChanged(columnsParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startColumns", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -71,6 +79,9 @@ Item {
         onPropertyValueChanged: {
             rowsChanged(rowsParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRows", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: offsetXParam
@@ -79,6 +90,9 @@ Item {
         onPropertyValueChanged: {
             offsetXChanged(offsetXParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startOffsetX", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: offsetYParam
@@ -86,6 +100,9 @@ Item {
         propertyName: "Offset Y"
         onPropertyValueChanged: {
             offsetYChanged(offsetYParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startOffsetY", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -96,6 +113,9 @@ Item {
         onPropertyValueChanged: {
             scaleXChanged(scaleXParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleX", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: scaleYParam
@@ -104,6 +124,9 @@ Item {
         propertyName: "Scale Y"
         onPropertyValueChanged: {
             scaleYChanged(scaleYParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleY", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -115,6 +138,9 @@ Item {
         onPropertyValueChanged: {
             rotationAngleChanged(rotationParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRotation", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: randPositionParam
@@ -122,6 +148,9 @@ Item {
         propertyName: "Randomizing position"
         onPropertyValueChanged: {
             randPositionChanged(randPositionParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startRandPosition", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -131,6 +160,9 @@ Item {
         onPropertyValueChanged: {
             randRotationChanged(randRotationParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRandRotation", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: randScaleParam
@@ -139,6 +171,9 @@ Item {
         onPropertyValueChanged: {
             randScaleChanged(randScaleParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startRandScale", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: maskStrengthParam
@@ -146,6 +181,9 @@ Item {
         propertyName: "Mask"
         onPropertyValueChanged: {
             maskChanged(maskStrengthParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startMask", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -158,17 +196,37 @@ Item {
         onPropertyValueChanged: {
             inputsCountChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startInputsCount", propertyValue, oldValue)
+        }
+    }
+    ParamSlider {
+        id: seedParam
+        y: 396
+        minimum: 1
+        maximum: 100
+        step: 1
+        propertyName: "Seed"
+        onPropertyValueChanged: {
+            seedChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startSeed", propertyValue, oldValue)
+        }
     }
     CheckBox {
         id: keepProportionParam
-        y: 411
+        y: 444
         leftPadding: 30
         height: 25
         width: 140
         text: qsTr("Keep proportion")
         checked: false
         onCheckedChanged: {
-            keepProportionChanged(keepProportionParam.checked)
+            keepProportionChanged(keepProportionParam.checked)            
+        }
+        onToggled: {
+            propertyChangingFinished("startKeepProportion", checked, !checked)
             focus = false
         }
 
@@ -196,6 +254,53 @@ Item {
         contentItem: Text {
             topPadding: 0
             text: keepProportionParam.text
+            color: "#A2A2A2"
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+            renderType: Text.NativeRendering
+        }
+    }
+    CheckBox {
+        id: useAlphaParam
+        y: 469
+        leftPadding: 30
+        height: 25
+        width: 140
+        text: qsTr("Use alpha")
+        checked: true
+        onCheckedChanged: {
+            useAlphaChanged(useAlphaParam.checked)
+        }
+        onToggled: {
+            propertyChangingFinished("startUseAlpha", checked, !checked)
+            focus = false
+        }
+
+        indicator: Item {
+            implicitWidth: 30
+            implicitHeight: 30
+            x: useAlphaParam.contentItem.width + 5
+            anchors.verticalCenter: parent.verticalCenter
+            Rectangle {
+                width: 14
+                height: 14
+                anchors.centerIn: parent
+                color: "transparent"
+                border.color: "#A2A2A2"
+                Rectangle {
+                    width: 6
+                    height: 6
+                    anchors.centerIn: parent
+                    visible: useAlphaParam.checked
+                    color: "#A2A2A2"
+                }
+            }
+        }
+
+        contentItem: Text {
+            topPadding: 0
+            text: useAlphaParam.text
             color: "#A2A2A2"
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignVCenter

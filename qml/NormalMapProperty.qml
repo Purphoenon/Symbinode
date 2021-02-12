@@ -28,6 +28,7 @@ Item {
     width: parent.width
     property real startStrenght: 0.2
     signal strenghtChanged(real val)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: strenghtParam
         minimum: -1
@@ -35,6 +36,9 @@ Item {
         propertyValue: startStrenght
         onPropertyValueChanged: {
             strenghtChanged(strenghtParam.propertyValue*10)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startStrenght", propertyValue, oldValue)
         }
     }
 }

@@ -27,12 +27,16 @@ Item {
     width: parent.width
     property alias startIntensity: intensityParam.propertyValue
     signal intensityChanged(real intensity)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: intensityParam
         maximum: 2
         propertyName: "Intensity"
         onPropertyValueChanged: {
             intensityChanged(intensityParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startIntensity", propertyValue, oldValue)
         }
     }
 }

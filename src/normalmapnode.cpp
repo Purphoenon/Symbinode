@@ -35,7 +35,6 @@ NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, float str
     preview->setY(30*s);
     preview->setScale(s);
     propView = new QQuickView();
-    connect(this, &NormalMapNode::changeSelected, this, &NormalMapNode::updatePrev);
     connect(preview, &NormalMapObject::textureChanged, this, &NormalMapNode::setOutput);
     connect(this, &NormalMapNode::generatePreview, this, &NormalMapNode::previewGenerated);
     connect(this, &NormalMapNode::strenghtChanged, preview, &NormalMapObject::setStrenght);
@@ -45,6 +44,7 @@ NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, float str
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/NormalMapProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(strenghtChanged(qreal)), this, SLOT(updateStrenght(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     propertiesPanel->setProperty("startStrenght", m_strenght/30.0f);
 }
 
@@ -59,6 +59,14 @@ void NormalMapNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &NormalMapNode::getPreviewTexture() {
+    return preview->normalTexture();
+}
+
+void NormalMapNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 float NormalMapNode::strenght() {
     return m_strenght;
 }
@@ -69,8 +77,8 @@ void NormalMapNode::serialize(QJsonObject &json) const {
     json["strength"] = m_strenght;
 }
 
-void NormalMapNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void NormalMapNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("strength")) {
         updateStrenght(json["strength"].toVariant().toFloat());
         propertiesPanel->setProperty("startStrenght", m_strenght/30.0f);
@@ -91,13 +99,6 @@ void NormalMapNode::setOutput() {
 void NormalMapNode::previewGenerated() {
     preview->normalGenerated = true;
     preview->update();
-}
-
-void NormalMapNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->normalTexture(), true);
-    }
-    preview->selectedItem = sel;
 }
 
 void NormalMapNode::updateScale(float scale) {

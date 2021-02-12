@@ -32,15 +32,17 @@ public:
     BlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float intensity = 0.5f);
     ~BlurNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json);
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     float intensity();
     void setIntensity(float intensity);
 signals:
     void intensityChanged(float intensity);
 public slots:
     void updateScale(float scale);
-    void updatePrev(bool sel);
+    void previewGenerated();
     void setOutput();
     void updateIntensity(qreal intensity);
 private:

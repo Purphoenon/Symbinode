@@ -21,11 +21,12 @@
 
 #include "threshold.h"
 #include <QOpenGLFramebufferObjectFormat>
+#include "FreeImage.h"
 
 ThresholdObject::ThresholdObject(QQuickItem *parent, QVector2D resolution, float threshold):
     QQuickFramebufferObject (parent), m_resolution(resolution), m_threshold(threshold)
 {
-    setMirrorVertically(true);
+
 }
 
 QQuickFramebufferObject::Renderer *ThresholdObject::createRenderer() const {
@@ -61,6 +62,12 @@ void ThresholdObject::setSourceTexture(unsigned int texture) {
     update();
 }
 
+void ThresholdObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
+}
+
 float ThresholdObject::threshold() {
     return m_threshold;
 }
@@ -87,6 +94,10 @@ ThresholdRenderer::ThresholdRenderer(QVector2D res): m_resolution(res) {
     thresholdShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     thresholdShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/threshold.frag");
     thresholdShader->link();
+    checkerShader = new QOpenGLShaderProgram();
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/checker.vert");
+    checkerShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/checker.frag");
+    checkerShader->link();
     textureShader = new QOpenGLShaderProgram();
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
@@ -131,6 +142,7 @@ ThresholdRenderer::ThresholdRenderer(QVector2D res): m_resolution(res) {
 
 ThresholdRenderer::~ThresholdRenderer() {
     delete thresholdShader;
+    delete checkerShader;
     delete textureShader;
 }
 
@@ -158,18 +170,29 @@ void ThresholdRenderer::synchronize(QQuickFramebufferObject *item) {
             thresholdShader->setUniformValue(thresholdShader->uniformLocation("useMask"), maskTexture);
             thresholdShader->release();
             create();
-            if(thresholdItem->selectedItem) thresholdItem->updatePreview(m_thresholdTexture, true);
             thresholdItem->setTexture(m_thresholdTexture);
+            thresholdItem->updatePreview(m_thresholdTexture);
         }
     }    
+    if(thresholdItem->texSaving) {
+        thresholdItem->texSaving = false;
+        saveTexture(thresholdItem->saveName);
+    }
 }
 
 void ThresholdRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    checkerShader->bind();
+    glBindVertexArray(textureVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    checkerShader->release();
+
     if(m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();
@@ -206,4 +229,43 @@ void ThresholdRenderer::updateTexResolution() {
         GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void ThresholdRenderer::saveTexture(QString fileName) {
+    unsigned int fbo;
+    unsigned int tex;
+    glGenFramebuffers(1, &fbo);
+    glGenTextures(1, &tex);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glDisable(GL_DEPTH_TEST);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindVertexArray(textureVAO);
+    textureShader->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_thresholdTexture);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    textureShader->release();
+    glBindVertexArray(0);
+
+    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

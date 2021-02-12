@@ -34,7 +34,7 @@ BlurNode::BlurNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &BlurNode::updateScale);
-    connect(this, &BlurNode::changeSelected, this, &BlurNode::updatePrev);
+    connect(this, &Node::generatePreview, this, &BlurNode::previewGenerated);
     connect(preview, &BlurObject::textureChanged, this, &BlurNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BlurObject::setResolution);
     connect(this, &BlurNode::intensityChanged, preview, &BlurObject::setIntensity);
@@ -44,6 +44,7 @@ BlurNode::BlurNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startIntensity", m_intensity);
     connect(propertiesPanel, SIGNAL(intensityChanged(qreal)), this, SLOT(updateIntensity(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Blur");
     m_socketsInput[0]->setTip("Texture");
@@ -61,14 +62,22 @@ void BlurNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &BlurNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void BlurNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void BlurNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 19;
     json["intensity"] = m_intensity;
 }
 
-void BlurNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void BlurNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("intensity")) {
         m_intensity = json["intensity"].toVariant().toFloat();
         propertiesPanel->setProperty("startIntensity", m_intensity);
@@ -90,10 +99,9 @@ void BlurNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void BlurNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void BlurNode::previewGenerated() {
+    preview->bluredTex = true;
+    preview->update();
 }
 
 void BlurNode::setOutput() {

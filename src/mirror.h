@@ -25,6 +25,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include "FreeImage.h"
 
 class MirrorObject: public QQuickFramebufferObject
 {
@@ -38,6 +39,7 @@ public:
     void setMaskTexture(unsigned int texture);
     unsigned int sourceTexture();
     void setSourceTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     int direction();
     void setDirection(int dir);
     QVector2D resolution();
@@ -45,8 +47,10 @@ public:
     bool mirroredTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void textureChanged();
 private:
     QVector2D m_resolution;
@@ -66,6 +70,7 @@ public:
 private:
     void mirror();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int mirrorFBO;
     unsigned int m_mirrorTexture = 0;
@@ -73,6 +78,7 @@ private:
     unsigned int maskTexture = 0;
     unsigned int textureVAO = 0;
     QOpenGLShaderProgram *mirrorShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

@@ -29,12 +29,14 @@ uniform vec2 res;
 uniform int sides = 3;
 uniform float scale = 0.4;
 uniform float smoothValue = 0.0;
+uniform bool useAlpha = true;
 uniform bool useMask = false;
 
 out vec4 FragColor;
 
 void main() {
     vec2 st = gl_FragCoord.xy/res;
+    st.y = 1.0 - st.y;
     vec4 color = vec4(0.0);
     float d = 0.0;
 
@@ -49,6 +51,7 @@ void main() {
 
     float p = 1.0-smoothstep(scale - smoothValue*scale, scale,d);
     color = vec4(p);
+    if(!useAlpha) color.a = 1.0;
 
     if(useMask) {
         vec4 maskColor = texture(maskTexture, gl_FragCoord.xy/res);

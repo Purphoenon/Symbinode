@@ -34,8 +34,8 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float tra
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &TransformNode::updateScale);
+    connect(this, &Node::generatePreview, this, &TransformNode::previewGenerated);
     connect(preview, &TransformObject::textureChanged, this, &TransformNode::setOutput);
-    connect(this, &TransformNode::changeSelected, this, &TransformNode::updatePrev);
     connect(preview, &TransformObject::updatePreview, this, &TransformNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TransformObject::setResolution);
     connect(this, &TransformNode::translationXChanged, preview, &TransformObject::setTranslateX);
@@ -59,6 +59,7 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float tra
     connect(propertiesPanel, SIGNAL(scaleYChanged(qreal)), this, SLOT(updateScaleY(qreal)));
     connect(propertiesPanel, SIGNAL(angleChanged(int)), this, SLOT(updateRotation(int)));
     connect(propertiesPanel, SIGNAL(clampCoordsChanged(bool)), this, SLOT(updateClampCoords(bool)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Transform");
     m_socketsInput[0]->setTip("Texture");
@@ -76,6 +77,14 @@ void TransformNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &TransformNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void TransformNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void TransformNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 16;
@@ -87,8 +96,8 @@ void TransformNode::serialize(QJsonObject &json) const {
     json["clamp"] = m_clamp;
 }
 
-void TransformNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void TransformNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("transX")) {
         m_transX = json["transX"].toVariant().toFloat();
     }
@@ -179,10 +188,9 @@ void TransformNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void TransformNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void TransformNode::previewGenerated() {
+    preview->transformedTex = true;
+    preview->update();
 }
 
 void TransformNode::updateTranslationX(qreal x) {

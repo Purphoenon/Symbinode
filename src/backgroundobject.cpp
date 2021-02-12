@@ -38,6 +38,8 @@ void BackgroundObject::mousePressEvent(QMouseEvent *event) {
         lastY = event->pos().y();
     }
     else if(event->button() == Qt::LeftButton) {
+        setFocus(true);
+        setFocus(false);
         event->setAccepted(false);
     }
     else {
@@ -73,6 +75,7 @@ void BackgroundObject::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void BackgroundObject::wheelEvent(QWheelEvent *event) {
+    if(event->modifiers() != Qt::NoModifier) return;
     if(event->angleDelta().y() > 0) {
        if((m_scale + 0.001f*event->angleDelta().y()) > 2.0f) return;
        scaleStep = 0.001f*event->angleDelta().y();
@@ -98,8 +101,8 @@ void BackgroundObject::wheelEvent(QWheelEvent *event) {
     y = y - lastY;
     m_pan.setY(y);
     emit scaleChanged(m_scale);
-    update();
     emit panChanged(m_pan);
+    update();    
 }
 
 float BackgroundObject::viewScale() {

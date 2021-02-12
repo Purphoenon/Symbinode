@@ -41,12 +41,18 @@ void NormalObject::setResolution(QVector2D res) {
     m_resolution = res;
 }
 
-unsigned int NormalObject::normalTexture() {
+unsigned int &NormalObject::normalTexture() {
     return m_normalMap;
 }
 
 void NormalObject::setNormalTexture(unsigned int texture) {
     m_normalMap = texture;
+}
+
+void NormalObject::saveTexture(QString fileName) {
+    texSaving = true;
+    saveName = fileName;
+    update();
 }
 
 NormalRenderer::NormalRenderer(QVector2D resolution): m_resolution(resolution) {
@@ -61,10 +67,10 @@ NormalRenderer::NormalRenderer(QVector2D resolution): m_resolution(resolution) {
     renderNormal->setUniformValue(renderNormal->uniformLocation("textureSample"), 0);
     renderNormal->release();
 
-    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 1.0f,
-                    -1.0f, 1.0f, 0.0f, 0.0f,
-                    1.0f, -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 0.0f};
+    float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
+                    -1.0f, 1.0f, 0.0f, 1.0f,
+                    1.0f, -1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -94,10 +100,8 @@ void NormalRenderer::synchronize(QQuickFramebufferObject *item) {
     NormalObject *normalItem = static_cast<NormalObject*>(item);
     m_normalTexture = normalItem->normalTexture();
     m_resolution = normalItem->resolution();
-    if(normalItem->selectedItem) {
-        normalItem->updatePreview(m_normalTexture, true);
-    }
     normalItem->updateNormal(m_normalTexture);
+    normalItem->updatePreview(m_normalTexture);
 
     if(normalItem->texSaving && m_normalTexture) {
         normalItem->texSaving = false;

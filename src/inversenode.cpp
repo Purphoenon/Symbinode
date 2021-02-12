@@ -32,7 +32,7 @@ InverseNode::InverseNode(QQuickItem *parent, QVector2D resolution): Node(parent,
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &InverseNode::updateScale);
-    connect(this, &Node::changeSelected, this, &InverseNode::updatePrev);
+    connect(this, &Node::generatePreview, this, &InverseNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &InverseObject::setResolution);
     connect(preview, &InverseObject::textureChanged, this, &InverseNode::setOutput);
     connect(preview, &InverseObject::updatePreview, this, &InverseNode::updatePreview);
@@ -51,6 +51,14 @@ void InverseNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &InverseNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void InverseNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void InverseNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 20;
@@ -62,10 +70,9 @@ void InverseNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void InverseNode::updatePrev(bool sel) {
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void InverseNode::previewGenerated() {
+    preview->inversedTex = true;
+    preview->update();
 }
 
 void InverseNode::setOutput() {

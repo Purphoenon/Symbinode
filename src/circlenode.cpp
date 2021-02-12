@@ -21,10 +21,11 @@
 
 #include "circlenode.h"
 
-CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolation, float radius, float smooth):
-    Node(parent, resolution), m_interpolation(interpolation), m_radius(radius), m_smooth(smooth)
+CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolation, float radius,
+                       float smooth, bool useAlpha): Node(parent, resolution),
+    m_interpolation(interpolation), m_radius(radius), m_smooth(smooth), m_useAlpha(useAlpha)
 {
-    preview = new CircleObject(grNode, m_resolution, m_interpolation, m_radius, m_smooth);
+    preview = new CircleObject(grNode, m_resolution, m_interpolation, m_radius, m_smooth, m_useAlpha);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -33,14 +34,14 @@ CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolati
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &CircleNode::updateScale);
-    connect(this, &CircleNode::changeSelected, this, &CircleNode::updatePrev);
     connect(this, &CircleNode::generatePreview, this, &CircleNode::previewGenerated);
     connect(preview, &CircleObject::changedTexture, this, &CircleNode::setOutput);
     connect(preview, &CircleObject::updatePreview, this, &CircleNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &CircleObject::setResolution);
     connect(this, &CircleNode::interpolationChanged, preview, &CircleObject::setInterpolation);
     connect(this, &CircleNode::radiusChanged, preview, &CircleObject::setRadius);
-    connect(this, &CircleNode::smoothChanged, preview, &CircleObject::setSmooth);    
+    connect(this, &CircleNode::smoothChanged, preview, &CircleObject::setSmooth);
+    connect(this, &CircleNode::useAlphaChanged, preview, &CircleObject::setUseAlpha);
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Circle");
@@ -50,9 +51,12 @@ CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolati
     propertiesPanel->setProperty("startInterpolation", m_interpolation);
     propertiesPanel->setProperty("startRadius", m_radius);
     propertiesPanel->setProperty("startSmooth", m_smooth);
+    propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
     connect(propertiesPanel, SIGNAL(interpolationChanged(int)), this, SLOT(updateInterpolation(int)));
     connect(propertiesPanel, SIGNAL(radiusChanged(qreal)), this, SLOT(updateRadius(qreal)));
     connect(propertiesPanel, SIGNAL(smoothValueChanged(qreal)), this, SLOT(updateSmooth(qreal)));
+    connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 CircleNode::~CircleNode() {
@@ -64,16 +68,25 @@ void CircleNode::operation() {
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
 }
 
+unsigned int &CircleNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void CircleNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void CircleNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 15;
     json["interpolation"] = m_interpolation;
     json["radius"] = m_radius;
     json["smooth"] = m_smooth;
+    json["useAlpha"] = m_useAlpha;
 }
 
-void CircleNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void CircleNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("interpolation")) {
         m_interpolation = json["interpolation"].toVariant().toInt();
         interpolationChanged(m_interpolation);
@@ -84,9 +97,13 @@ void CircleNode::deserialize(const QJsonObject &json) {
     if(json.contains("smooth")) {
         m_smooth = json["smooth"].toVariant().toFloat();
     }
+    if(json.contains("useAlpha")) {
+        m_useAlpha = json["useAlpha"].toBool();
+    }
     propertiesPanel->setProperty("startInterpolation", m_interpolation);
     propertiesPanel->setProperty("startRadius", m_radius);
     propertiesPanel->setProperty("startSmooth", m_smooth);
+    propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
 }
 
 int CircleNode::interpolation() {
@@ -116,17 +133,19 @@ void CircleNode::setSmooth(float smooth) {
     smoothChanged(smooth);
 }
 
+bool CircleNode::useAlpha() {
+    return m_useAlpha;
+}
+
+void CircleNode::setUseAlpha(bool use) {
+    m_useAlpha = use;
+    useAlphaChanged(use);
+}
+
 void CircleNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
     preview->setScale(scale);
-}
-
-void CircleNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
 }
 
 void CircleNode::setOutput() {
@@ -150,5 +169,10 @@ void CircleNode::updateRadius(qreal radius) {
 
 void CircleNode::updateSmooth(qreal smooth) {
     setSmooth(smooth);
+    dataChanged();
+}
+
+void CircleNode::updateUseAlpha(bool use) {
+    setUseAlpha(use);
     dataChanged();
 }

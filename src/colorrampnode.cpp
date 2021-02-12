@@ -34,18 +34,19 @@ ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, QJsonArra
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColorRampNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ColorRampNode::updatePrev);
+    connect(this, &Node::generatePreview, this, &ColorRampNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &ColorRampObject::setResolution);
     connect(preview, &ColorRampObject::textureChanged, this, &ColorRampNode::setOutput);
     connect(preview, &ColorRampObject::updatePreview, this, &ColorRampNode::updatePreview);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorRampProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
-    connect(propertiesPanel, SIGNAL(gradientStopAdded(QVector3D, qreal)), preview, SLOT(gradientAdd(QVector3D, qreal)));
+    connect(propertiesPanel, SIGNAL(gradientStopAdded(QVector3D, qreal, int)), preview, SLOT(gradientAdd(QVector3D, qreal, int)));
     connect(propertiesPanel, SIGNAL(positionChanged(qreal, int)), preview, SLOT(positionUpdate(qreal, int)));
     connect(propertiesPanel, SIGNAL(colorChanged(QVector3D, int)), preview, SLOT(colorUpdate(QVector3D, int)));
     connect(propertiesPanel, SIGNAL(gradientStopDeleted(int)), preview, SLOT(gradientDelete(int)));
     connect(this, SIGNAL(stopsChanged(QVariant)), propertiesPanel, SIGNAL(gradientsStopsChanged(QVariant)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Color Ramp");
     m_socketsInput[0]->setTip("Texture");
@@ -64,14 +65,22 @@ void ColorRampNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &ColorRampNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void ColorRampNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void ColorRampNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 0;
     json["gradientsStops"] = stops();
 }
 
-void ColorRampNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void ColorRampNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("gradientsStops")) {
         QJsonArray gradientStops = json["gradientsStops"].toVariant().toJsonArray();
         stopsChanged(QVariant(gradientStops));
@@ -95,11 +104,9 @@ void ColorRampNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void ColorRampNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void ColorRampNode::previewGenerated() {
+    preview->rampedTex = true;
+    preview->update();
 }
 
 void ColorRampNode::setOutput() {

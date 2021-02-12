@@ -34,11 +34,15 @@ Item {
     signal inputMaxChanged(real value)
     signal outputMinChanged(real value)
     signal outputMaxChanged(real value)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: inputMinParam
         propertyName: "Input Min"
         onPropertyValueChanged: {
             inputMinChanged(inputMinParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startInputMin", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -48,6 +52,9 @@ Item {
         onPropertyValueChanged: {
             inputMaxChanged(inputMaxParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startInputMax", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: outputMinParam
@@ -56,6 +63,9 @@ Item {
         onPropertyValueChanged: {
             outputMinChanged(outputMinParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startOutputMin", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: outputMaxParam
@@ -63,6 +73,9 @@ Item {
         propertyName: "Output Max"
         onPropertyValueChanged: {
             outputMaxChanged(outputMaxParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startOutputMax", propertyValue, oldValue)
         }
     }
 }

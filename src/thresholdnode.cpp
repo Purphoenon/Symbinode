@@ -33,7 +33,7 @@ ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, float thr
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ThresholdNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ThresholdNode::updatePrev);
+    connect(this, &Node::generatePreview, this, &ThresholdNode::previewGenerated);
     connect(preview, &ThresholdObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &ThresholdObject::textureChanged, this, &ThresholdNode::setOutput);
     connect(this, &ThresholdNode::thresholdChanged, preview, &ThresholdObject::setThreshold);
@@ -42,6 +42,7 @@ ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, float thr
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startThreshold", m_threshold);
     connect(propertiesPanel, SIGNAL(thresholdChanged(qreal)), this, SLOT(updateThreshold(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Threshold");
     m_socketsInput[0]->setTip("Texture");
@@ -58,14 +59,22 @@ void ThresholdNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &ThresholdNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void ThresholdNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void ThresholdNode::serialize(QJsonObject &json) const{
     Node::serialize(json);
     json["type"] = 22;
     json["threshold"] = m_threshold;
 }
 
-void ThresholdNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void ThresholdNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("threshold")) {
         updateThreshold(json["threshold"].toVariant().toReal());
         propertiesPanel->setProperty("startThreshold", m_threshold);
@@ -87,9 +96,9 @@ void ThresholdNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void ThresholdNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) updatePreview(preview->texture(), true);
+void ThresholdNode::previewGenerated() {
+    preview->created = true;
+    preview->update();
 }
 
 void ThresholdNode::setOutput() {

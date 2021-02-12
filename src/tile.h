@@ -30,7 +30,7 @@ class TileObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, bool keepProportion = false);
+    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -48,6 +48,7 @@ public:
     void setTile4(unsigned int texture);
     unsigned int tile5();
     void setTile5(unsigned int texture);
+    void saveTexture(QString fileName);
     float offsetX();
     void setOffsetX(float offset);
     float offsetY();
@@ -72,15 +73,22 @@ public:
     void setMaskStrength(float mask);
     int inputsCount();
     void setInputsCount(int count);
+    int seed();
+    void setSeed(int seed);
     bool keepProportion();
     void setKeepProportion(bool keep);
+    bool useAlpha();
+    void setUseAlpha(bool use);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool tiledTex = false;
+    bool randUpdated = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void changedTexture();
 private:
     QVector2D m_resolution;
@@ -104,7 +112,9 @@ private:
     float m_randScale = 0.0f;
     float m_maskStrength = 0.0f;
     int m_inputsCount = 1;
+    int m_seed = 1;
     bool m_keepProportion = false;
+    bool m_useAlpha = true;
 };
 
 class TileRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -116,7 +126,9 @@ public:
     void render();
 private:
     void createTile();
+    void createRandom();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QVector2D m_resolution;
     unsigned int m_sourceTexture = 0;
     unsigned int m_tile1 = 0;
@@ -132,6 +144,7 @@ private:
     unsigned int randomFBO = 0;
     QOpenGLShaderProgram *tileShader;
     QOpenGLShaderProgram *randomShader;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
 };
 

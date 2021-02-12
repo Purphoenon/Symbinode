@@ -47,12 +47,19 @@ public:
     QVariant metalness();
     QVariant roughness();
     unsigned int normal();
+    QVector2D texResolution();
+    void setTexResolution(QVector2D res);
     bool translationView = false;
     bool zoomView = false;
     bool rotationObject = false;
+    bool updateRes = false;
     bool useAlbedoTex = false;
     bool useMetalTex = false;
     bool useRoughTex = false;
+    bool changedAlbedo = false;
+    bool changedRough = false;
+    bool changedMetal = false;
+    bool changedNormal = false;
 public slots:
     void updateAlbedo(QVariant albedo, bool useTexture);
     void updateMetal(QVariant metal, bool useTexture);
@@ -71,6 +78,7 @@ private:
     QVariant m_metalness = 0.0f;
     QVariant m_roughness = 0.2f;
     unsigned int m_normal = 0;
+    QVector2D m_texResolution = QVector2D(1024, 1024);
     int m_primitive = 0;
     int m_tile = 1;
 };
@@ -93,6 +101,7 @@ private:
     QMatrix4x4 projection;
     QMatrix4x4 view;
     QMatrix4x4 model;
+    QVector2D m_texResolution = QVector2D(1024, 1024);
     unsigned int hdrTexture = 0;
     unsigned int envCubemap = 0;
     unsigned int irradianceMap = 0;
@@ -118,6 +127,8 @@ private:
     void renderSphere();
     void renderPlane();
     void updateMatrix();
+    void updateTexResolution();
+    void updateOutputsTexture(unsigned int &dst, const unsigned int &src);
 };
 
 #endif // PREVIEW3D_H

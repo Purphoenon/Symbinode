@@ -33,6 +33,7 @@ Edge::Edge(QQuickItem *parent): QQuickItem(parent)
         connect(scene->background(), &BackgroundObject::scaleChanged, this, &Edge::updateScale);
         grEdge->setLineWidth(3.0f*scene->background()->viewScale());
     }
+    setZ(2);
 }
 
 Edge::Edge(const Edge &edge):Edge() {
@@ -44,6 +45,19 @@ Edge::~Edge() {
     m_startSocket = nullptr;
     m_endSocket = nullptr;
     delete grEdge;
+}
+
+bool Edge::intersectWith(QPointF p1, QPointF p2) {
+    QPainterPath cutLine(p1);
+    cutLine.lineTo(p2);
+    QPointF startPoint = grEdge->p1();
+    QPointF c1 = grEdge->p2();
+    QPointF c2 = grEdge->p3();
+    QPointF endPoint = grEdge->p4();
+    QPainterPath edgeLine(QPointF(m_startPos.x(), m_startPos.y()));
+    edgeLine.cubicTo(QPointF(m_startPos.x() + 0.5*grEdge->width(), m_startPos.y()), QPointF(m_endPos.x() -
+                     0.5*grEdge->width(), m_endPos.y()), QPointF(m_endPos.x(), m_endPos.y()));
+    return cutLine.intersects(edgeLine);
 }
 
 QVector2D Edge::startPosition() {
@@ -152,31 +166,27 @@ void Edge::setSelected(bool selected) {
 }
 
 void Edge::serialize(QJsonObject &json) const {
-    Scene *scene = reinterpret_cast<Scene*>(parentItem());
-    json["name"] = objectName();
-    json["startPosX"] = (m_startPos.x() + scene->background()->viewPan().x())/scene->background()->viewScale();
-    json["startPosY"] = (m_startPos.y() + scene->background()->viewPan().y())/scene->background()->viewScale();
-    json["endPosX"] = (m_endPos.x() + scene->background()->viewPan().x())/scene->background()->viewScale();
-    json["endPosY"] = (m_endPos.y() + scene->background()->viewPan().y())/scene->background()->viewScale();
+    json["start"] = m_startSocket->id().toString();
+    json["end"] = m_endSocket->id().toString();
 }
 
-void Edge::deserialize(const QJsonObject &json) {
-    Scene *scene = reinterpret_cast<Scene*>(parentItem());
-    if(json.contains("startPosX") && json.contains("startPosY")) {
-        setStartPosition(QVector2D(json["startPosX"].toVariant().toFloat(), json["startPosY"].toVariant().toFloat()));
-        Socket *s = findSockets(scene, m_startPos.x(), m_startPos.y());
+void Edge::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    if(json.contains("start")) {
+        Socket *s = hash[QUuid(json["start"].toString())];
         if(s) {
             setStartSocket(s);
             s->addEdge(this);
+            setStartPosition(s->globalPos());
         }
     }
-    if(json.contains("endPosX") && json.contains("endPosY")) {
-        setEndPosition(QVector2D(json["endPosX"].toVariant().toFloat(), json["endPosY"].toVariant().toFloat()));
-        Socket *s = findSockets(scene, m_endPos.x(), m_endPos.y());
+    if(json.contains("end")) {
+        Socket *s = hash[QUuid(json["end"].toString())];
         if(s) {
             setEndSocket(s);
             s->addEdge(this);
+            setEndPosition(s->globalPos());
         }
+
     }
 }
 

@@ -78,7 +78,9 @@ SOURCES += \
     src/brightnesscontrast.cpp \
     src/thresholdnode.cpp \
     src/threshold.cpp \
-    src/cubicbezier.cpp
+    src/cubicbezier.cpp \
+    src/cutline.cpp \
+    src/frame.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -149,7 +151,9 @@ HEADERS += \
     src/brightnesscontrast.h \
     src/thresholdnode.h \
     src/threshold.h \
-    src/cubicbezier.h
+    src/cubicbezier.h \
+    src/cutline.h \
+    src/frame.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -188,4 +192,7 @@ DISTFILES += \
     shaders/random.frag \
     shaders/mirror.frag \
     shaders/brightnesscontrast.frag \
-    shaders/threshold.frag
+    shaders/threshold.frag \
+    shaders/checker.vert \
+    shaders/checker.frag \
+    qml/NodeFrame.qml

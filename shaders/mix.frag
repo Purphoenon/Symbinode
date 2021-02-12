@@ -28,6 +28,7 @@ uniform sampler2D maskTexture;
 uniform float mixFactor = 0.5;
 uniform bool useFactorTex = false;
 uniform int mode = 0;
+uniform bool includingAlpha = true;
 uniform bool useMask = false;
 
 in vec2 texCoords;
@@ -42,7 +43,7 @@ void main()
     vec4 result = vec4(0.0);
 
     if(mode == 0) {
-        result = mix(fTex, sTex, factor);
+        result = mix(fTex, sTex, factor);        
     }
     else if(mode == 1) {
         result = (fTex + sTex)*factor + fTex*(1.0 - factor);
@@ -56,6 +57,8 @@ void main()
     else if(mode == 4) {
         result = (fTex/(sTex + 0.0039))*factor + fTex*(1.0 - factor);
     }
+
+    if(!includingAlpha) result.a = max(fTex.a, sTex.a);
 
     if(useMask) {
         vec4 maskColor = texture(maskTexture, texCoords);

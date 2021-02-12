@@ -32,9 +32,10 @@ public:
     NormalNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
     ~NormalNode();
     void operation();
+    unsigned int &getPreviewTexture();
+    void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
 public slots:
-    void updatePrev(bool sel);
     void updateScale(float scale);
     void saveNormal(QString dir);
 signals:

@@ -30,6 +30,7 @@ Item {
     property alias startScaleY: scaleYParam.propertyValue
     property alias startJitter: jitterParam.propertyValue
     property alias startIntensity: intensityParam.propertyValue
+    property alias startSeed: seedParam.propertyValue
     property alias startBorders: bordersParam.propertyValue
     property alias startInverse: inverseParam.checked
     property alias type: control.currentIndex
@@ -41,25 +42,31 @@ Item {
     signal inverseChanged(bool inverse)
     signal intensityChanged(real intensity)
     signal bordersChanged(real size)
+    signal seedChanged(int seed)
+    signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown{
         id: control
         y: 15
         model: ["Crystals", "Borders", "Solid", "Worley"]
-        onActivated: {
-            if(index == 0) {
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
                 voronoiTypeChanged("crystals")
             }
-            else if(index == 1) {
+            else if(currentIndex == 1) {
                 voronoiTypeChanged("borders")
             }
-            else if(index == 2) {
+            else if(currentIndex == 2) {
                 voronoiTypeChanged("solid")
             }
-            else if(index == 3) {
+            else if(currentIndex == 3) {
                 voronoiTypeChanged("worley")
             }
             focus = false
+        }
+
+        onActivated: {
+            propertyChangingFinished("type", currentIndex, oldIndex)
         }
     }
 
@@ -72,6 +79,9 @@ Item {
         onPropertyValueChanged: {
             voronoiScaleChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScale", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: scaleXParam
@@ -82,6 +92,9 @@ Item {
         step: 1
         onPropertyValueChanged: {
             scaleXChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleX", propertyValue, oldValue)
         }
     }
     ParamSlider {
@@ -94,6 +107,9 @@ Item {
         onPropertyValueChanged: {
             scaleYChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startScaleY", propertyValue, oldValue)
+        }
     }
     ParamSlider {
         id: jitterParam
@@ -102,17 +118,23 @@ Item {
         onPropertyValueChanged: {
             jitterChanged(propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startJitter", propertyValue, oldValue)
+        }
     }
     CheckBox {
         id: inverseParam
-        y: control.currentIndex == 1 ? 251 : 218
+        y: control.currentIndex == 1 ? 284 : 251
         leftPadding: 30
         height: 25
         width: 100
         text: qsTr("Inverse")
         checked: false        
         onCheckedChanged: {
-            inverseChanged(inverseParam.checked)
+            inverseChanged(inverseParam.checked)            
+        }
+        onToggled: {
+            propertyChangingFinished("startInverse", checked, !checked)
             focus = false
         }
 
@@ -156,15 +178,36 @@ Item {
         onPropertyValueChanged: {
             intensityChanged(intensityParam.propertyValue)
         }
+        onChangingFinished: {
+            propertyChangingFinished("startIntensity", propertyValue, oldValue)
+        }
+    }
+
+    ParamSlider {
+        id: seedParam
+        y: 203
+        minimum: 1
+        maximum: 100
+        step: 1
+        propertyName: "Seed"
+        onPropertyValueChanged: {
+            seedChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startSeed", propertyValue, oldValue)
+        }
     }
 
     ParamSlider {
         id: bordersParam
-        y: 203
+        y: 236
         visible: control.currentIndex == 1
         propertyName: "Width"
         onPropertyValueChanged: {
             bordersChanged(bordersParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startBorders", propertyValue, oldValue)
         }
     }
 }

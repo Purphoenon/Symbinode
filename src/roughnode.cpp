@@ -35,7 +35,6 @@ RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     preview->setY(30*s);
     preview->setScale(s);
     preview->setValue(0.2f);
-    connect(this, &RoughNode::changeSelected, this, &RoughNode::updatePrev);
     connect(this, &Node::changeScaleView, this, &RoughNode::updateScale);
     connect(preview, &OneChanelObject::updatePreview, this, &RoughNode::updatePreview);
     connect(preview, &OneChanelObject::updateValue, this, &RoughNode::roughChanged);
@@ -44,6 +43,7 @@ RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/RoughProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(roughChanged(qreal)), this, SLOT(updateRough(qreal)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 RoughNode::~RoughNode() {
@@ -63,14 +63,22 @@ void RoughNode::operation() {
     preview->update();
 }
 
+unsigned int &RoughNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void RoughNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void RoughNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 10;
     json["rough"] = m_rough;
 }
 
-void RoughNode::deserialize(const QJsonObject &json) {
-    Node::deserialize(json);
+void RoughNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) {
+    Node::deserialize(json, hash);
     if(json.contains("rough")) {
         updateRough(json["rough"].toVariant().toFloat());
         propertiesPanel->setProperty("startRough", m_rough);
@@ -85,17 +93,6 @@ void RoughNode::updateRough(qreal rough) {
     dataChanged();
 }
 
-void RoughNode::updatePrev(bool sel) {
-    if(sel) {
-        if(m_socketsInput[0]->countEdge() > 0) {
-            updatePreview(m_socketsInput[0]->value(), true);
-        }
-        else {
-            updatePreview(QVector3D(m_rough, m_rough, m_rough), false);
-        }
-    }
-}
-
 void RoughNode::updateScale(float scale) {
     preview->setX(3*scale);
     preview->setY(30*scale);
@@ -103,7 +100,5 @@ void RoughNode::updateScale(float scale) {
 }
 
 void RoughNode::saveRough(QString dir) {
-    preview->texSaving = true;
-    preview->saveName = dir.append("/roughness.png");
-    preview->update();
+    preview->saveTexture(dir.append("/roughness.png"));
 }

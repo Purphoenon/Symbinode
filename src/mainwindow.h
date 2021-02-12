@@ -46,6 +46,7 @@
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
+#include "frame.h"
 
 class MainWindow: public QQuickWindow
 {
@@ -54,6 +55,7 @@ class MainWindow: public QQuickWindow
     Q_PROPERTY(Node* pinnedNode READ pinnedNode)
 public:
     Q_INVOKABLE void createNode(float x, float y, int nodeType);
+    Q_INVOKABLE void createFrame(float x, float y);
     Q_INVOKABLE void newDocument();
     Q_INVOKABLE void copy();
     Q_INVOKABLE void paste();
@@ -63,6 +65,7 @@ public:
     Q_INVOKABLE void saveSceneAs();
     Q_INVOKABLE void loadScene();
     Q_INVOKABLE void exportTextures();
+    Q_INVOKABLE void saveCurrentTexture();
     Q_INVOKABLE void changeResolution(QVector2D res);
     Q_INVOKABLE void changePrimitive(int id);
     Q_INVOKABLE void changeTilePreview3D(int id);
@@ -73,6 +76,7 @@ public:
     ~MainWindow();
     void keyPressEvent(QKeyEvent *event);
     void duplicate();
+    void removeFromFrame();
     void setActiveTab(Tab *tab);
     void closeTab(Tab *tab);
     Node *pinnedNode();
@@ -84,7 +88,7 @@ signals:
     void deleteTab(Tab *tab);
     void propertiesPanelChanged(QQuickItem *oldPanel, QQuickItem *newPanel);
     void preview3DChanged(QQuickItem *oldPreview, QQuickItem *newPreview);
-    void previewUpdate(QVariant previewData, bool useTexture);
+    void previewUpdate(unsigned int previewData);
     void resolutionChanged(QVector2D res);
 private:
     Tab *activeTab = nullptr;

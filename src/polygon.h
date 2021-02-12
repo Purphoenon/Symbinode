@@ -30,25 +30,30 @@ class PolygonObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    PolygonObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int sides = 3, float polygonScale = 0.4f, float smooth = 0.0f);
+    PolygonObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int sides = 3, float polygonScale = 0.4f, float smooth = 0.0f, bool useAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
     unsigned int &texture();
     void setTexture(unsigned int texture);
+    void saveTexture(QString fileName);
     int sides();
     void setSides(int sides);
     float polygonScale();
     void setPolygonScale(float scale);
     float smooth();
     void setSmooth(float smooth);
+    bool useAlpha();
+    void setUseAlpha(bool use);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool generatedPolygon = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool texSaving = false;
+    QString saveName = "";
 signals:
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void changedTexture();
 private:
     QVector2D m_resolution;
@@ -57,6 +62,7 @@ private:
     int m_sides = 3;
     float m_scale = 0.4f;
     float m_smooth = 0.0f;
+    bool m_useAlpha = true;
 };
 
 class PolygonRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -69,7 +75,9 @@ public:
 private:
     void createPolygon();
     void updateTexResolution();
+    void saveTexture(QString fileName);
     QOpenGLShaderProgram *generatePolygon;
+    QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     unsigned int polygonFBO;
     unsigned int polygonVAO, textureVAO;

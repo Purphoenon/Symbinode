@@ -33,7 +33,7 @@ ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D c
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &ColoringNode::updateScale);
-    connect(this, &Node::changeSelected, this, &ColoringNode::updatePrev);
+    connect(this, &Node::generatePreview, this, &ColoringNode::previewGenerated);
     connect(preview, &ColoringObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &ColoringObject::setResolution);
     connect(preview, &ColoringObject::textureChanged, this, &ColoringNode::setOutput);
@@ -43,6 +43,7 @@ ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D c
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startColor", m_color);
     connect(propertiesPanel, SIGNAL(colorChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(1, 1);
     setTitle("Coloring");
     m_socketsInput[0]->setTip("Texture");
@@ -58,6 +59,14 @@ void ColoringNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
+unsigned int &ColoringNode::getPreviewTexture() {
+    return preview->texture();
+}
+
+void ColoringNode::saveTexture(QString fileName) {
+    preview->saveTexture(fileName);
+}
+
 void ColoringNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 2;
@@ -68,8 +77,8 @@ void ColoringNode::serialize(QJsonObject &json) const {
     json["color"] = color;
 }
 
-void ColoringNode::deserialize(const QJsonObject &json){
-    Node::deserialize(json);
+void ColoringNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash){
+    Node::deserialize(json, hash);
     if(json.contains("color")) {
         QJsonArray color = json["color"].toArray();
         QVector3D c = QVector3D(color[0].toVariant().toFloat(), color[1].toVariant().toFloat(), color[2].toVariant().toFloat());
@@ -93,11 +102,9 @@ void ColoringNode::updateScale(float scale) {
     preview->setScale(scale);
 }
 
-void ColoringNode::updatePrev(bool sel) {
-    preview->selectedItem = sel;
-    if(sel) {
-        updatePreview(preview->texture(), true);
-    }
+void ColoringNode::previewGenerated() {
+    preview->colorizedTex = true;
+    preview->update();
 }
 
 void ColoringNode::setOutput() {

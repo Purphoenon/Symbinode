@@ -51,6 +51,7 @@ Item {
         verticalAlignment: Text.AlignVCenter
         font.pointSize: 8
         selectByMouse: true
+        selectionColor: "#7E7E7E"
         onAccepted: {
             focus = false
         }

@@ -27,6 +27,8 @@
 #include <QJsonArray>
 #include "socket.h"
 
+class Frame;
+
 class Node: public QQuickItem
 {
     Q_OBJECT
@@ -51,21 +53,25 @@ public:
     bool checkConnected(Node* node, socketType type);
     QList<Edge*> getEdges() const;
     QQuickItem *getPropertyPanel();
+    Frame *attachedFrame();
+    void setAttachedFrame(Frame *frame);
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void hoverMoveEvent(QHoverEvent *event);
     void hoverLeaveEvent(QHoverEvent *event);
     virtual void serialize(QJsonObject &json) const;
-    virtual void deserialize(const QJsonObject &json);
+    virtual void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void setPropertyOnPanel(const char* name, QVariant value);
     void createSockets(int inputCount, int outputCount);
     void createAdditionalInputs(int count);
     void setTitle(QString title);
-    void setContentText(QString text);
     virtual void operation();
     virtual unsigned int &getPreviewTexture();
+    virtual void saveTexture(QString fileName);
 public slots:
     void scaleUpdate(float scale);
+    void propertyChanged(QString propName, QVariant newValue, QVariant oldValue);
 signals:
     void changeBaseX(float value);
     void changeBaseY(float value);
@@ -73,7 +79,7 @@ signals:
     void changeResolution(QVector2D res);
     void changeSelected(bool select);
     void changeScaleView(float scale);
-    void updatePreview(QVariant previewData, bool useTexture);
+    void updatePreview(unsigned int previewData);
     void dataChanged();
     void generatePreview();
 protected:
@@ -85,9 +91,10 @@ protected:
     QVector<Socket *> m_additionalInputs;
     QVector2D m_resolution;
 private:
-    QQuickView *view;       
-    float m_baseX;
-    float m_baseY;
+    QQuickView *view;
+    Frame *m_attachedFrame = nullptr;
+    float m_baseX = 0;
+    float m_baseY = 0;
     float m_scale = 1.0f;
     QVector2D m_pan = QVector2D(0, 0);
     bool m_selected = false;
