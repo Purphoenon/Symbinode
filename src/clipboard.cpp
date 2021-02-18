@@ -327,7 +327,9 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     }
     else if(qobject_cast<MixNode*>(node)) {
         MixNode *baseNode = qobject_cast<MixNode*>(node);
-        MixNode *mixNode = new MixNode(parent, scene->resolution(), baseNode->factor(), baseNode->mode(), baseNode->includingAlpha());
+        MixNode *mixNode = new MixNode(parent, scene->resolution(), baseNode->factor(),
+                                       baseNode->foregroundOpacity(), baseNode->backgroundOpacity(),
+                                       baseNode->mode(), baseNode->includingAlpha());
         return mixNode;
     }
     else if(qobject_cast<NormalMapNode*>(node)) {

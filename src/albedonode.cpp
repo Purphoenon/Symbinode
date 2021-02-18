@@ -53,12 +53,12 @@ AlbedoNode::~AlbedoNode() {
 void AlbedoNode::operation() {
     if(m_socketsInput[0]->countEdge() > 0) {
         preview->useAlbedoTex = true;
-        preview->setAlbedo(m_socketsInput[0]->value());
+        preview->setAlbedoTexture(m_socketsInput[0]->value().toUInt());
     }
     else {
-        preview->useAlbedoTex = false;
-        preview->setAlbedo(m_albedo);
+        preview->useAlbedoTex = false;        
     }
+    preview->setAlbedoValue(m_albedo);
     preview->selectedItem = selected();
     preview->update();
 }
@@ -94,9 +94,10 @@ void AlbedoNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &ha
 
 void AlbedoNode::updateAlbedo(QVector3D color) {
     m_albedo = color;
-    if(m_socketsInput[0]->countEdge() == 0) {
+    operation();
+    /*if(m_socketsInput[0]->countEdge() == 0) {
         operation();
-    }
+    }*/
     dataChanged();
 }
 

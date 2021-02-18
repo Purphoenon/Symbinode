@@ -152,6 +152,7 @@ Item {
         id: upValue
         x: textValue.x + textValue.width + 5
         y: 1
+        cursorShape: Qt.PointingHandCursor
         hoverEnabled: true
         width: 6
         height: parent.height/2 - 2
@@ -195,7 +196,7 @@ Item {
         width: 6
         height: parent.height/2 - 2
         hoverEnabled: true
-
+        cursorShape: Qt.PointingHandCursor
         onEntered: {
             hovered = true
             downCanvas.requestPaint()

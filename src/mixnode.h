@@ -28,7 +28,7 @@ class MixNode: public Node
 {
     Q_OBJECT
 public:
-    MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int mode = 0, bool includingAlpha = true);
+    MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
     ~MixNode();
     void operation();
     unsigned int &getPreviewTexture();
@@ -39,6 +39,10 @@ public:
     void setMode(int mode);
     bool includingAlpha();
     void setIncludingAlpha(bool including);
+    int foregroundOpacity();
+    void setForegroundOpacity(int opacity);
+    int backgroundOpacity();
+    void setBackgroundOpacity(int opacity);
     void setOutput();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
@@ -46,15 +50,21 @@ signals:
     void factorChanged(float f);
     void modeChanged(int mode);
     void includingAlphaChanged(bool including);
+    void foregroundOpacityChanged(int opacity);
+    void backgroundOpacityChanged(int opacity);
 public slots:
     void previewGenerated();
     void updateFactor(qreal f);
     void updateMode(int mode);
     void updateIncludingAlpha(bool including);
+    void updateForegroundOpacity(int opacity);
+    void updateBackgroundOpacity(int opacity);
     void updateScale(float scale);
 private:
     MixObject *preview = nullptr;
     float m_factor = 0.5;
+    int m_fOpacity = 100;
+    int m_bOpacity = 100;
     int m_mode = 0;
     bool m_includingAlpha = true;
 };

@@ -32,17 +32,20 @@ class AlbedoObject: public QQuickFramebufferObject
 public:
     AlbedoObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
     QQuickFramebufferObject::Renderer *createRenderer() const;
-    QVariant albedo();
-    void setAlbedo(QVariant albedo);
+    QVector3D albedoValue();
+    void setAlbedoValue(QVector3D albedo);
     void setColorTexture(unsigned int texture);
+    unsigned int albedoTexture();
     void setAlbedoTexture(unsigned int texture);
     unsigned int &texture();
+    void setTexture (unsigned int texture);
     void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool useAlbedoTex = false;
     bool selectedItem = false;
     bool texSaving = false;
+    bool resUpdated = false;
     QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
@@ -50,7 +53,7 @@ signals:
 private:
     unsigned int m_colorTexture = 0;
     unsigned int m_albedoTexture = 0;
-    QVariant m_albedo = QVector3D(1.0f, 1.0f, 1.0f);
+    QVector3D m_albedo = QVector3D(1.0f, 1.0f, 1.0f);
     QVector2D m_resolution;
 };
 
@@ -64,11 +67,15 @@ public:
 private:
     void saveTexture(QString fileName);
     void createColor();
+    void createAlbedoTexture();
+    void updateTextureRes();
     QOpenGLShaderProgram *renderAlbedo;
     unsigned int VAO = 0;
+    unsigned int albedoFBO = 0;
     unsigned int colorFBO = 0;
     unsigned int albedoTexture = 0;
     unsigned int colorTexture = 0;
+    unsigned int m_sourceTexture = 0;
     QVector3D albedoVal = QVector3D(1.0f, 1.0f, 1.0f);
     QVector2D m_resolution;
 };

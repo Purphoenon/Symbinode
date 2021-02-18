@@ -28,15 +28,20 @@ Item {
     property alias startMode: control.currentIndex
     property alias startincludingAlpha: includingAlphaParam.checked
     property real startFactor
+    property int startForegroundOpacity
+    property int startBackgroundOpacity
     signal modeChanged(int mode)
     signal factorChanged(real f)
     signal includingAlphaChanged(bool including)
+    signal foregroundOpacityChanged(int opacity);
+    signal backgroundOpacityChanged(int opacity);
     signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
         id: control
         y: 15
-        model: ["Mix", "Add", "Multiply", "Substract", "Divide"]
+        model: ["Normal", "Mix", "Overlay", "Screen", "Soft-light", "Hard-light", "Lighten", "Color-dodge", "Color-burn",
+                "Darken", "Add", "Subtract", "Multiply", "Divide", "Difference", "Exclusion"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 modeChanged(0)
@@ -52,6 +57,39 @@ Item {
             }
             else if(currentIndex == 4) {
                 modeChanged(4)
+            }
+            else if(currentIndex == 5) {
+                modeChanged(5)
+            }
+            else if(currentIndex == 6) {
+                modeChanged(6)
+            }
+            else if(currentIndex == 7) {
+                modeChanged(7)
+            }
+            else if(currentIndex == 8) {
+                modeChanged(8)
+            }
+            else if(currentIndex == 9) {
+                modeChanged(9)
+            }
+            else if(currentIndex == 10) {
+                modeChanged(10)
+            }
+            else if(currentIndex == 11) {
+                modeChanged(11)
+            }
+            else if(currentIndex == 12) {
+                modeChanged(12)
+            }
+            else if(currentIndex == 13) {
+                modeChanged(13)
+            }
+            else if(currentIndex == 14) {
+                modeChanged(14)
+            }
+            else if(currentIndex == 15) {
+                modeChanged(15)
             }
             focus = false
         }
@@ -73,13 +111,45 @@ Item {
         }
     }
 
+    ParamSlider {
+        id: foregroundOpacityParam
+        y: 71
+        visible: control.currentIndex != 1
+        propertyName: "Foreground opacity"
+        propertyValue: startForegroundOpacity
+        maximum: 100
+        step: 1
+        onPropertyValueChanged: {
+            foregroundOpacityChanged(foregroundOpacityParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startForegroundOpacity", propertyValue, oldValue)
+        }
+    }
+
+    ParamSlider {
+        id: backgroundOpacityParam
+        y: 104
+        visible: control.currentIndex != 1
+        propertyName: "Background opacity"
+        propertyValue: startBackgroundOpacity
+        maximum: 100
+        step: 1
+        onPropertyValueChanged: {
+            backgroundOpacityChanged(backgroundOpacityParam.propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startBackgroundOpacity", propertyValue, oldValue)
+        }
+    }
+
     CheckBox {
         id: includingAlphaParam
-        y: 86
+        y: control.currentIndex != 1 ? 152 : 86
         leftPadding: 30
         height: 25
         width: 135
-        text: qsTr("Including alpha")
+        text: qsTr("Use alpha")
         checked: true
         onCheckedChanged: {
             includingAlphaChanged(checked)

@@ -101,17 +101,21 @@ ComboBox {
         x: parent.leftPadding
         y: control.height - 2 + control.topPadding
         width: control.width - parent.rightPadding
-        implicitHeight: contentItem.implicitHeight
+        implicitHeight: 200
         padding: 0
         topPadding: 2
 
         contentItem: ListView {
             clip: true
+            boundsBehavior: Flickable.StopAtBounds
             implicitHeight: contentHeight
             model: control.popup.visible ? control.delegateModel : null
             currentIndex: control.highlightedIndex
 
-            ScrollIndicator.vertical: ScrollIndicator { }
+            ScrollBar.vertical: ScrollBar{
+                active: true
+                 z: 1
+            }
         }
 
         background: Rectangle {

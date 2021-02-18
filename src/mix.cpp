@@ -23,8 +23,10 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int mode, bool includingAlpha):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_factor(factor), m_mode(mode), m_includingAlpha(includingAlpha)
+MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int foregroundOpacity,
+                     int backgroundOpacity, int mode, bool includingAlpha): QQuickFramebufferObject (parent),
+     m_factor(factor), m_fOpacity(foregroundOpacity), m_bOpacity(backgroundOpacity),
+     m_mode(mode), m_includingAlpha(includingAlpha), m_resolution(resolution)
 {
 }
 
@@ -84,6 +86,22 @@ bool MixObject::includingAlpha() {
 
 void MixObject::setIncludingAlpha(bool including) {
     m_includingAlpha = including;
+}
+
+int MixObject::foregroundOpacity() {
+    return m_fOpacity;
+}
+
+void MixObject::setForegroundOpacity(int opacity) {
+    m_fOpacity = opacity;
+}
+
+int MixObject::backgroundOpacity() {
+    return m_bOpacity;
+}
+
+void MixObject::setBackgroundOpacity(int opacity) {
+    m_bOpacity = opacity;
 }
 
 QVector2D MixObject::resolution() {
@@ -191,11 +209,13 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
         secondTexture = mixItem->secondTexture();
         if(firstTexture || secondTexture) {
             maskTexture = mixItem->maskTexture();
+            currentMode = mixItem->mode();
             mixShader->bind();
             mixShader->setUniformValue(mixShader->uniformLocation("useFactorTex"), mixItem->useFactorTexture);
-            mixShader->setUniformValue(mixShader->uniformLocation("mode"), mixItem->mode());
             mixShader->setUniformValue(mixShader->uniformLocation("includingAlpha"), mixItem->includingAlpha());
             mixShader->setUniformValue(mixShader->uniformLocation("useMask"), maskTexture);
+            mixShader->setUniformValue(mixShader->uniformLocation("foregroundOpacity"), mixItem->foregroundOpacity()*0.01f);
+            mixShader->setUniformValue(mixShader->uniformLocation("backgroundOpacity"), mixItem->backgroundOpacity()*0.01f);
             mixShader->release();
             if(mixItem->useFactorTexture) {
                 factorTexture = mixItem->factor().toUInt();
@@ -247,6 +267,8 @@ void MixRenderer::mix() {
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
     mixShader->bind();
     mixShader->setUniformValue(mixShader->uniformLocation("mixFactor"), mixFactor);
+    GLuint indexMode = glGetSubroutineIndex(mixShader->programId(), GL_FRAGMENT_SHADER, blendFunc[currentMode].c_str());
+    glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &indexMode);
     glBindVertexArray(VAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, firstTexture);

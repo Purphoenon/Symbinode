@@ -24,13 +24,14 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include <string>
 #include "FreeImage.h"
 
 class MixObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int mode = 0, bool includingAlpha = true);
+    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int firstTexture();
     void setFirstTexture(unsigned int texture);
@@ -45,6 +46,10 @@ public:
     void setMode(int mode);
     bool includingAlpha();
     void setIncludingAlpha(bool including);
+    int foregroundOpacity();
+    void setForegroundOpacity(int opacity);
+    int backgroundOpacity();
+    void setBackgroundOpacity(int opacity);
     QVector2D resolution();
     void setResolution(QVector2D res);
     unsigned int &texture();
@@ -62,6 +67,8 @@ private:
     unsigned int m_firstTexture = 0;
     unsigned int m_secondTexture = 0;
     QVariant m_factor = QVariant(0.5f);
+    int m_fOpacity = 100;
+    int m_bOpacity = 100;
     int m_mode = 0;
     bool m_includingAlpha = true;
     QVector2D m_resolution;
@@ -92,6 +99,10 @@ private:
     float mixFactor = 0.5f;
     QVector2D m_resolution;
     unsigned int VAO;
+    int currentMode = 0;
+    QList<std::string> blendFunc {"normal", "mixMode", "overlay", "screen", "soft_light", "hard_light",
+                               "lighten", "color_dodge", "color_burn", "darken", "add", "subtract",
+                               "multiply", "divide", "difference", "exclusion"};
 };
 
 #endif // MIX_H

@@ -31,5 +31,10 @@ out vec4 FragColor;
 
 void main()
 {
-    FragColor = useAlbedoTex ? texture(albedoTex, texCoords) : vec4(albedoVal, 1.0);
+    vec4 albedoTex = texture(albedoTex, texCoords);
+    vec4 albedo = vec4(albedoVal, 1.0);
+    if(useAlbedoTex) {
+        albedo = albedoTex*albedoTex.a + (1.0 - albedoTex.a)*albedo;
+    }
+    FragColor = vec4(albedo.rgb, 1.0);
 }
