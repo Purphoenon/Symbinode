@@ -28,7 +28,7 @@ class MixNode: public Node
 {
     Q_OBJECT
 public:
-    MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
+    MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 1.0f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
     ~MixNode();
     void operation();
     unsigned int &getPreviewTexture();
@@ -62,7 +62,7 @@ public slots:
     void updateScale(float scale);
 private:
     MixObject *preview = nullptr;
-    float m_factor = 0.5;
+    float m_factor = 1.0f;
     int m_fOpacity = 100;
     int m_bOpacity = 100;
     int m_mode = 0;

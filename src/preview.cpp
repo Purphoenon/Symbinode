@@ -34,9 +34,11 @@ QQuickFramebufferObject::Renderer *PreviewObject::createRenderer() const{
 }
 
 void PreviewObject::mousePressEvent(QMouseEvent *event) {
-    if(event->button() == Qt::MidButton) {
+    if(event->button() == Qt::MidButton || event->button() == Qt::RightButton) {
         lastX = event->pos().x();
         lastY = event->pos().y();
+        startX = lastX;
+        startY = lastY;
     }
     else {
         event->setAccepted(false);
@@ -53,6 +55,36 @@ void PreviewObject::mouseMoveEvent(QMouseEvent *event) {
        lastY = event->pos().y();
        update();
     }
+    else if(event->buttons() == Qt::RightButton && event->modifiers() == Qt::AltModifier) {
+        if(event->pos().x() > 0) {
+           if((m_scale + 0.01f*(event->pos().x() - lastX)) > 2.0f) scaleStep = 2.0f - m_scale;
+           else scaleStep = 0.01f*(event->pos().x() - lastX);
+        }
+        else {
+            if((m_scale + 0.01f*(event->pos().x() - lastX)) < 0.1f) scaleStep = 0.1f - m_scale;
+            else scaleStep = 0.01f*(event->pos().x() - lastX);
+        }
+
+        if(scaleStep != 0.0f) {
+            float oldScale = m_scale;
+            m_scale += scaleStep;
+            lastX = event->pos().x();
+            lastY = event->pos().y();
+            m_scale = std::min(std::max(m_scale, 0.1f), 2.0f);
+            float x = startX - (width() - 1024.0f*(oldScale))*0.5f - m_pan.x();
+            x = x/(oldScale);
+            x = x*m_scale + (width() - 1024.0f*m_scale)*0.5f;
+            x = startX - x;
+            m_pan.setX(x);
+            float y = startY - (height() - 1024.0f*(oldScale))*0.5f - m_pan.y();
+            y = y/(oldScale);
+            y = y*m_scale + (height() - 1024.0f*m_scale)*0.5f;
+            y = startY - y;
+            m_pan.setY(y);
+            update();
+        }
+
+    }
 }
 
 void PreviewObject::mouseReleaseEvent(QMouseEvent *event) {
@@ -64,29 +96,33 @@ void PreviewObject::mouseReleaseEvent(QMouseEvent *event) {
 
 void PreviewObject::wheelEvent(QWheelEvent *event) {
     if(event->angleDelta().y() > 0) {
-       if((m_scale + 0.001f*event->angleDelta().y()) > 2.0f) return;
-       scaleStep = 0.001f*event->angleDelta().y();
+       if((m_scale + 0.001f*event->angleDelta().y()) > 2.0f) scaleStep = 2.0f - m_scale;
+       else scaleStep = 0.001f*event->angleDelta().y();
     }
     else {
-        if((m_scale + 0.001f*event->angleDelta().y()) < 0.1f) return;
-        scaleStep = 0.001f*event->angleDelta().y();
+        if((m_scale + 0.001f*event->angleDelta().y()) < 0.1f) scaleStep = 0.1f - m_scale;
+        else scaleStep = 0.001f*event->angleDelta().y();
     }
 
-    m_scale += scaleStep;
-    lastX = event->pos().x();
-    lastY = event->pos().y();
-    m_scale = std::min(std::max(m_scale, 0.1f), 2.0f);
-    float x = lastX - (width() - 1024.0f*(m_scale - scaleStep))*0.5f - m_pan.x();
-    x = x/(m_scale - scaleStep);
-    x = x*m_scale + (width() - 1024.0f*m_scale)*0.5f;
-    x = lastX - x;
-    m_pan.setX(x);
-    float y = lastY - (height() - 1024.0f*(m_scale - scaleStep))*0.5f - m_pan.y();
-    y = y/(m_scale - scaleStep);
-    y = y*m_scale + (height() - 1024.0f*m_scale)*0.5f;
-    y = lastY - y;
-    m_pan.setY(y);
-    update();
+    if(scaleStep != 0.0f) {
+        float oldScale = m_scale;
+        m_scale += scaleStep;
+        lastX = event->pos().x();
+        lastY = event->pos().y();
+        m_scale = std::min(std::max(m_scale, 0.1f), 2.0f);
+        float x = lastX - (width() - 1024.0f*(oldScale))*0.5f - m_pan.x();
+        x = x/(oldScale);
+        x = x*m_scale + (width() - 1024.0f*m_scale)*0.5f;
+        x = lastX - x;
+        m_pan.setX(x);
+        float y = lastY - (height() - 1024.0f*(oldScale))*0.5f - m_pan.y();
+        y = y/(oldScale);
+        y = y*m_scale + (height() - 1024.0f*m_scale)*0.5f;
+        y = lastY - y;
+        m_pan.setY(y);
+        update();
+    }
+
 }
 
 float PreviewObject::previewScale() {

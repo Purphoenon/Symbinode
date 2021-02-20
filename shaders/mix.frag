@@ -168,7 +168,7 @@ vec4 hard_light(vec4 src, vec4 dst, float f) {
 subroutine(blendModeType)
 vec4 lighten(vec4 src, vec4 dst, float f) {
     vec4 result = vec4(0.0);
-    if(src.r*dst.a > dst.r*src.a) {
+    /*if(src.r*dst.a > dst.r*src.a) {
         result.r = src.r*src.a + dst.r*dst.a*(1.0 - src.a);
     }
     else {
@@ -185,7 +185,8 @@ vec4 lighten(vec4 src, vec4 dst, float f) {
     }
     else {
         result.b = dst.b*dst.a + src.b*src.a*(1.0 - dst.a);
-    }
+    }*/
+    result.rgb = max(src.rgb*src.a*dst.a, dst.rgb*dst.a*src.a) + src.rgb*src.a*(1.0 - dst.a) + dst.rgb*dst.a*(1.0 - src.a);
     result.a = src.a + dst.a - src.a*dst.a;
     if(src.a > 0) {
         result.a = result.a*f + dst.a*(1.0 - f);
@@ -246,7 +247,7 @@ vec4 color_burn(vec4 src, vec4 dst, float f) {
         result.r = dst.r*dst.a*(1.0 - src.a);
     }
     else if(src.r*src.a > 0) {
-        result.r = src.a*dst.a*(1.0 - min(1, (1.0 - dst.r*dst.a/dst.a)*src.a/src.r*src.a)) + src.r*src.a*(1.0 - dst.a) + dst.r*dst.a*(1.0 - src.a);
+        result.r = src.a*dst.a*(1.0 - min(1, (1.0 - dst.r)*1.0/src.r)) + src.r*src.a*(1.0 - dst.a) + dst.r*dst.a*(1.0 - src.a);
     }
 
     if(src.g*src.a == 0 && dst.g*dst.a == dst.a) {
@@ -256,7 +257,7 @@ vec4 color_burn(vec4 src, vec4 dst, float f) {
         result.g = dst.g*dst.a*(1.0 - src.a);
     }
     else if(src.g*src.a > 0) {
-        result.g = src.a*dst.a*(1.0 - min(1, (1.0 - dst.g*dst.a/dst.a)*src.a/src.g*src.a)) + src.g*src.a*(1.0 - dst.a) + dst.g*dst.a*(1.0 - src.a);
+        result.g = src.a*dst.a*(1.0 - min(1, (1.0 - dst.g)*1.0/src.g)) + src.g*src.a*(1.0 - dst.a) + dst.g*dst.a*(1.0 - src.a);
     }
 
     if(src.b*src.a == 0 && dst.b*dst.a == dst.a) {
@@ -266,7 +267,7 @@ vec4 color_burn(vec4 src, vec4 dst, float f) {
         result.b = dst.b*dst.a*(1.0 - src.a);
     }
     else if(src.b*src.a > 0) {
-        result.b = src.a*dst.a*(1.0 - min(1, (1.0 - dst.b*dst.a/dst.a)*src.a/src.b*src.a)) + src.b*src.a*(1.0 - dst.a) + dst.b*dst.a*(1.0 - src.a);
+        result.b = src.a*dst.a*(1.0 - min(1, (1.0 - dst.b)*1.0/src.b)) + src.b*src.a*(1.0 - dst.a) + dst.b*dst.a*(1.0 - src.a);
     }
 
     result.a = src.a + dst.a - src.a*dst.a;
@@ -281,7 +282,7 @@ vec4 color_burn(vec4 src, vec4 dst, float f) {
 subroutine(blendModeType)
 vec4 darken(vec4 src, vec4 dst, float f) {
     vec4 result = vec4(0.0);
-    result.rgb = min(src.rgb*dst.a, dst.rgb*src.a) + src.rgb*src.a*(1.0 - dst.a) + dst.rgb*dst.a*(1.0 - src.a);
+    result.rgb = min(src.rgb*src.a*dst.a, dst.rgb*dst.a*src.a) + src.rgb*src.a*(1.0 - dst.a) + dst.rgb*dst.a*(1.0 - src.a);
     result.a = src.a + dst.a - src.a*dst.a;
     if(src.a > 0) {
         result.a = result.a*f + dst.a*(1.0 - f);
@@ -307,8 +308,8 @@ vec4 add(vec4 src, vec4 dst, float f) {
 subroutine(blendModeType)
 vec4 subtract(vec4 src, vec4 dst, float f) {
     vec4 result = vec4(0.0);
-    result.rgb = src.rgb*src.a*(1.0 - 2.0*dst.a) + dst.rgb*dst.a;
-    result.a = src.a + dst.a - src.a*dst.a;
+    result.rgb = max(src.rgb*src.a*(1.0 - 2.0*dst.a) + dst.rgb*dst.a, vec3(0.0));
+    result.a = max(src.a + dst.a - src.a*dst.a, 0.0);
     if(src.a > 0) {
         result.a = result.a*f + dst.a*(1.0 - f);
         result.rgb = (result.rgb*f + dst.rgb*dst.a*(1.0 - f))/result.a;

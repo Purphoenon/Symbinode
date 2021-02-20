@@ -49,6 +49,10 @@ void Preview3DObject::mousePressEvent(QMouseEvent *event) {
             lastWorldPos = viewPos.unproject(model*view, projection, QRect(0, 0, width(), height()));
         }
     }
+    else if(event->button() == Qt::RightButton) {
+        lastX = event->pos().x();
+        lastY = event->pos().y();
+    }
     else {
         event->ignore();
     }
@@ -97,19 +101,37 @@ void Preview3DObject::mouseMoveEvent(QMouseEvent *event) {
         rotationObject = true;
         update();
     }
+    else if(event->buttons() == Qt::RightButton && event->modifiers() == Qt::AltModifier) {
+        float stepZoom = 0.0f;
+        if(event->pos().x() - lastX > 0) {
+           if((m_zoomCam - 0.05f*(event->pos().x() - lastX)) < 1.0f) stepZoom = m_zoomCam - 1.0f;
+           else stepZoom = 0.05f*(event->pos().x() - lastX);
+        }
+        else {
+            if((m_zoomCam - 0.05f*(event->pos().x() - lastX)) > 45.0f) stepZoom = m_zoomCam - 45.0f;
+            else stepZoom = 0.05f*(event->pos().x() - lastX);
+        }
+        if(stepZoom != 0.0f) {
+            m_zoomCam -= stepZoom;
+            lastX = event->pos().x();
+            lastY = event->pos().y();
+            zoomView = true;
+            update();
+        }
+    }
 }
 
 void Preview3DObject::wheelEvent(QWheelEvent *event) {
     float stepZoom = 0.0f;
     if(event->angleDelta().y() > 0) {
-        if(m_zoomCam - 2.0f < 1.0f) return;
-        stepZoom = -2.0f;
+       if((m_zoomCam - 0.01f*event->angleDelta().y()) < 1.0f) return;
+       stepZoom = 0.01f*event->angleDelta().y();
     }
     else {
-        if(m_zoomCam + 2.0f > 45.0f) return;
-        stepZoom = 2.0f;
+        if((m_zoomCam - 0.01f*event->angleDelta().y()) > 45.0f) return;
+        stepZoom = 0.01f*event->angleDelta().y();
     }
-    m_zoomCam += stepZoom;
+    m_zoomCam -= stepZoom;
     zoomView = true;
     update();
 }
@@ -132,6 +154,11 @@ int Preview3DObject::primitivesType() {
 
 void Preview3DObject::setPrimitivesType(int type) {
     m_primitive = type;
+    theta = 0;
+    phi = 0;
+    m_rotQuat = QQuaternion();
+    m_zoomCam = 35.0f;
+    m_posCam = QVector3D(0, 0, -19);
     update();
 }
 
@@ -491,7 +518,13 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
     Preview3DObject *previewItem = static_cast<Preview3DObject*>(item);
     wWidth = previewItem->width();
     wHeight = previewItem->height();
-    primitive = previewItem->primitivesType();
+    if(primitive != previewItem->primitivesType()) {
+        primitive = previewItem->primitivesType();
+        positionV = previewItem->posCam();
+        zoom = previewItem->zoomCam();
+        rotQuat = previewItem->rotQuat();
+        updateMatrix();
+    }
     if(previewItem->translationView) {
         previewItem->translationView = false;
         positionV = previewItem->posCam();
@@ -833,6 +866,7 @@ void Preview3DRenderer::updateMatrix() {
     projection.perspective(zoom, (float)wWidth/(float)wHeight, 0.1f, 38.0f);
     view = QMatrix4x4();
     view.translate(positionV);
+    //view.rotate(rotQuat);
     model = QMatrix4x4();
     model.translate(0.0f, 0.0f, 0.0f);
     model.rotate(rotQuat);

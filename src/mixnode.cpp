@@ -37,8 +37,8 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int for
     preview->setScale(s);
     createSockets(4, 1);
     setTitle("Mix");
-    m_socketsInput[0]->setTip("Color1");
-    m_socketsInput[1]->setTip("Color2");
+    m_socketsInput[0]->setTip("Background");
+    m_socketsInput[1]->setTip("Foreground");
     m_socketsInput[2]->setTip("Factor");
     m_socketsInput[3]->setTip("Mask");
     connect(this, &Node::changeScaleView, this, &MixNode::updateScale);

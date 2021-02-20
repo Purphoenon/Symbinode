@@ -82,7 +82,7 @@ DragRect {
                 anchors.fill: parent
                 text: node.title
                 anchors.bottomMargin: 5*scaleView
-                renderType: Text.NativeRendering
+                //renderType: Text.NativeRendering
                 font.pointSize: 10*scaleView
                 color: "#C8C8C8"
                 verticalAlignment: Text.AlignVCenter

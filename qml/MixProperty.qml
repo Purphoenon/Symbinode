@@ -113,7 +113,7 @@ Item {
 
     ParamSlider {
         id: foregroundOpacityParam
-        y: 71
+        y: 104
         visible: control.currentIndex != 1
         propertyName: "Foreground opacity"
         propertyValue: startForegroundOpacity
@@ -129,7 +129,7 @@ Item {
 
     ParamSlider {
         id: backgroundOpacityParam
-        y: 104
+        y: 71
         visible: control.currentIndex != 1
         propertyName: "Background opacity"
         propertyValue: startBackgroundOpacity

@@ -31,7 +31,7 @@ class MixObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 0.5f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
+    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 1.0f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int firstTexture();
     void setFirstTexture(unsigned int texture);
@@ -66,7 +66,7 @@ signals:
 private:
     unsigned int m_firstTexture = 0;
     unsigned int m_secondTexture = 0;
-    QVariant m_factor = QVariant(0.5f);
+    QVariant m_factor = QVariant(1.0f);
     int m_fOpacity = 100;
     int m_bOpacity = 100;
     int m_mode = 0;
@@ -96,7 +96,7 @@ private:
     unsigned int mixTexture = 0;
     unsigned int maskTexture = 0;
     unsigned int factorTexture = 0;
-    float mixFactor = 0.5f;
+    float mixFactor = 1.0f;
     QVector2D m_resolution;
     unsigned int VAO;
     int currentMode = 0;

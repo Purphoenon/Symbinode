@@ -45,6 +45,7 @@ private:
     float m_scale = 0.2f;
     float offsetX = 0, offsetY = 0;
     float lastX, lastY;
+    float startX, startY;
     float scaleStep = 0.0f;
     QVector2D m_pan = QVector2D(0.0f, 0.0f);
 };

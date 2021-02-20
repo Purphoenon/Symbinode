@@ -59,18 +59,4 @@ Rectangle {
         x: type ? socket.width + 5 : -width - 5
         color: "#D8D9D9"
     }
-    /*ToolTip {
-        id: tip
-        text: textTip
-        visible: showTip && socket.parent.parent.parent
-        y: (socket.height - height)*0.5
-        x: type ? socket.width : -width
-        contentItem: Text {
-                text: tip.text
-                font: tip.font
-                color: "#D8D9D9"
-        }
-
-        background: Item{}
-    }*/
 }

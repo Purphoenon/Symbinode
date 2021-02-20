@@ -724,6 +724,7 @@ MainWindow {
                 id: pin
                 x: parent.width - width - 5
                 y: 30
+                z: 1
                 radius: 2
                 width: 24
                 height: 24
@@ -737,8 +738,10 @@ MainWindow {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        pin.pinned = !pin.pinned
-                        mainWindow.pin(pin.pinned)
+                        if(mainWindow.activeNode || pin.pinned) {
+                            pin.pinned = !pin.pinned
+                            mainWindow.pin(pin.pinned)
+                        }
                     }
                 }                
             }
@@ -746,7 +749,7 @@ MainWindow {
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: {
-                    if(mouse.buttons == Qt.RightButton){
+                    if(mouse.buttons == Qt.RightButton && mouse.modifiers == Qt.NoModifier){
                         nodeViewParams.popup()
                     }
                     else {
@@ -788,54 +791,6 @@ MainWindow {
                       }
                 }
             }
-            /*Popup {
-                id: nodeViewParams
-                //x: 0
-                z: 0
-                width: 150
-                height: contentItem.implicitHeight
-                padding: 0
-
-                contentItem: Item {
-                    width: 100
-                    implicitHeight: 100
-                    Rectangle {
-                        id: saveTextureItem
-                        y: 20
-                        height: 30
-                        width: parent.width
-                        color: "transparent"
-                        Text {
-                            height: 30
-                            x: 28
-                            verticalAlignment: Text.AlignVCenter
-                            text: qsTr("Save texture")
-                            color: "#A2A2A2"
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onEntered: {
-                                saveTextureItem.color = "#404347"
-                            }
-                            onExited: {
-                                saveTextureItem.color = "transparent"
-                            }
-                            onClicked:  {
-                                mainWindow.saveCurrentTexture()
-                                nodeViewParams.close()
-                            }
-                        }
-                    }
-                }
-
-                background:
-                    Rectangle {
-                        width: 150
-                        radius: 2
-                        color: "#2C2D2F"
-                    }
-            }*/
         }
     }
     DockPanel {

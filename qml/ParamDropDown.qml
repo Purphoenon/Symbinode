@@ -101,7 +101,7 @@ ComboBox {
         x: parent.leftPadding
         y: control.height - 2 + control.topPadding
         width: control.width - parent.rightPadding
-        implicitHeight: 200
+        implicitHeight: Math.min(contentHeight, 200) + topPadding
         padding: 0
         topPadding: 2
 
@@ -113,7 +113,7 @@ ComboBox {
             currentIndex: control.highlightedIndex
 
             ScrollBar.vertical: ScrollBar{
-                active: true
+                active: popup.contentHeight > 200
                  z: 1
             }
         }
