@@ -59,6 +59,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(this, &TileNode::maskStrengthChanged, preview, &TileObject::setMaskStrength);
     connect(this, &TileNode::inputsCountChanged, preview, &TileObject::setInputsCount);
     connect(this, &TileNode::seedChanged, preview, &TileObject::setSeed);
+    connect(this, &TileNode::tileScaleChanged, preview, &TileObject::setTileScale);
     connect(this, &TileNode::keepProportionChanged, preview, &TileObject::setKeepProportion);
     connect(this, &TileNode::useAlphaChanged, preview, &TileObject::setUseAlpha);
     propView = new QQuickView();
@@ -92,6 +93,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(propertiesPanel, SIGNAL(maskChanged(qreal)), this, SLOT(updateMaskStrength(qreal)));
     connect(propertiesPanel, SIGNAL(inputsCountChanged(int)), this, SLOT(updateInputsCount(int)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
+    connect(propertiesPanel, SIGNAL(scaleTileChanged(int)), this, SLOT(updateTileScale(int)));
     connect(propertiesPanel, SIGNAL(keepProportionChanged(bool)), this, SLOT(updateKeepProportion(bool)));
     connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
@@ -365,6 +367,15 @@ void TileNode::setSeed(int seed) {
     seedChanged(seed);
 }
 
+int TileNode::tileScale() {
+    return m_scale;
+}
+
+void TileNode::setTileScale(int scale) {
+    m_scale = scale;
+    tileScaleChanged(scale);
+}
+
 bool TileNode::keepProportion() {
     return m_keepProportion;
 }
@@ -475,6 +486,12 @@ void TileNode::updateInputsCount(int count) {
 
 void TileNode::updateSeed(int seed) {
     setSeed(seed);
+    operation();
+    dataChanged();
+}
+
+void TileNode::updateTileScale(int scale) {
+    setTileScale(scale);
     operation();
     dataChanged();
 }

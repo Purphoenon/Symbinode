@@ -79,9 +79,10 @@ DragRect {
             radius: 6*scaleView
             Label {
                 id: titleLabel
-                anchors.fill: parent
+                width: parent.width
+                height: parent.height
                 text: node.title
-                anchors.bottomMargin: 5*scaleView
+                bottomPadding: 5*scaleView
                 //renderType: Text.NativeRendering
                 font.pointSize: 10*scaleView
                 color: "#C8C8C8"

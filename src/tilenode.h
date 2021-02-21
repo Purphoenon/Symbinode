@@ -62,6 +62,8 @@ public:
     void setInputsCount(int count);
     int seed();
     void setSeed(int seed);
+    int tileScale();
+    void setTileScale(int scale);
     bool keepProportion();
     void setKeepProportion(bool keep);
     bool useAlpha();
@@ -81,6 +83,7 @@ signals:
     void maskStrengthChanged(float mask);
     void inputsCountChanged(int count);
     void seedChanged(int seed);
+    void tileScaleChanged(int scale);
     void keepProportionChanged(bool keep);
     void useAlphaChanged(bool use);
 public slots:
@@ -99,6 +102,7 @@ public slots:
     void updateMaskStrength(qreal mask);
     void updateInputsCount(int count);
     void updateSeed(int seed);
+    void updateTileScale(int scale);
     void updateKeepProportion(bool keep);
     void updateUseAlpha(bool use);
 private:
@@ -116,6 +120,7 @@ private:
     float m_maskStrength = 0.0f;
     int m_inputsCount = 1;
     int m_seed = 1;
+    int m_scale = 1;
     bool m_keepProportion = false;
     bool m_useAlpha = true;
 };

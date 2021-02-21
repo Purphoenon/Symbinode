@@ -26,7 +26,7 @@ Item {
     height: childrenRect.height + 30
     width: parent.width
     property alias startMode: control.currentIndex
-    property alias startincludingAlpha: includingAlphaParam.checked
+    property alias startincludingAlpha: useAlphaParam.checked
     property real startFactor
     property int startForegroundOpacity
     property int startBackgroundOpacity
@@ -142,13 +142,10 @@ Item {
             propertyChangingFinished("startBackgroundOpacity", propertyValue, oldValue)
         }
     }
-
-    CheckBox {
-        id: includingAlphaParam
+    ParamCheckbox {
+        id: useAlphaParam
         y: control.currentIndex != 1 ? 152 : 86
-        leftPadding: 30
-        height: 25
-        width: 135
+        width: 90
         text: qsTr("Use alpha")
         checked: true
         onCheckedChanged: {
@@ -157,37 +154,6 @@ Item {
         onToggled: {
             propertyChangingFinished("startIncludingAlpha", checked, !checked)
             focus = false
-        }
-
-        indicator: Item {
-                       implicitWidth: 30
-                       implicitHeight: 30
-                       x: includingAlphaParam.contentItem.width + 5
-                       anchors.verticalCenter: parent.verticalCenter
-                       Rectangle {
-                           width: 14
-                           height: 14
-                           anchors.centerIn: parent
-                           color: "transparent"
-                           border.color: "#A2A2A2"
-                           Rectangle {
-                               width: 6
-                               height: 6
-                               anchors.centerIn: parent
-                               visible: includingAlphaParam.checked
-                               color: "#A2A2A2"
-                           }
-                       }
-                   }
-
-        contentItem: Text {
-            topPadding: 0
-            text: includingAlphaParam.text
-            color: "#A2A2A2"
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
         }
     }
 }

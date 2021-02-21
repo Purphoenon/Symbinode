@@ -195,4 +195,5 @@ DISTFILES += \
     shaders/threshold.frag \
     shaders/checker.vert \
     shaders/checker.frag \
-    qml/NodeFrame.qml
+    qml/NodeFrame.qml \
+    qml/ParamCheckbox.qml

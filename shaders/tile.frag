@@ -27,6 +27,7 @@ uniform int columns = 5;
 uniform int rows = 5;
 uniform float scaleX = 1.0;
 uniform float scaleY = 1.0;
+uniform int scale;
 uniform int rotationAngle = 0;
 uniform float randPosition = 0.0;
 uniform float randRotation = 0.0;
@@ -77,8 +78,8 @@ void main()
     float priority = -1.0;
     vec4 image;
     vec4 color = vec4(0.0);
-    for(int i = -3; i <= 2; ++i) {
-        for(int j = -4; j <= 2; ++j) {
+    for(int j = -3; j <= 3; ++j) {
+        for(int i = -3; i <= 3; ++i) {
             vec2 cell_t = cell + vec2(i, j);
             cell_t = mod(cell_t, vec2(columns, rows));
             vec2 offset_t = offset - vec2(i, j);
@@ -96,6 +97,7 @@ void main()
             coords -= 0.5;
             coords *= rotate2d(rotationAngle*PI/180.0 + PI*random.z*randRotation);
             coords /= (vec2(scaleX, scaleY) - vec2(random.w*randScale));
+            coords /= scale*0.2f;
             coords += 0.5;           
             if((coords.x < 0.0 || coords.y < 0.0 || coords.x > 1.0 || coords.y > 1.0)) continue;
             int textureNumber = int(floor((random.z + random.w)*0.5*(inputCount - 0.1)));
@@ -135,7 +137,7 @@ void main()
                 }
                 else {
                     if(color.a < 1.0) {
-                        float a = color.a + image.a*(1 - color.a);
+                        float a = color.a + image.a*(1.0 - color.a);
                         vec3 rgb = (color.rgb*color.a + image.rgb*maskS*image.a*(1 - color.a))/a;
                         color = vec4(rgb, a);
                     }

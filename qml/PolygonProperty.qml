@@ -69,12 +69,10 @@ Item {
             propertyChangingFinished("startSmooth", propertyValue, oldValue)
         }
     }
-    CheckBox {
+    ParamCheckbox {
         id: useAlphaParam
         y: 114
-        leftPadding: 30
-        height: 25
-        width: 110
+        width: 90
         text: qsTr("Use alpha")
         checked: true
         onCheckedChanged: {
@@ -83,37 +81,6 @@ Item {
         onToggled: {
             propertyChangingFinished("startUseAlpha", checked, !checked)
             focus = false
-        }
-
-        indicator: Item {
-                       implicitWidth: 30
-                       implicitHeight: 30
-                       x: useAlphaParam.contentItem.width + 5
-                       anchors.verticalCenter: parent.verticalCenter
-                       Rectangle {
-                           width: 14
-                           height: 14
-                           anchors.centerIn: parent
-                           color: "transparent"
-                           border.color: "#A2A2A2"
-                           Rectangle {
-                               width: 6
-                               height: 6
-                               anchors.centerIn: parent
-                               visible: useAlphaParam.checked
-                               color: "#A2A2A2"
-                           }
-                       }
-                   }
-
-        contentItem: Text {
-            topPadding: 0
-            text: useAlphaParam.text
-            color: "#A2A2A2"
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
         }
     }
 }

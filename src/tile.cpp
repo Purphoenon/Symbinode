@@ -255,6 +255,16 @@ void TileObject::setSeed(int seed) {
     update();
 }
 
+int TileObject::tileScale() {
+    return m_scale;
+}
+
+void TileObject::setTileScale(int scale) {
+    m_scale = scale;
+    tiledTex = true;
+    update();
+}
+
 bool TileObject::keepProportion() {
     return m_keepProportion;
 }
@@ -408,6 +418,7 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
             tileShader->setUniformValue(tileShader->uniformLocation("rows"), tileItem->rows());
             tileShader->setUniformValue(tileShader->uniformLocation("scaleX"), tileItem->scaleX());
             tileShader->setUniformValue(tileShader->uniformLocation("scaleY"), tileItem->scaleY());
+            tileShader->setUniformValue(tileShader->uniformLocation("scale"), tileItem->tileScale());
             tileShader->setUniformValue(tileShader->uniformLocation("rotationAngle"), tileItem->rotationAngle());
             tileShader->setUniformValue(tileShader->uniformLocation("randPosition"), tileItem->randPosition());
             tileShader->setUniformValue(tileShader->uniformLocation("randRotation"), tileItem->randRotation());

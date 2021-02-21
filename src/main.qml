@@ -152,15 +152,16 @@ MainWindow {
                                 implicitWidth: 30
                                 implicitHeight: 30
                                 Rectangle {
-                                    width: 12
-                                    height: 12
+                                    width: 14
+                                    height: 14
+                                    radius: 6
                                     anchors.centerIn: parent
                                     visible: menuResolution.checkable
-                                    color: "transparent"
-                                    border.color: "#A2A2A2"
+                                    color: "#484C51"
                                     Rectangle {
-                                        width: 4
-                                        height: 4
+                                        width: 6
+                                        height: 6
+                                        radius: 3
                                         anchors.centerIn: parent
                                         visible: menuResolution.checked
                                         color: "#A2A2A2"

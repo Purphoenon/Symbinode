@@ -122,54 +122,19 @@ Item {
             propertyChangingFinished("startJitter", propertyValue, oldValue)
         }
     }
-    CheckBox {
+    ParamCheckbox{
         id: inverseParam
         y: control.currentIndex == 1 ? 284 : 251
-        leftPadding: 30
-        height: 25
-        width: 100
+        width: 80
         text: qsTr("Inverse")
-        checked: false        
         onCheckedChanged: {
-            inverseChanged(inverseParam.checked)            
+            inverseChanged(inverseParam.checked)
         }
         onToggled: {
             propertyChangingFinished("startInverse", checked, !checked)
             focus = false
         }
-
-        indicator: Item {
-                       implicitWidth: 30
-                       implicitHeight: 30
-                       x: inverseParam.contentItem.width + 5
-                       anchors.verticalCenter: parent.verticalCenter
-                       Rectangle {
-                           width: 14
-                           height: 14
-                           anchors.centerIn: parent
-                           color: "transparent"
-                           border.color: "#A2A2A2"
-                           Rectangle {
-                               width: 6
-                               height: 6
-                               anchors.centerIn: parent
-                               visible: inverseParam.checked
-                               color: "#A2A2A2"
-                           }
-                       }
-                   }
-
-        contentItem: Text {
-            topPadding: 0
-            text: inverseParam.text
-            color: "#A2A2A2"
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
-        }
     }
-
     ParamSlider {
         id: intensityParam
         y: 170

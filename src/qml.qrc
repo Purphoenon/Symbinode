@@ -100,5 +100,6 @@
         <file>../icons/tab-close-2.png</file>
         <file>../icons/tab-close-3.png</file>
         <file>../qml/NodeFrame.qml</file>
+        <file>../qml/ParamCheckbox.qml</file>
     </qresource>
 </RCC>

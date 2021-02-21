@@ -75,6 +75,8 @@ public:
     void setInputsCount(int count);
     int seed();
     void setSeed(int seed);
+    int tileScale();
+    void setTileScale(int scale);
     bool keepProportion();
     void setKeepProportion(bool keep);
     bool useAlpha();
@@ -113,6 +115,7 @@ private:
     float m_maskStrength = 0.0f;
     int m_inputsCount = 1;
     int m_seed = 1;
+    int m_scale = 1;
     bool m_keepProportion = false;
     bool m_useAlpha = true;
 };
