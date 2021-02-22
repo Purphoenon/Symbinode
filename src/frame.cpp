@@ -182,24 +182,29 @@ void Frame::mousePressEvent(QMouseEvent *event) {
         m_oldX = m_baseX;
         m_oldY = m_baseY;
         m_moved = false;
-        Scene *scene = qobject_cast<Scene*>(parentItem());
-        if(event->modifiers() == Qt::ControlModifier) {
-           setSelected(!m_selected);
-           QList<QQuickItem*> selectedList = scene->selectedList();
-           if(m_selected) {
-               scene->addSelected(this);
-           }
-           else {
-               scene->deleteSelected(this);
-           }
-           scene->selectedItems(selectedList);
+        if(event->pos().y() < 45.0f*m_scale && currentResize == resize::NOT) {
+            Scene *scene = qobject_cast<Scene*>(parentItem());
+            if(event->modifiers() == Qt::ControlModifier) {
+               setSelected(!m_selected);
+               QList<QQuickItem*> selectedList = scene->selectedList();
+               if(m_selected) {
+                   scene->addSelected(this);
+               }
+               else {
+                   scene->deleteSelected(this);
+               }
+               scene->selectedItems(selectedList);
+            }
+            else if(!m_selected) {
+                QList<QQuickItem*> selectedList = scene->selectedList();
+                scene->clearSelected();
+                scene->addSelected(this);
+                setSelected(true);
+                scene->selectedItems(selectedList);
+            }
         }
-        else if(!m_selected) {
-            QList<QQuickItem*> selectedList = scene->selectedList();
-            scene->clearSelected();
-            scene->addSelected(this);
-            setSelected(true);
-            scene->selectedItems(selectedList);
+        else if(event->pos().y() > 45.0f*m_scale && currentResize == resize::NOT) {
+            event->setAccepted(false);
         }
     }
     else {

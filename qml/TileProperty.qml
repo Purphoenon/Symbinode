@@ -54,7 +54,7 @@ Item {
     signal maskChanged(real mask)
     signal inputsCountChanged(int count)
     signal seedChanged(int seed)
-    signal scaleTileChanged(int scale)
+    signal scaleTileChanged(real scale)
     signal keepProportionChanged(bool keep)
     signal useAlphaChanged(bool use)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
@@ -108,8 +108,20 @@ Item {
         }
     }
     ParamSlider {
-        id: scaleXParam
+        id: scaleParam
         y: 132
+        maximum: 4
+        propertyName: "Scale"
+        onPropertyValueChanged: {
+            scaleTileChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startTileScale", propertyValue, oldValue)
+        }
+    }
+    ParamSlider {
+        id: scaleXParam
+        y: 165
         maximum: 4
         propertyName: "Scale X"
         onPropertyValueChanged: {
@@ -121,7 +133,7 @@ Item {
     }
     ParamSlider {
         id: scaleYParam
-        y: 165
+        y: 198
         maximum: 4
         propertyName: "Scale Y"
         onPropertyValueChanged: {
@@ -133,7 +145,7 @@ Item {
     }
     ParamSlider {
         id: rotationParam
-        y: 198
+        y: 231
         maximum: 360
         step: 1
         propertyName: "Rotation"
@@ -146,7 +158,7 @@ Item {
     }
     ParamSlider {
         id: randPositionParam
-        y: 231
+        y: 264
         propertyName: "Randomizing position"
         onPropertyValueChanged: {
             randPositionChanged(randPositionParam.propertyValue)
@@ -157,7 +169,7 @@ Item {
     }
     ParamSlider {
         id: randRotationParam
-        y: 264
+        y: 297
         propertyName: "Randomizing rotation"
         onPropertyValueChanged: {
             randRotationChanged(randRotationParam.propertyValue)
@@ -168,7 +180,7 @@ Item {
     }
     ParamSlider {
         id: randScaleParam
-        y: 297
+        y: 330
         propertyName: "Randomizing scale"
         onPropertyValueChanged: {
             randScaleChanged(randScaleParam.propertyValue)
@@ -179,7 +191,7 @@ Item {
     }
     ParamSlider {
         id: maskStrengthParam
-        y: 330
+        y: 363
         propertyName: "Mask"
         onPropertyValueChanged: {
             maskChanged(maskStrengthParam.propertyValue)
@@ -190,7 +202,7 @@ Item {
     }
     ParamSlider {
         id: inputsCountParam
-        y: 363
+        y: 396
         minimum: 1
         maximum: 6
         step: 1
@@ -204,7 +216,7 @@ Item {
     }
     ParamSlider {
         id: seedParam
-        y: 396
+        y: 429
         minimum: 1
         maximum: 100
         step: 1
@@ -214,20 +226,6 @@ Item {
         }
         onChangingFinished: {
             propertyChangingFinished("startSeed", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: scaleParam
-        y: 429
-        minimum: 0
-        maximum: 20
-        step: 1
-        propertyName: "Scale"
-        onPropertyValueChanged: {
-            scaleTileChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startTileScale", propertyValue, oldValue)
         }
     }
     ParamCheckbox{

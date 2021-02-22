@@ -30,7 +30,7 @@ class TileObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true);
+    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scale = 1.0f, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -75,8 +75,8 @@ public:
     void setInputsCount(int count);
     int seed();
     void setSeed(int seed);
-    int tileScale();
-    void setTileScale(int scale);
+    float tileScale();
+    void setTileScale(float scale);
     bool keepProportion();
     void setKeepProportion(bool keep);
     bool useAlpha();
@@ -115,7 +115,7 @@ private:
     float m_maskStrength = 0.0f;
     int m_inputsCount = 1;
     int m_seed = 1;
-    int m_scale = 1;
+    float m_scale = 1.0f;
     bool m_keepProportion = false;
     bool m_useAlpha = true;
 };

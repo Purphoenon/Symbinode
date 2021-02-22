@@ -27,7 +27,7 @@ uniform int columns = 5;
 uniform int rows = 5;
 uniform float scaleX = 1.0;
 uniform float scaleY = 1.0;
-uniform int scale;
+uniform float scale = 1.0;
 uniform int rotationAngle = 0;
 uniform float randPosition = 0.0;
 uniform float randRotation = 0.0;
@@ -97,7 +97,7 @@ void main()
             coords -= 0.5;
             coords *= rotate2d(rotationAngle*PI/180.0 + PI*random.z*randRotation);
             coords /= (vec2(scaleX, scaleY) - vec2(random.w*randScale));
-            coords /= scale*0.2f;
+            coords /= scale;
             coords += 0.5;           
             if((coords.x < 0.0 || coords.y < 0.0 || coords.x > 1.0 || coords.y > 1.0)) continue;
             int textureNumber = int(floor((random.z + random.w)*0.5*(inputCount - 0.1)));

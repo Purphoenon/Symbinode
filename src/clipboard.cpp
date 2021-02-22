@@ -370,7 +370,7 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         TileNode *baseNode = qobject_cast<TileNode*>(node);
         TileNode *tileNode = new TileNode(parent, scene->resolution(), baseNode->offsetX(),
                                           baseNode->offsetY(), baseNode->columns(), baseNode->rows(),
-                                          baseNode->scaleX(), baseNode->scaleY(),
+                                          baseNode->tileScale(), baseNode->scaleX(), baseNode->scaleY(),
                                           baseNode->rotationAngle(), baseNode->randPosition(),
                                           baseNode->randRotation(), baseNode->randScale(),
                                           baseNode->maskStrength(), baseNode->inputsCount(),
