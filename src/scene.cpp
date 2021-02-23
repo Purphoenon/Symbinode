@@ -116,7 +116,7 @@ bool Scene::addSelected(QQuickItem *item) {
     //item->setParentItem(this);
     if(qobject_cast<Node*>(item)) {
         Node *n = qobject_cast<Node*>(item);
-        n->setZ(4);
+        n->setZ(5);
         //n->generatePreview();
         //m_nodes.move(m_nodes.indexOf(n), 0);
         m_activeNode = n;
@@ -138,7 +138,7 @@ bool Scene::deleteSelected(QQuickItem *item) {
             m_activeNode = nullptr;
             activeNodeChanged();
         }
-        item->setZ(3);
+        item->setZ(4);
     }
     else if(qobject_cast<Frame*>(item)) {
         item->setZ(0);
@@ -151,7 +151,7 @@ void Scene::clearSelected() {
         if(qobject_cast<Node*>(item)) {
             Node *n = qobject_cast<Node*>(item);
             n->setSelected(false);
-            n->setZ(3);
+            n->setZ(4);
         }
         else if(qobject_cast<Frame*>(item)) {
             Frame *f = qobject_cast<Frame*>(item);
@@ -401,6 +401,7 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
             rectSelect->setProperty("rotCenterY", event->pos().y());
             rectSelect->setX(event->pos().x());
             rectSelect->setY(event->pos().y());
+            rectSelect->setZ(5);
         }
         float difX = event->pos().x() - rectSelect->property("rotCenterX").toFloat();
         float difY = event->pos().y() - rectSelect->property("rotCenterY").toFloat();
@@ -431,6 +432,21 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
                 if(!n->selected()) {
                     n->setSelected(true);
                     m_selectedItem.push_back(n);
+                }
+            }
+        }
+        for(auto f: m_frames) {
+            if(rectSelect->x() + rectSelect->width() < f->x() || rectSelect->x() > f->x() + f->width() ||
+               rectSelect->y() + rectSelect->height() < f->y() || rectSelect->y() > f->y() + 45.0f*m_background->viewScale()) {
+                if(f->selected()) {
+                    f->setSelected(false);
+                    m_selectedItem.removeOne(f);
+                }
+            }
+            else {
+                if(!f->selected()) {
+                    f->setSelected(true);
+                    m_selectedItem.push_back(f);
                 }
             }
         }

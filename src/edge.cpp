@@ -33,7 +33,7 @@ Edge::Edge(QQuickItem *parent): QQuickItem(parent)
         connect(scene->background(), &BackgroundObject::scaleChanged, this, &Edge::updateScale);
         grEdge->setLineWidth(3.0f*scene->background()->viewScale());
     }
-    setZ(2);
+    setZ(3);
 }
 
 Edge::Edge(const Edge &edge):Edge() {

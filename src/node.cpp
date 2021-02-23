@@ -33,7 +33,7 @@ Node::Node(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_res
     grNode = qobject_cast<QQuickItem *>(view->rootObject());
     grNode->setParentItem(this);
     grNode->setX(8);
-    setZ(3);
+    setZ(4);
 }
 
 Node::Node(const Node &node):Node() {
@@ -318,18 +318,6 @@ void Node::mouseReleaseEvent(QMouseEvent *event) {
 
             QPointF scenePoint = mapToItem(scene, QPointF(width()*0.5f, height()*0.16f));
             Frame *frame = scene->frameAt(scenePoint.x(), scenePoint.y());
-            /*if(!attachedFrame() && frame) {
-                QList<QQuickItem*> nodesToFrame;
-                for(int i = 0; i < scene->countSelected(); ++i) {
-                    QQuickItem *item = scene->atSelected(i);
-                    if(qobject_cast<Node*>(item)) {
-                        Node *n = qobject_cast<Node*>(item);
-                        if(n->attachedFrame()) continue;
-                        nodesToFrame.push_back(n);
-                    }
-                }
-                if(nodesToFrame.size() > 0) frame->addNodes(nodesToFrame);
-            }*/
             if(!attachedFrame()) scene->movedNodes(scene->selectedList(), offset, frame);
             else scene->movedNodes(scene->selectedList(), offset, nullptr);
             scene->isNodesDrag = false;
@@ -340,14 +328,19 @@ void Node::mouseReleaseEvent(QMouseEvent *event) {
 void Node::hoverMoveEvent(QHoverEvent *event) {
     if(!grNode->property("hovered").toBool() && event->pos().y() < 207*m_scale) {
         grNode->setProperty("hovered", true);
+        if(m_attachedFrame) m_attachedFrame->setZ(2);
     }
     else if(grNode->property("hovered").toBool() && event->pos().y() > 207*m_scale) {
         grNode->setProperty("hovered", false);
+        if(m_attachedFrame && m_attachedFrame->selected()) m_attachedFrame->setZ(1);
+        else if(m_attachedFrame && !m_attachedFrame->selected()) m_attachedFrame->setZ(0);
     }
 }
 
 void Node::hoverLeaveEvent(QHoverEvent *event) {
     grNode->setProperty("hovered", false);
+    if(m_attachedFrame && m_attachedFrame->selected()) m_attachedFrame->setZ(1);
+    else if(m_attachedFrame && !m_attachedFrame->selected()) m_attachedFrame->setZ(0);
 }
 
 void Node::serialize(QJsonObject &json) const {

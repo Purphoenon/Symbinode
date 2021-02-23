@@ -164,11 +164,11 @@ void Frame::resizeByContent() {
         maxY = std::max(maxY, item->y() + item->height());
     }
     setX(minX - 10*m_scale);
-    setY(minY - 45*m_scale);
+    setY(minY - 55*m_scale);
     m_baseX = (x() + m_pan.x())/m_scale;
     m_baseY = (y() + m_pan.y())/m_scale;
     setWidth(maxX - minX + 20*m_scale);
-    setHeight(maxY - minY + 65*m_scale);
+    setHeight(maxY - minY + 75*m_scale);
     m_baseWidth = width()/m_scale;
     m_baseHeight = height()/m_scale;
 }
@@ -363,10 +363,17 @@ void Frame::mouseDoubleClickEvent(QMouseEvent *event) {
 }
 
 void Frame::hoverEnterEvent(QHoverEvent *event) {
-    m_grFrame->setProperty("hovered", true);
+    setZ(2);
 }
 
 void Frame::hoverMoveEvent(QHoverEvent *event) {
+    if(event->pos().y() < 45.0f) {
+        m_grFrame->setProperty("hovered", true);
+    }
+    else {
+        m_grFrame->setProperty("hovered", false);
+    }
+
     if(m_content.size() > 0) {
         currentResize = NOT;
         setCursor(QCursor(Qt::ArrowCursor));
@@ -414,6 +421,8 @@ void Frame::hoverMoveEvent(QHoverEvent *event) {
 void Frame::hoverLeaveEvent(QHoverEvent *event) {
     m_grFrame->setProperty("hovered", false);
     window()->setCursor(QCursor(Qt::ArrowCursor));
+    if(m_selected) setZ(1);
+    else setZ(0);
 }
 
 void Frame::addNodes(QList<QQuickItem *> nodes) {

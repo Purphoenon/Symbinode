@@ -56,6 +56,7 @@ Item {
         color: "#E0E0E0"
         font.pointSize: 8
         selectByMouse: true
+        selectionColor: "#7E7E7E"
         validator: IntValidator{bottom: 0; top: maximumValue;}
         verticalAlignment: TextInput.AlignVCenter
         horizontalAlignment: TextInput.AlignLeft

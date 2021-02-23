@@ -27,7 +27,7 @@ CutLine::CutLine(QQuickItem *parent): QQuickPaintedItem (parent)
      m_pen = QPen(QColor(231, 81, 51));
      m_pen.setWidthF(1.5);
      m_pen.setDashPattern(QVector<qreal>({2, 3}));
-     setZ(2);
+     setZ(6);
 }
 
 void CutLine::paint(QPainter *painter) {
