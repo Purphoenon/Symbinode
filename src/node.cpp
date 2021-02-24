@@ -328,19 +328,28 @@ void Node::mouseReleaseEvent(QMouseEvent *event) {
 void Node::hoverMoveEvent(QHoverEvent *event) {
     if(!grNode->property("hovered").toBool() && event->pos().y() < 207*m_scale) {
         grNode->setProperty("hovered", true);
-        if(m_attachedFrame) m_attachedFrame->setZ(2);
+        if(m_attachedFrame) {
+            m_attachedFrame->setZ(2);
+            m_attachedFrame->setBubbleVisible(true);
+        }
     }
     else if(grNode->property("hovered").toBool() && event->pos().y() > 207*m_scale) {
         grNode->setProperty("hovered", false);
-        if(m_attachedFrame && m_attachedFrame->selected()) m_attachedFrame->setZ(1);
-        else if(m_attachedFrame && !m_attachedFrame->selected()) m_attachedFrame->setZ(0);
+        if(m_attachedFrame) {
+            if(m_attachedFrame->selected())m_attachedFrame->setZ(1);
+            else m_attachedFrame->setZ(0);
+            m_attachedFrame->setBubbleVisible(false);
+        }
     }
 }
 
 void Node::hoverLeaveEvent(QHoverEvent *event) {
     grNode->setProperty("hovered", false);
-    if(m_attachedFrame && m_attachedFrame->selected()) m_attachedFrame->setZ(1);
-    else if(m_attachedFrame && !m_attachedFrame->selected()) m_attachedFrame->setZ(0);
+    if(m_attachedFrame) {
+        if(m_attachedFrame->selected())m_attachedFrame->setZ(1);
+        else m_attachedFrame->setZ(0);
+        m_attachedFrame->setBubbleVisible(false);
+    }
 }
 
 void Node::serialize(QJsonObject &json) const {
@@ -466,7 +475,7 @@ void Node::propertyChanged(QString propName, QVariant newValue, QVariant oldValu
         char *name = new char[prop.size() + 1];
         std::copy(prop.begin(), prop.end(), name);
         name[prop.size()] = '\0';
-        scene->nodePropertyChanged(this, name, newValue, oldValue);
+        scene->itemPropertyChanged(this, name, newValue, oldValue);
     }
 }
 

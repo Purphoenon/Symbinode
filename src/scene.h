@@ -48,7 +48,7 @@ public:
     QQmlListProperty<Node> childrenNode();
     int nodesCount();
     Node* node(int idx);
-    Node* activeNode();
+    QQuickItem* activeItem();
     QList<Node*> nodes() const;
     void setNodes(const QList<Node*> &nodes);
     QList<Edge*> edges() const;
@@ -84,6 +84,7 @@ public:
     void redo();
     void cut();
     void removeFromFrame();
+    void addToFrame(Frame *frame);
     void movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame = nullptr);
     void addedEdge(Edge *edge);
     void addedNode(Node *node);
@@ -92,7 +93,7 @@ public:
     void selectedItems(QList<QQuickItem*> items);
     void pastedItems(QList<QQuickItem*> items);
     void movedEdge(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket);
-    void nodePropertyChanged(Node *node, const char *propName, QVariant newValue, QVariant oldValue);
+    void itemPropertyChanged(QQuickItem *item, const char *propName, QVariant newValue, QVariant oldValue);
     void detachedFromFrame(QList<QPair<QQuickItem *, Frame *> > data);
     void resizedFrame(Frame *frame, float offsetX, float offsetY, float offsetWidth, float offsetHeight);
     void changedTitle(Frame *frame, QString newTitle, QString oldTitle);
@@ -112,7 +113,7 @@ public:
     QQuickView* rectView = nullptr;
     CutLine* cutLine = nullptr;
 signals:
-    void activeNodeChanged();
+    void activeItemChanged();
     void fileNameUpdate(QString fileName, bool modified);
     void outputsSave(QString dir);
     void resolutionUpdate(QVector2D res);
@@ -125,7 +126,7 @@ private:
     QList<Edge*> m_edges;
     QList<Frame*> m_frames;
     QList<QQuickItem*> m_selectedItem;
-    Node *m_activeNode = nullptr;
+    QQuickItem *m_activeItem = nullptr;
     QString m_fileName = "";
     bool m_modified = false;
     QUndoStack *m_undoStack = nullptr;

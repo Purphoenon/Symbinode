@@ -43,6 +43,9 @@ public:
     void setBaseHeight(float height);
     QString title();
     void setTitle(QString title);
+    QQuickItem *getPropertyPanel();
+    QVector3D color();
+    void setColor(QVector3D color);
     QVector2D pan();
     void setPan(QVector2D pan);
     void setScaleView(float scale);
@@ -58,16 +61,22 @@ public:
     void removeItem(QQuickItem *item);
     bool selected();
     void setSelected(bool sel);
+    void setBubbleVisible(bool visible);
     QList<QQuickItem*> contentList() const;
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 signals:
     void nameInput();
+    void colorChanged(QVector3D color);
 public slots:
     void titleChanged(QString newTitle, QString oldTitle);
+    void updateColor(QVector3D color);
+    void propertyChanged(QString propName, QVariant newValue, QVariant oldValue);
 private:
     QQuickView *m_view = nullptr;
     QQuickItem *m_grFrame = nullptr;
+    QQuickItem *m_propertiesPanel = nullptr;
+    QQuickView *m_propView = nullptr;
     QList<QQuickItem*> m_content;
     float m_baseX;
     float m_baseY;
@@ -85,6 +94,7 @@ private:
     bool m_containsNodes = false;
     bool m_selected = false;
     bool m_moved = false;
+    QVector3D m_color = QVector3D(0.13f, 0.13f, 0.13f);
 };
 
 #endif // FRAME_H

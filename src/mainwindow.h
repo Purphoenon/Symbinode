@@ -77,11 +77,12 @@ public:
     void keyPressEvent(QKeyEvent *event);
     void duplicate();
     void removeFromFrame();
+    void addToFrame();
     void setActiveTab(Tab *tab);
     void closeTab(Tab *tab);
     Node *pinnedNode();
     Node *activeNode();
-    void activeNodeChanged();
+    void activeItemChanged();
 
 signals:
     void addTab(Tab *tab);
@@ -92,6 +93,7 @@ signals:
     void resolutionChanged(QVector2D res);
 private:
     Tab *activeTab = nullptr;
+    QQuickItem *m_activeItem = nullptr;
     Node *m_activeNode = nullptr;
     Node *m_pinnedNode = nullptr;
     QList<Tab*> tabs;

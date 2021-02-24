@@ -113,6 +113,7 @@ void Clipboard::copy(Scene *scene) {
         f->setBaseWidth(frame->baseWidth());
         f->setBaseHeight(frame->baseHeight());
         f->setTitle(frame->title());
+        f->setColor(frame->color());
         clipboard_frames.append(f);
         QList<QQuickItem*> copiedContent;
         for(auto item: frame->contentList()) {
@@ -160,6 +161,7 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
         frame->setBaseWidth(f->baseWidth());
         frame->setBaseHeight(f->baseHeight());
         frame->setTitle(f->title());
+        frame->setColor(f->color());
         frame->setSelected(true);
         scene->addFrame(frame);
         scene->addSelected(frame);
@@ -255,6 +257,7 @@ void Clipboard::duplicate(Scene *scene) {
         f->setBaseWidth(frame->baseWidth());
         f->setBaseHeight(frame->baseHeight());
         f->setTitle(frame->title());
+        f->setColor(frame->color());
         scene->addFrame(f);
         scene->addSelected(f);
         pastedItem.append(f);

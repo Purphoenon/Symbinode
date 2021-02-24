@@ -26,6 +26,8 @@ Rectangle {
     property real scaleView: 1.0
     property bool selected: false
     property bool hovered: false
+    property bool bubbleVisible: false
+    property vector3d startColor
     property alias frameName: frameTitle.text
     signal titleChanged(string newTitle, string oldTitle)
     ColorSettings {
@@ -66,14 +68,21 @@ Rectangle {
         nameInput.accepted.connect(labelUpdate)
     }
 
+    onStartColorChanged: {
+        frame.color = Qt.rgba(startColor.x, startColor.y, startColor.z, 0.7)
+        titleBubbleRect.color = Qt.rgba(startColor.x, startColor.y, startColor.z, 1.0)
+        tailOfBubble.requestPaint()
+    }
+
     Item {
         id:bubble
         width: textMetrics.tightBoundingRect.width + 30
         height: 50
-        visible: scaleView < 0.6
+        visible: bubbleVisible && scaleView < 0.6
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.top
         Rectangle {
+            id: titleBubbleRect
             width: parent.width
             height: parent.height - 10
             radius: 3
@@ -98,6 +107,7 @@ Rectangle {
             }
         }
         Canvas {
+            id: tailOfBubble
             width: 6
             height: 10
             anchors.horizontalCenter: parent.horizontalCenter
@@ -106,7 +116,7 @@ Rectangle {
             onPaint: {
                 var ctx = getContext("2d")
                 ctx.reset();
-                ctx.fillStyle = "#212121"
+                ctx.fillStyle = titleBubbleRect.color
                 ctx.lineTo(6, 0)
                 ctx.lineTo(3, 10)
                 ctx.lineTo(0, 0)
@@ -123,11 +133,11 @@ Rectangle {
         height: 35*scaleView
         //radius: 2
         color: "#801D1D1D"
-        /*Rectangle {
+       /* Rectangle {
             width: parent.width
             height: 2*scaleView
             anchors.bottom: parent.bottom
-            color: "#212121"
+            color: "#1D1D1D"
         }*/
         Label {
             id: frameTitle

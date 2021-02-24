@@ -373,23 +373,37 @@ void PasteCommand::redo() {
     }
 }
 
-PropertyChangeCommand::PropertyChangeCommand(Node* node, const char* propName, QVariant newValue,
+PropertyChangeCommand::PropertyChangeCommand(QQuickItem *item, const char* propName, QVariant newValue,
                                              QVariant oldValue, QUndoCommand *parent):
-    QUndoCommand (parent), m_node(node), m_propName(propName), m_oldValue(oldValue), m_newValue(newValue) {
+    QUndoCommand (parent), m_item(item), m_propName(propName), m_oldValue(oldValue), m_newValue(newValue) {
 
 }
 
 PropertyChangeCommand::~PropertyChangeCommand() {
-    m_node = nullptr;
+    m_item = nullptr;
     m_propName = nullptr;
 }
 
 void PropertyChangeCommand::undo() {
-    m_node->setPropertyOnPanel(m_propName, m_oldValue);
+    if(qobject_cast<Node*>(m_item)) {
+        Node *n = qobject_cast<Node*>(m_item);
+        n->getPropertyPanel()->setProperty(m_propName, m_oldValue);
+    }
+    else if(qobject_cast<Frame*>(m_item)) {
+        Frame *f = qobject_cast<Frame*>(m_item);
+        f->getPropertyPanel()->setProperty(m_propName, m_oldValue);
+    }
 }
 
 void PropertyChangeCommand::redo() {
-    m_node->setPropertyOnPanel(m_propName, m_newValue);
+    if(qobject_cast<Node*>(m_item)) {
+        Node *n = qobject_cast<Node*>(m_item);
+        n->getPropertyPanel()->setProperty(m_propName, m_newValue);
+    }
+    else if(qobject_cast<Frame*>(m_item)) {
+        Frame *f = qobject_cast<Frame*>(m_item);
+        f->getPropertyPanel()->setProperty(m_propName, m_newValue);
+    }
 }
 
 MoveEdgeCommand::MoveEdgeCommand(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket,

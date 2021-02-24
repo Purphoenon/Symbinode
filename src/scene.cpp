@@ -119,13 +119,15 @@ bool Scene::addSelected(QQuickItem *item) {
         n->setZ(5);
         //n->generatePreview();
         //m_nodes.move(m_nodes.indexOf(n), 0);
-        m_activeNode = n;
-        activeNodeChanged();
+        m_activeItem = n;
+        activeItemChanged();
     }
     else if(qobject_cast<Frame*>(item)) {
         Frame *f = qobject_cast<Frame*>(item);
         f->setZ(1);
         //m_frames.move(m_frames.indexOf(f), 0);
+        m_activeItem = f;
+        activeItemChanged();
     }
     return true;
 }
@@ -134,14 +136,14 @@ bool Scene::deleteSelected(QQuickItem *item) {
     if(m_selectedItem.indexOf(item) < 0) return false;
     m_selectedItem.removeOne(item);
     if(qobject_cast<Node*>(item) ) {
-        if(qobject_cast<Node*>(item) == m_activeNode) {
-            m_activeNode = nullptr;
-            activeNodeChanged();
-        }
         item->setZ(4);
     }
     else if(qobject_cast<Frame*>(item)) {
         item->setZ(0);
+    }
+    if(item == m_activeItem) {
+        m_activeItem = nullptr;
+        activeItemChanged();
     }
     return true;
 }
@@ -164,8 +166,8 @@ void Scene::clearSelected() {
         }
     }
     m_selectedItem.clear();
-    m_activeNode = nullptr;
-    activeNodeChanged();
+    m_activeItem = nullptr;
+    activeItemChanged();
 }
 
 int Scene::countSelected() {
@@ -191,8 +193,8 @@ Node *Scene::node(QQmlListProperty<Node> *nodes, int idx) {
     return reinterpret_cast<Scene*>(nodes->data)->node(idx);
 }
 
-Node *Scene::activeNode() {
-    return m_activeNode;
+QQuickItem *Scene::activeItem() {
+    return m_activeItem;
 }
 
 int Scene::nodesCount() {
@@ -204,9 +206,9 @@ Node *Scene::node(int idx) {
 }
 
 void Scene::deleteNode(Node *node) {
-    if(m_activeNode == node) {
-        m_activeNode = nullptr;
-        activeNodeChanged();
+    if(m_activeItem == node) {
+        m_activeItem = nullptr;
+        activeItemChanged();
     }
     m_nodes.removeOne(node);
     if(qobject_cast<AlbedoNode*>(node)) {
@@ -320,6 +322,10 @@ void Scene::addEdge(Edge *edge) {
 }
 
 void Scene::deleteFrame(Frame *frame) {
+    if(m_activeItem == frame) {
+        m_activeItem = nullptr;
+        activeItemChanged();
+    }
     m_frames.removeOne(frame);
     disconnect(m_background, &BackgroundObject::panChanged, frame, &Frame::setPan);
     disconnect(m_background, &BackgroundObject::scaleChanged, frame, &Frame::setScaleView);
@@ -719,6 +725,10 @@ void Scene::removeFromFrame() {
     detachedFromFrame(data);
 }
 
+void Scene::addToFrame(Frame *frame) {
+
+}
+
 void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame) {
     m_undoStack->push(new MoveCommand(nodes, vec, frame));
     if(!m_modified) {
@@ -755,8 +765,8 @@ void Scene::movedEdge(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket) {
     m_undoStack->push(new MoveEdgeCommand(edge, oldEndSocket, newEndSocket));
 }
 
-void Scene::nodePropertyChanged(Node *node, const char *propName, QVariant newValue, QVariant oldValue) {
-    m_undoStack->push(new PropertyChangeCommand(node, propName, newValue, oldValue));
+void Scene::itemPropertyChanged(QQuickItem *item, const char *propName, QVariant newValue, QVariant oldValue) {
+    m_undoStack->push(new PropertyChangeCommand(item, propName, newValue, oldValue));
 }
 
 void Scene::detachedFromFrame(QList<QPair<QQuickItem *, Frame *> > data) {
