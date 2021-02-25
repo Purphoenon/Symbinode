@@ -23,6 +23,7 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Shapes 1.12
 import QtQuick.Controls 2.5
+import QtQuick.Dialogs 1.2
 import QtGraphicalEffects 1.0
 import "qml"
 import backgroundobject 1.0
@@ -614,6 +615,25 @@ MainWindow {
         id:colors
     }
 
+    MessageDialog {
+        id: exitDialog
+        title: "Symbinode"
+        icon: StandardIcon.Warning
+        text: "The document has been modified."
+        informativeText: "Save the changes before closing?"
+        standardButtons: StandardButton.Save | StandardButton.Discard | StandardButton.Cancel
+        onAccepted: {
+            mainWindow.saveScene()
+            Qt.quit()
+        }
+        onDiscard: {
+            Qt.quit()
+        }
+        onRejected: {
+
+        }
+    }
+
     onAddTab: {
         tab.scene.layer.enabled = true
         tab.scene.layer.samples = 8
@@ -666,6 +686,14 @@ MainWindow {
             resGroup.checkedAction = res4096
         }
     }
+
+    /*Connections {
+        target: mainWindow
+        onClosing: {
+            close.accepted = false
+            exitDialog.open()
+        }
+    }*/
 
     DockPanel {
         id: rightDock

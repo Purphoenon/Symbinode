@@ -79,6 +79,7 @@ public:
 private:
     Scene *m_scene;
     Frame *m_frame;
+    QList<QPair<Node*, Frame*>> m_nodes;
 };
 
 class DeleteCommand: public QUndoCommand {

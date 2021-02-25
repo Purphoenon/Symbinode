@@ -725,8 +725,18 @@ void Scene::removeFromFrame() {
     detachedFromFrame(data);
 }
 
-void Scene::addToFrame(Frame *frame) {
-
+void Scene::addToFrame() {
+    bool addFrame = false;
+    for(auto item: m_selectedItem) {
+        if(qobject_cast<Node*>(item)) {
+            addFrame = true;
+            break;
+        }
+    }
+    if(addFrame) {
+        Frame *frame = new Frame(this);
+        addedFrame(frame);
+    }
 }
 
 void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame) {

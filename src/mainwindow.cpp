@@ -325,9 +325,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         }
         redo();
     }
+    else if(event->key() == Qt::Key_F && event->modifiers() == Qt::ControlModifier) {
+        addToFrame();
+    }
     else if(event->key() == Qt::Key_F && event->modifiers() == Qt::AltModifier) {
         removeFromFrame();
-    }
+    }    
     else {
         QApplication::sendEvent(activeFocusItem(), event);
     }
@@ -346,7 +349,7 @@ void MainWindow::removeFromFrame() {
 
 void MainWindow::addToFrame() {
     if(activeTab) {
-
+        activeTab->scene()->addToFrame();
     }
 }
 

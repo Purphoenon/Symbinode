@@ -139,7 +139,12 @@ void AddEdge::redo() {
 
 AddFrame::AddFrame(Frame *frame, Scene *scene, QUndoCommand *parent): QUndoCommand (parent), m_scene(scene), m_frame(frame)
 {
-
+    for(int i = 0; i < scene->countSelected(); ++i) {
+        if(qobject_cast<Node*>(scene->atSelected(i))) {
+            Node *node = qobject_cast<Node*>(scene->atSelected(i));
+            m_nodes.push_back(QPair<Node*, Frame*>(node, node->attachedFrame()));
+        }
+    }
 }
 
 AddFrame::~AddFrame() {
@@ -150,11 +155,21 @@ AddFrame::~AddFrame() {
 void AddFrame::undo() {
     m_scene->deleteFrame(m_frame);
     m_frame->setParentItem(nullptr);
+    for(auto p: m_nodes) {
+        m_frame->removeItem(p.first);
+        if(p.second) p.second->addNodes(QList<QQuickItem*>({p.first}));
+    }
 }
 
 void AddFrame::redo() {
     m_scene->addFrame(m_frame);
     m_frame->setParentItem(m_scene);
+    QList<QQuickItem*> addedNodes;
+    for(auto p: m_nodes) {
+        addedNodes.push_back(p.first);
+        if(p.second) p.second->removeItem(p.first);
+    }
+    if(addedNodes.size() > 0) m_frame->addNodes(addedNodes);
 }
 
 DeleteCommand::DeleteCommand(QList<QQuickItem*> items, Scene *scene, QUndoCommand *parent): QUndoCommand (parent),

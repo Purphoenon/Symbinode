@@ -84,7 +84,7 @@ public:
     void redo();
     void cut();
     void removeFromFrame();
-    void addToFrame(Frame *frame);
+    void addToFrame();
     void movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame = nullptr);
     void addedEdge(Edge *edge);
     void addedNode(Node *node);
