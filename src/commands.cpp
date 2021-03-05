@@ -139,7 +139,12 @@ void AddEdge::redo() {
 
 AddFrame::AddFrame(Frame *frame, Scene *scene, QUndoCommand *parent): QUndoCommand (parent), m_scene(scene), m_frame(frame)
 {
-
+    for(int i = 0; i < scene->countSelected(); ++i) {
+        if(qobject_cast<Node*>(scene->atSelected(i))) {
+            Node *node = qobject_cast<Node*>(scene->atSelected(i));
+            m_nodes.push_back(QPair<Node*, Frame*>(node, node->attachedFrame()));
+        }
+    }
 }
 
 AddFrame::~AddFrame() {
@@ -150,11 +155,21 @@ AddFrame::~AddFrame() {
 void AddFrame::undo() {
     m_scene->deleteFrame(m_frame);
     m_frame->setParentItem(nullptr);
+    for(auto p: m_nodes) {
+        m_frame->removeItem(p.first);
+        if(p.second) p.second->addNodes(QList<QQuickItem*>({p.first}));
+    }
 }
 
 void AddFrame::redo() {
     m_scene->addFrame(m_frame);
     m_frame->setParentItem(m_scene);
+    QList<QQuickItem*> addedNodes;
+    for(auto p: m_nodes) {
+        addedNodes.push_back(p.first);
+        if(p.second) p.second->removeItem(p.first);
+    }
+    if(addedNodes.size() > 0) m_frame->addNodes(addedNodes);
 }
 
 DeleteCommand::DeleteCommand(QList<QQuickItem*> items, Scene *scene, QUndoCommand *parent): QUndoCommand (parent),
@@ -172,6 +187,7 @@ void DeleteCommand::undo() {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
             m_scene->addNode(node);
+            if(node->attachedFrame()) node->attachedFrame()->addNodes(QList<QQuickItem*>({node}));
             node->setParentItem(m_scene);
             m_scene->addSelected(node);
             node->generatePreview();
@@ -206,6 +222,7 @@ void DeleteCommand::redo() {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
             m_scene->deleteNode(node);
+            if(node->attachedFrame()) node->attachedFrame()->removeItem(node);
             node->setParentItem(nullptr);
         }
         else if(qobject_cast<Edge*>(item)) {
@@ -373,23 +390,37 @@ void PasteCommand::redo() {
     }
 }
 
-PropertyChangeCommand::PropertyChangeCommand(Node* node, const char* propName, QVariant newValue,
+PropertyChangeCommand::PropertyChangeCommand(QQuickItem *item, const char* propName, QVariant newValue,
                                              QVariant oldValue, QUndoCommand *parent):
-    QUndoCommand (parent), m_node(node), m_propName(propName), m_oldValue(oldValue), m_newValue(newValue) {
+    QUndoCommand (parent), m_item(item), m_propName(propName), m_oldValue(oldValue), m_newValue(newValue) {
 
 }
 
 PropertyChangeCommand::~PropertyChangeCommand() {
-    m_node = nullptr;
+    m_item = nullptr;
     m_propName = nullptr;
 }
 
 void PropertyChangeCommand::undo() {
-    m_node->setPropertyOnPanel(m_propName, m_oldValue);
+    if(qobject_cast<Node*>(m_item)) {
+        Node *n = qobject_cast<Node*>(m_item);
+        n->getPropertyPanel()->setProperty(m_propName, m_oldValue);
+    }
+    else if(qobject_cast<Frame*>(m_item)) {
+        Frame *f = qobject_cast<Frame*>(m_item);
+        f->getPropertyPanel()->setProperty(m_propName, m_oldValue);
+    }
 }
 
 void PropertyChangeCommand::redo() {
-    m_node->setPropertyOnPanel(m_propName, m_newValue);
+    if(qobject_cast<Node*>(m_item)) {
+        Node *n = qobject_cast<Node*>(m_item);
+        n->getPropertyPanel()->setProperty(m_propName, m_newValue);
+    }
+    else if(qobject_cast<Frame*>(m_item)) {
+        Frame *f = qobject_cast<Frame*>(m_item);
+        f->getPropertyPanel()->setProperty(m_propName, m_newValue);
+    }
 }
 
 MoveEdgeCommand::MoveEdgeCommand(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket,
@@ -438,6 +469,10 @@ void DetachFromFrameCommand::undo() {
 void DetachFromFrameCommand::redo() {
     for(auto pair: m_data) {
         pair.second->removeItem(pair.first);
+        if(qobject_cast<Node*>(pair.first)) {
+            Node *node = qobject_cast<Node*>(pair.first);
+            node->setAttachedFrame(nullptr);
+        }
     }
 }
 

@@ -55,14 +55,22 @@ Frame::Frame(QQuickItem *parent): QQuickItem (parent)
     m_view = new QQuickView();
     m_view->setSource(QUrl(QStringLiteral("qrc:/qml/NodeFrame.qml")));
     m_grFrame = qobject_cast<QQuickItem *>(m_view->rootObject());
-    m_grFrame->setParentItem(this);
+    m_grFrame->setParentItem(this);    
     connect(this, SIGNAL(nameInput()), m_grFrame, SLOT(createNameInput()));
     connect(m_grFrame, SIGNAL(titleChanged(QString, QString)), this, SLOT(titleChanged(QString, QString)));
+    m_propView = new QQuickView();
+    m_propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorProperty.qml")));
+    m_propertiesPanel = qobject_cast<QQuickItem*>(m_propView->rootObject());
+    connect(m_propertiesPanel, SIGNAL(colorChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    connect(m_propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
+    m_propertiesPanel->setProperty("startColor", m_color);
 }
 
 Frame::~Frame() {
     delete m_grFrame;
     delete m_view;
+    delete m_propertiesPanel;
+    delete m_propView;
 }
 
 float Frame::baseX() {
@@ -135,6 +143,19 @@ void Frame::setTitle(QString title) {
     m_grFrame->setProperty("frameName", title);
 }
 
+QQuickItem *Frame::getPropertyPanel() {
+    return m_propertiesPanel;
+}
+
+QVector3D Frame::color() {
+    return m_color;
+}
+
+void Frame::setColor(QVector3D color) {
+    m_color = color;
+    m_grFrame->setProperty("startColor", m_color);
+}
+
 QVector2D Frame::pan() {
     return m_pan;
 }
@@ -164,11 +185,11 @@ void Frame::resizeByContent() {
         maxY = std::max(maxY, item->y() + item->height());
     }
     setX(minX - 10*m_scale);
-    setY(minY - 45*m_scale);
+    setY(minY - 55*m_scale);
     m_baseX = (x() + m_pan.x())/m_scale;
     m_baseY = (y() + m_pan.y())/m_scale;
     setWidth(maxX - minX + 20*m_scale);
-    setHeight(maxY - minY + 65*m_scale);
+    setHeight(maxY - minY + 75*m_scale);
     m_baseWidth = width()/m_scale;
     m_baseHeight = height()/m_scale;
 }
@@ -182,24 +203,29 @@ void Frame::mousePressEvent(QMouseEvent *event) {
         m_oldX = m_baseX;
         m_oldY = m_baseY;
         m_moved = false;
-        Scene *scene = qobject_cast<Scene*>(parentItem());
-        if(event->modifiers() == Qt::ControlModifier) {
-           setSelected(!m_selected);
-           QList<QQuickItem*> selectedList = scene->selectedList();
-           if(m_selected) {
-               scene->addSelected(this);
-           }
-           else {
-               scene->deleteSelected(this);
-           }
-           scene->selectedItems(selectedList);
+        if(event->pos().y() < 45.0f*m_scale && currentResize == resize::NOT) {
+            Scene *scene = qobject_cast<Scene*>(parentItem());
+            if(event->modifiers() == Qt::ControlModifier) {
+               setSelected(!m_selected);
+               QList<QQuickItem*> selectedList = scene->selectedList();
+               if(m_selected) {
+                   scene->addSelected(this);
+               }
+               else {
+                   scene->deleteSelected(this);
+               }
+               scene->selectedItems(selectedList);
+            }
+            else if(!m_selected) {
+                QList<QQuickItem*> selectedList = scene->selectedList();
+                scene->clearSelected();
+                scene->addSelected(this);
+                setSelected(true);
+                scene->selectedItems(selectedList);
+            }
         }
-        else if(!m_selected) {
-            QList<QQuickItem*> selectedList = scene->selectedList();
-            scene->clearSelected();
-            scene->addSelected(this);
-            setSelected(true);
-            scene->selectedItems(selectedList);
+        else if(event->pos().y() > 45.0f*m_scale && currentResize == resize::NOT) {
+            event->setAccepted(false);
         }
     }
     else {
@@ -358,10 +384,17 @@ void Frame::mouseDoubleClickEvent(QMouseEvent *event) {
 }
 
 void Frame::hoverEnterEvent(QHoverEvent *event) {
-    m_grFrame->setProperty("hovered", true);
+    setBubbleVisible(true);
 }
 
 void Frame::hoverMoveEvent(QHoverEvent *event) {
+    if(event->pos().y() < 45.0f*m_scale) {
+        m_grFrame->setProperty("hovered", true);
+    }
+    else {
+        m_grFrame->setProperty("hovered", false);
+    }
+
     if(m_content.size() > 0) {
         currentResize = NOT;
         setCursor(QCursor(Qt::ArrowCursor));
@@ -409,6 +442,7 @@ void Frame::hoverMoveEvent(QHoverEvent *event) {
 void Frame::hoverLeaveEvent(QHoverEvent *event) {
     m_grFrame->setProperty("hovered", false);
     window()->setCursor(QCursor(Qt::ArrowCursor));
+    setBubbleVisible(false);
 }
 
 void Frame::addNodes(QList<QQuickItem *> nodes) {
@@ -425,10 +459,10 @@ void Frame::addNodes(QList<QQuickItem *> nodes) {
 
 void Frame::removeItem(QQuickItem *item) {
     m_content.removeOne(item);
-    if(qobject_cast<Node*>(item)) {
+    /*if(qobject_cast<Node*>(item)) {
         Node *node = qobject_cast<Node*>(item);
         node->setAttachedFrame(nullptr);
-    }
+    }*/
     if(m_content.size() > 0) resizeByContent();
 }
 
@@ -441,11 +475,20 @@ void Frame::setSelected(bool sel) {
     m_grFrame->setProperty("selected", sel);
 }
 
+void Frame::setBubbleVisible(bool visible) {
+    m_grFrame->setProperty("bubbleVisible", visible);
+}
+
 QList<QQuickItem*> Frame::contentList() const {
     return m_content;
 }
 
 void Frame::serialize(QJsonObject &json) const {
+    QJsonArray color;
+    color.append(m_color.x());
+    color.append(m_color.y());
+    color.append(m_color.z());
+    json["color"] = color;
     json["title"] = m_grFrame->property("frameName").toString();
     json["baseX"] = m_baseX;
     json["baseY"] = m_baseY;
@@ -464,6 +507,12 @@ void Frame::serialize(QJsonObject &json) const {
 }
 
 void Frame::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    if(json.contains("color")) {
+        QJsonArray color = json["color"].toVariant().toJsonArray();
+        QVector3D colorValue = QVector3D(color[0].toVariant().toFloat(), color[1].toVariant().toFloat(), color[2].toVariant().toFloat());
+        updateColor(colorValue);
+        m_propertiesPanel->setProperty("startColor", colorValue);
+    }
     if(json.contains("baseX")) {
         setBaseX(json["baseX"].toVariant().toFloat());
     }
@@ -503,4 +552,18 @@ void Frame::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
 void Frame::titleChanged(QString newTitle, QString oldTitle) {
     Scene *scene = qobject_cast<Scene*>(parentItem());
     scene->changedTitle(this, newTitle, oldTitle);
+}
+
+void Frame::updateColor(QVector3D color) {
+    setColor(color);
+}
+void Frame::propertyChanged(QString propName, QVariant newValue, QVariant oldValue) {
+    Scene* scene = reinterpret_cast<Scene*>(parentItem());
+    if(scene) {
+        std::string prop = propName.toStdString();
+        char *name = new char[prop.size() + 1];
+        std::copy(prop.begin(), prop.end(), name);
+        name[prop.size()] = '\0';
+        scene->itemPropertyChanged(this, name, newValue, oldValue);
+    }
 }

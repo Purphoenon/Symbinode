@@ -98,51 +98,17 @@ Item {
             propertyChangingFinished("startRotation", propertyValue, oldValue)
         }
     }
-    CheckBox {
+    ParamCheckbox {
         id: clampParam
         y: 180
-        leftPadding: 30
-        height: 25
-        width: 100
+        width: 75
         text: qsTr("Clamp")
-        checked: false
         onCheckedChanged: {
             clampCoordsChanged(clampParam.checked)
         }
         onToggled: {
             propertyChangingFinished("startClamp", checked, !checked)
             focus = false
-        }
-
-        indicator: Item {
-                       implicitWidth: 30
-                       implicitHeight: 30
-                       x: clampParam.contentItem.width + 5
-                       anchors.verticalCenter: parent.verticalCenter
-                       Rectangle {
-                           width: 14
-                           height: 14
-                           anchors.centerIn: parent
-                           color: "transparent"
-                           border.color: "#A2A2A2"
-                           Rectangle {
-                               width: 6
-                               height: 6
-                               anchors.centerIn: parent
-                               visible: clampParam.checked
-                               color: "#A2A2A2"
-                           }
-                       }
-                   }
-
-        contentItem: Text {
-            topPadding: 0
-            text: clampParam.text
-            color: "#A2A2A2"
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
         }
     }
 }

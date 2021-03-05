@@ -23,6 +23,7 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Shapes 1.12
 import QtQuick.Controls 2.5
+import QtQuick.Dialogs 1.2
 import QtGraphicalEffects 1.0
 import "qml"
 import backgroundobject 1.0
@@ -152,15 +153,16 @@ MainWindow {
                                 implicitWidth: 30
                                 implicitHeight: 30
                                 Rectangle {
-                                    width: 12
-                                    height: 12
+                                    width: 14
+                                    height: 14
+                                    radius: 6.5
                                     anchors.centerIn: parent
                                     visible: menuResolution.checkable
-                                    color: "transparent"
-                                    border.color: "#A2A2A2"
+                                    color: "#484C51"
                                     Rectangle {
-                                        width: 4
-                                        height: 4
+                                        width: 6
+                                        height: 6
+                                        radius: 3
                                         anchors.centerIn: parent
                                         visible: menuResolution.checked
                                         color: "#A2A2A2"
@@ -621,15 +623,11 @@ MainWindow {
         tab.width = Qt.binding(function(){return 200*tabsList.children.length > tabsList.width ? Math.floor(tabsList.width/tabsList.children.length) : 200})
         tabsList.tabs.push(tab)
     }
-    onDeleteTab: {
-        tabsList.tabs.splice(tabsList.tabs.indexOf(tab), 1)
-    }
     onPropertiesPanelChanged: {
         if(newPanel) {
             newPanel.parent = flickable.contentItem
         }
         if(oldPanel) oldPanel.parent = null
-
     }
 
     onPreviewUpdate: {
@@ -663,6 +661,93 @@ MainWindow {
         }
         else if(res == Qt.vector2d(4096, 4096)) {
             resGroup.checkedAction = res4096
+        }
+    }
+
+    onTabClosing: {
+        if(tab.scene.modified) {
+            var exitDialogComponent = Qt.createComponent("qml/ExitDialog.qml")
+            if(exitDialogComponent.status == Component.Ready) {
+                var exitDialogObject = exitDialogComponent.createObject(mainWindow, {fileName: tab.title})
+                function saveFunction() {
+                    var saved = tab.save()
+                    if(saved) {
+                        var index = tabsList.tabs.indexOf(tab)
+                        if(index >= 0) {
+                            tabsList.tabs.splice(index, 1)
+                            mainWindow.closeTab(tab)
+                        }
+                    }
+                    exitDialogObject.accepted.disconnect(saveFunction)
+                    exitDialogObject.destroy()
+                    //console.log("saved")
+                }
+                exitDialogObject.accepted.connect(saveFunction)
+                exitDialogObject.discard.connect(function() {
+                    //console.log("discard")
+                    var index = tabsList.tabs.indexOf(tab)
+                    if(index >= 0) {
+                        tabsList.tabs.splice(index, 1)
+                        mainWindow.closeTab(tab)
+                    }
+                    exitDialogObject.destroy()
+
+                })
+                exitDialogObject.rejected.connect(function(){
+                    exitDialogObject.destroy()
+                    //console.log("reject")
+                })
+            }
+        }
+        else {
+            var index = tabsList.tabs.indexOf(tab)
+            if(index >= 0) {
+                tabsList.tabs.splice(index, 1)
+                mainWindow.closeTab(tab)
+            }
+        }
+    }
+
+    function checkTabsOnExit(index) {
+        if(index < mainWindow.tabsCount()) {
+            var tab = mainWindow.tab(index)
+            /*console.log(tabsList.tabs.length)
+            console.log(tabsList.children.length)
+            console.log("scene " + tab.scene + " tab " + tab)*/
+            if(tab.scene.modified) {
+                var exitDialogComponent = Qt.createComponent("qml/ExitDialog.qml")
+                function saveTabsScene() {
+                    if(tab.save()) checkTabsOnExit(index + 1)
+                    exitDialogObject.accepted.disconnect(saveTabsScene)
+                    exitDialogObject.destroy()
+                }
+                function cancel() {
+                    exitDialogObject.rejected.disconnect(cancel)
+                    exitDialogObject.destroy()
+                    //console.log("cancel")
+                }
+
+                if(exitDialogComponent.status == Component.Ready) {
+                    var exitDialogObject = exitDialogComponent.createObject(mainWindow, {fileName: tab.title})
+                    exitDialogObject.accepted.connect(saveTabsScene)
+                    exitDialogObject.discard.connect(function(){                        
+                        checkTabsOnExit(index + 1)
+                        exitDialogObject.destroy()
+                        //console.log("discard")
+                    })
+                    exitDialogObject.rejected.connect(cancel)
+                }
+            }
+            else checkTabsOnExit(index + 1)
+        }
+        else Qt.quit()
+    }
+
+    Connections {
+        target: mainWindow
+        onClosing: {            
+            close.accepted = false
+            checkTabsOnExit(0)
         }
     }
 
@@ -724,6 +809,7 @@ MainWindow {
                 id: pin
                 x: parent.width - width - 5
                 y: 30
+                z: 1
                 radius: 2
                 width: 24
                 height: 24
@@ -737,8 +823,10 @@ MainWindow {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        pin.pinned = !pin.pinned
-                        mainWindow.pin(pin.pinned)
+                        if(mainWindow.activeNode || pin.pinned) {
+                            pin.pinned = !pin.pinned
+                            mainWindow.pin(pin.pinned)
+                        }
                     }
                 }                
             }
@@ -746,7 +834,7 @@ MainWindow {
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: {
-                    if(mouse.buttons == Qt.RightButton){
+                    if(mouse.buttons == Qt.RightButton && mouse.modifiers == Qt.NoModifier){
                         nodeViewParams.popup()
                     }
                     else {
@@ -788,54 +876,6 @@ MainWindow {
                       }
                 }
             }
-            /*Popup {
-                id: nodeViewParams
-                //x: 0
-                z: 0
-                width: 150
-                height: contentItem.implicitHeight
-                padding: 0
-
-                contentItem: Item {
-                    width: 100
-                    implicitHeight: 100
-                    Rectangle {
-                        id: saveTextureItem
-                        y: 20
-                        height: 30
-                        width: parent.width
-                        color: "transparent"
-                        Text {
-                            height: 30
-                            x: 28
-                            verticalAlignment: Text.AlignVCenter
-                            text: qsTr("Save texture")
-                            color: "#A2A2A2"
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onEntered: {
-                                saveTextureItem.color = "#404347"
-                            }
-                            onExited: {
-                                saveTextureItem.color = "transparent"
-                            }
-                            onClicked:  {
-                                mainWindow.saveCurrentTexture()
-                                nodeViewParams.close()
-                            }
-                        }
-                    }
-                }
-
-                background:
-                    Rectangle {
-                        width: 150
-                        radius: 2
-                        color: "#2C2D2F"
-                    }
-            }*/
         }
     }
     DockPanel {

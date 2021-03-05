@@ -38,9 +38,15 @@ Rectangle {
     width: parent.width
     height: parent.height
     radius: 8*scaleView
-    color: mask ? "#AFAFAF" : "#FEC556"
-    border.width: 3*scaleView
-    border.color: "#2D2D2D"
+    color: "#2D2D2D"
+    Rectangle {
+        x: 3*scaleView
+        y: 3*scaleView
+        width: 10*scaleView
+        height: 10*scaleView
+        radius: 5*scaleView
+        color: mask ? "#AFAFAF" : "#FEC556"
+    }
 
     Rectangle {
         x: socket.width/2
@@ -59,18 +65,4 @@ Rectangle {
         x: type ? socket.width + 5 : -width - 5
         color: "#D8D9D9"
     }
-    /*ToolTip {
-        id: tip
-        text: textTip
-        visible: showTip && socket.parent.parent.parent
-        y: (socket.height - height)*0.5
-        x: type ? socket.width : -width
-        contentItem: Text {
-                text: tip.text
-                font: tip.font
-                color: "#D8D9D9"
-        }
-
-        background: Item{}
-    }*/
 }

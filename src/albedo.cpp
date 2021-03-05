@@ -33,8 +33,11 @@ QQuickFramebufferObject::Renderer *AlbedoObject::createRenderer() const {
 }
 
 unsigned int &AlbedoObject::texture() {
-    if(useAlbedoTex) return m_albedoTexture;
-    else return m_colorTexture;
+    return m_colorTexture;
+}
+
+void AlbedoObject::setTexture(unsigned int texture) {
+    m_colorTexture = texture;
 }
 
 void AlbedoObject::saveTexture(QString fileName) {
@@ -43,16 +46,20 @@ void AlbedoObject::saveTexture(QString fileName) {
     update();
 }
 
-QVariant AlbedoObject::albedo() {
+QVector3D AlbedoObject::albedoValue() {
     return m_albedo;
 }
 
-void AlbedoObject::setAlbedo(QVariant albedo) {
+void AlbedoObject::setAlbedoValue(QVector3D albedo) {
     m_albedo = albedo;
 }
 
 void AlbedoObject::setColorTexture(unsigned int texture) {
     m_colorTexture = texture;
+}
+
+unsigned int AlbedoObject::albedoTexture() {
+    return m_albedoTexture;
 }
 
 void AlbedoObject::setAlbedoTexture(unsigned int texture) {
@@ -65,6 +72,8 @@ QVector2D AlbedoObject::resolution() {
 
 void AlbedoObject::setResolution(QVector2D res) {
     m_resolution = res;
+    resUpdated = true;
+    update();
 }
 
 AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
@@ -94,6 +103,19 @@ AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
     renderAlbedo->bind();
     renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("albedoTex"), 0);
     renderAlbedo->release();
+
+    glGenFramebuffers(1, &albedoFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, albedoFBO);
+    glGenTextures(1, &albedoTexture);
+    glBindTexture(GL_TEXTURE_2D, albedoTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, albedoTexture, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glGenFramebuffers(1, &colorFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, colorFBO);
@@ -127,16 +149,20 @@ void AlbedoRenderer::synchronize(QQuickFramebufferObject *item) {
     renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("useAlbedoTex"), albedoItem->useAlbedoTex);
     renderAlbedo->release();
     m_resolution = albedoItem->resolution();
-    if(albedoItem->useAlbedoTex) {
-        albedoTexture = albedoItem->albedo().toUInt();        
-        albedoItem->setAlbedoTexture(albedoTexture);
+    m_sourceTexture = albedoItem->albedoTexture();
+    albedoVal = albedoItem->albedoValue();
+    if(albedoItem->resUpdated) {
+        updateTextureRes();
+    }
+    if(albedoItem->useAlbedoTex) {        
+        createAlbedoTexture();
+        albedoItem->setTexture(albedoTexture);
         albedoItem->updateAlbedo(albedoTexture, true);
         albedoItem->updatePreview(albedoTexture);
     }
-    else {
-        albedoVal = qvariant_cast<QVector3D>(albedoItem->albedo());     
+    else {           
         createColor();
-        albedoItem->setColorTexture(colorTexture);
+        albedoItem->setTexture(colorTexture);
         albedoItem->updateAlbedo(albedoVal, false);
         albedoItem->updatePreview(colorTexture);
     }
@@ -221,4 +247,27 @@ void AlbedoRenderer::createColor() {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderAlbedo->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void AlbedoRenderer::createAlbedoTexture() {
+    glBindFramebuffer(GL_FRAMEBUFFER, albedoFBO);
+    glViewport(0, 0, m_resolution.x(), m_resolution.y());
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    renderAlbedo->bind();
+    renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("albedoVal"), albedoVal);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    renderAlbedo->release();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void AlbedoRenderer::updateTextureRes() {
+    glBindTexture(GL_TEXTURE_2D, albedoTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }

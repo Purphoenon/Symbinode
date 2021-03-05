@@ -107,6 +107,7 @@ private:
     unsigned int irradianceMap = 0;
     unsigned int prefilterMap = 0;
     unsigned int brdfLUTTexture = 0;
+    unsigned int cubeMapVAO = 0;
     unsigned int sphereVAO = 0;
     unsigned int cubeVAO = 0;
     unsigned int quadVAO = 0;

@@ -25,13 +25,14 @@
 #include "FreeImage.h"
 
 TileObject::TileObject(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
-                       int rows, float scaleX, float scaleY, int rotation, float randPosition,
+                       int rows, float scale, float scaleX, float scaleY, int rotation, float randPosition,
                        float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
                        bool keepProportion, bool useAlpha): QQuickFramebufferObject (parent),
     m_resolution(resolution), m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows),
     m_scaleX(scaleX), m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition),
     m_randRotation(randRotation), m_randScale(randScale), m_maskStrength(maskStrength),
-    m_inputsCount(inputsCount), m_seed(seed), m_keepProportion(keepProportion), m_useAlpha(useAlpha)
+    m_inputsCount(inputsCount), m_seed(seed), m_scale(scale), m_keepProportion(keepProportion),
+    m_useAlpha(useAlpha)
 {
 
 }
@@ -255,6 +256,16 @@ void TileObject::setSeed(int seed) {
     update();
 }
 
+float TileObject::tileScale() {
+    return m_scale;
+}
+
+void TileObject::setTileScale(float scale) {
+    m_scale = scale;
+    tiledTex = true;
+    update();
+}
+
 bool TileObject::keepProportion() {
     return m_keepProportion;
 }
@@ -408,6 +419,7 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
             tileShader->setUniformValue(tileShader->uniformLocation("rows"), tileItem->rows());
             tileShader->setUniformValue(tileShader->uniformLocation("scaleX"), tileItem->scaleX());
             tileShader->setUniformValue(tileShader->uniformLocation("scaleY"), tileItem->scaleY());
+            tileShader->setUniformValue(tileShader->uniformLocation("scale"), tileItem->tileScale());
             tileShader->setUniformValue(tileShader->uniformLocation("rotationAngle"), tileItem->rotationAngle());
             tileShader->setUniformValue(tileShader->uniformLocation("randPosition"), tileItem->randPosition());
             tileShader->setUniformValue(tileShader->uniformLocation("randRotation"), tileItem->randRotation());

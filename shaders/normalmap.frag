@@ -54,8 +54,9 @@ void main() {
     float dy = 0.0;
 
     for(int i = 0; i < 9; ++i) {
-        dx += sobelX[i] * texture(grayscaleTexture, st + offsets[i]).r;
-        dy += sobelY[i] * texture(grayscaleTexture, st + offsets[i]).r;
+        vec4 texColor = texture(grayscaleTexture, st + offsets[i]);
+        dx += sobelX[i] * texColor.r*texColor.a;
+        dy += sobelY[i] * texColor.r*texColor.a;
     }
     float s = strength == 0 ? 0.05 : strength;
     vec3 norm = normalize(vec3(dx, dy, 1.0/abs(s))) * 0.5 + 0.5;

@@ -34,6 +34,7 @@ MainWindow::~MainWindow() {
     activeTab = nullptr;
     m_activeNode = nullptr;
     m_pinnedNode = nullptr;
+    m_activeItem = nullptr;
     for(auto tab: tabs) {
         delete tab;
     }
@@ -145,8 +146,8 @@ void MainWindow::newDocument() {
     tab->setParent(this);
     tab->setZ(1);
     connect(tab, &Tab::changeActiveTab, this, &MainWindow::setActiveTab);
-    connect(tab, &Tab::closedTab, this, &MainWindow::closeTab);
-    connect(tab->scene(), &Scene::activeNodeChanged, this, &MainWindow::activeNodeChanged);
+    connect(tab, &Tab::closedTab, this, &MainWindow::tabClosing);
+    connect(tab->scene(), &Scene::activeItemChanged, this, &MainWindow::activeItemChanged);
     setActiveTab(tab);
     tabs.append(tab);
     emit addTab(tab);
@@ -178,11 +179,12 @@ void MainWindow::deleteItems() {
     }
 }
 
-void MainWindow::saveScene() {
+bool MainWindow::saveScene() {
     if(activeTab) {
         QString fileName = activeTab->scene()->fileName();
-        activeTab->scene()->saveScene(fileName);
+        return activeTab->scene()->saveScene(fileName);
     }
+    return false;
 }
 
 void MainWindow::saveSceneAs() {
@@ -325,9 +327,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         }
         redo();
     }
+    else if(event->key() == Qt::Key_F && event->modifiers() == Qt::ControlModifier) {
+        addToFrame();
+    }
     else if(event->key() == Qt::Key_F && event->modifiers() == Qt::AltModifier) {
         removeFromFrame();
-    }
+    }    
     else {
         QApplication::sendEvent(activeFocusItem(), event);
     }
@@ -341,6 +346,12 @@ void MainWindow::duplicate() {
 void MainWindow::removeFromFrame() {
     if(activeTab) {
         activeTab->scene()->removeFromFrame();
+    }
+}
+
+void MainWindow::addToFrame() {
+    if(activeTab) {
+        activeTab->scene()->addToFrame();
     }
 }
 
@@ -367,26 +378,38 @@ void MainWindow::setActiveTab(Tab *tab) {
     connect(this, &MainWindow::heightChanged, tab->scene(), &Scene::setHeight);
     connect(this, &MainWindow::widthChanged, tab->scene()->background(), &BackgroundObject::setWidth);
     connect(this, &MainWindow::heightChanged, tab->scene()->background(), &BackgroundObject::setHeight);
-    preview3DChanged(oldPreview, tab->scene()->preview3d());
-    activeNodeChanged();
+
+    preview3DChanged(oldPreview, tab->scene()->preview3d());    
+    activeItemChanged();
     resolutionChanged(tab->scene()->resolution());
 }
 
 void MainWindow::closeTab(Tab *tab) {
+    int index = tabs.indexOf(activeTab);
     tabs.removeOne(tab);
-    emit deleteTab(tab);
-    int index = tabs.indexOf(tab) + 1 >= tabs.size() ? tabs.indexOf(tab) - 1 : tabs.indexOf(tab) + 1;
 
-    if(index >= 0) {
+    if(activeTab == tab && tabs.size() > 0) {
+        index = std::min(index, tabs.size() - 1);
         setActiveTab(tabs[index]);
         tabs[index]->setSelected(true);
     }
-    else {
+    else if(tabs.size() == 0) {
        activeTab = nullptr;
-       m_activeNode = nullptr;
+       m_activeItem = nullptr;
        previewUpdate(0);
     }
     tab->deleteLater();
+}
+
+int MainWindow::tabsCount() {
+    return tabs.count();
+}
+
+Tab *MainWindow::tab(int index) {
+    if(index >= 0 && index < tabs.size()) {
+        return tabs[index];
+    }
+    return nullptr;
 }
 
 Node *MainWindow::pinnedNode() {
@@ -397,19 +420,32 @@ Node *MainWindow::activeNode() {
     return m_activeNode;
 }
 
-void MainWindow::activeNodeChanged() {
-    QQuickItem *oldPanel = m_activeNode ? m_activeNode->getPropertyPanel() : nullptr;
-    if(!m_pinnedNode && m_activeNode) {
-        disconnect(m_activeNode, &Node::updatePreview, this, &MainWindow::previewUpdate);
+void MainWindow::activeItemChanged() {
+    QQuickItem *oldPanel = nullptr;
+    if(qobject_cast<Node*>(m_activeItem)) {
+        oldPanel = qobject_cast<Node*>(m_activeItem)->getPropertyPanel();
+        if(!m_pinnedNode) disconnect(m_activeNode, &Node::updatePreview, this, &MainWindow::previewUpdate);
     }
-    m_activeNode = activeTab->scene()->activeNode();
-    QQuickItem *newPanel = m_activeNode ? m_activeNode->getPropertyPanel() : nullptr;
-    propertiesPanelChanged(oldPanel, newPanel);
-    if(!m_pinnedNode && m_activeNode) {
-        connect(m_activeNode, &Node::updatePreview, this, &MainWindow::previewUpdate);
-        previewUpdate(m_activeNode->getPreviewTexture());
+    else if(qobject_cast<Frame*>(m_activeItem)) {
+        oldPanel = qobject_cast<Frame*>(m_activeItem)->getPropertyPanel();
     }
-    else if(!m_pinnedNode && !m_activeNode) {
+    m_activeItem = activeTab->scene()->activeItem();
+    m_activeNode = nullptr;
+    QQuickItem *newPanel = nullptr;
+    if(qobject_cast<Node*>(m_activeItem)) {
+        Node* node = qobject_cast<Node*>(m_activeItem);
+        m_activeNode = node;
+        newPanel = node->getPropertyPanel();
+        if(!m_pinnedNode) {
+            connect(node, &Node::updatePreview, this, &MainWindow::previewUpdate);
+            previewUpdate(node->getPreviewTexture());
+        }
+    }
+    else if(qobject_cast<Frame*>(m_activeItem)) {        
+        newPanel = qobject_cast<Frame*>(m_activeItem)->getPropertyPanel();
+    }
+    else if(!m_pinnedNode) {
         previewUpdate(0);
     }
+    propertiesPanelChanged(oldPanel, newPanel);
 }

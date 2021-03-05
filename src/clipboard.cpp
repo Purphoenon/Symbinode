@@ -113,6 +113,7 @@ void Clipboard::copy(Scene *scene) {
         f->setBaseWidth(frame->baseWidth());
         f->setBaseHeight(frame->baseHeight());
         f->setTitle(frame->title());
+        f->setColor(frame->color());
         clipboard_frames.append(f);
         QList<QQuickItem*> copiedContent;
         for(auto item: frame->contentList()) {
@@ -160,6 +161,7 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
         frame->setBaseWidth(f->baseWidth());
         frame->setBaseHeight(f->baseHeight());
         frame->setTitle(f->title());
+        frame->setColor(f->color());
         frame->setSelected(true);
         scene->addFrame(frame);
         scene->addSelected(frame);
@@ -255,6 +257,7 @@ void Clipboard::duplicate(Scene *scene) {
         f->setBaseWidth(frame->baseWidth());
         f->setBaseHeight(frame->baseHeight());
         f->setTitle(frame->title());
+        f->setColor(frame->color());
         scene->addFrame(f);
         scene->addSelected(f);
         pastedItem.append(f);
@@ -327,7 +330,9 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     }
     else if(qobject_cast<MixNode*>(node)) {
         MixNode *baseNode = qobject_cast<MixNode*>(node);
-        MixNode *mixNode = new MixNode(parent, scene->resolution(), baseNode->factor(), baseNode->mode(), baseNode->includingAlpha());
+        MixNode *mixNode = new MixNode(parent, scene->resolution(), baseNode->factor(),
+                                       baseNode->foregroundOpacity(), baseNode->backgroundOpacity(),
+                                       baseNode->mode(), baseNode->includingAlpha());
         return mixNode;
     }
     else if(qobject_cast<NormalMapNode*>(node)) {
@@ -368,7 +373,7 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         TileNode *baseNode = qobject_cast<TileNode*>(node);
         TileNode *tileNode = new TileNode(parent, scene->resolution(), baseNode->offsetX(),
                                           baseNode->offsetY(), baseNode->columns(), baseNode->rows(),
-                                          baseNode->scaleX(), baseNode->scaleY(),
+                                          baseNode->tileScale(), baseNode->scaleX(), baseNode->scaleY(),
                                           baseNode->rotationAngle(), baseNode->randPosition(),
                                           baseNode->randRotation(), baseNode->randScale(),
                                           baseNode->maskStrength(), baseNode->inputsCount(),

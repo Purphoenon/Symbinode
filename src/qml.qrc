@@ -92,13 +92,12 @@
         <file>../icons/pin-active.svg</file>
         <file>../icons/pin.svg</file>
         <file>../icons/symbinode.ico</file>
-        <file>../icons/tab-close.svg</file>
         <file>../icons/params (2).svg</file>
         <file>../shaders/checker.frag</file>
         <file>../shaders/checker.vert</file>
-        <file>../icons/tab-close-1.png</file>
-        <file>../icons/tab-close-2.png</file>
         <file>../icons/tab-close-3.png</file>
         <file>../qml/NodeFrame.qml</file>
+        <file>../qml/ParamCheckbox.qml</file>
+        <file>../qml/ExitDialog.qml</file>
     </qresource>
 </RCC>

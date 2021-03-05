@@ -79,6 +79,7 @@ public:
 private:
     Scene *m_scene;
     Frame *m_frame;
+    QList<QPair<Node*, Frame*>> m_nodes;
 };
 
 class DeleteCommand: public QUndoCommand {
@@ -117,12 +118,12 @@ private:
 
 class PropertyChangeCommand: public QUndoCommand {
 public:
-    PropertyChangeCommand(Node* node, const char *propName, QVariant newValue, QVariant oldValue, QUndoCommand *parent = nullptr);
+    PropertyChangeCommand(QQuickItem* item, const char *propName, QVariant newValue, QVariant oldValue, QUndoCommand *parent = nullptr);
     ~PropertyChangeCommand();
     void undo();
     void redo();
 private:
-    Node *m_node = nullptr;
+    QQuickItem *m_item = nullptr;
     const char *m_propName;
     QVariant m_oldValue;
     QVariant m_newValue;

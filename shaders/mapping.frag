@@ -35,12 +35,13 @@ out vec4 FragColor;
 void main()
 {
     vec4 texColor = texture(sourceTexture, texCoords);
-    vec4 outputValue = (texColor - vec4(inputMin))/vec4(inputMax - inputMin)*vec4(vec3(outputMax - outputMin), 1.0)
-                       + vec4(vec3(outputMin), 0.0);
+    vec3 outputValue = (texColor.rgb - vec3(inputMin))/vec3(inputMax - inputMin)*vec3(outputMax - outputMin)
+                       + vec3(outputMin);
+    vec4 result = vec4(outputValue, texColor.a);
     if(useMask) {
         vec4 maskColor = texture(maskTexture, texCoords);
         float mask = 0.33333*(maskColor.r + maskColor.g + maskColor.b);
-        outputValue *= mask;
+        result *= mask;
     }
-    FragColor = outputValue;
+    FragColor = result;
 }

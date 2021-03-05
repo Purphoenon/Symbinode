@@ -42,7 +42,8 @@ Item {
             color: "#343537"
             Label {
                 id: titleLabel
-                anchors.fill: parent
+                width:parent.width
+                height: 24
                 text: dragContainer.title
                 renderType: Text.NativeRendering
                 leftPadding: 15
@@ -66,9 +67,10 @@ Item {
         }
 
         onReleased: {
+            console.log("released")
             if(!dragContainer.Drag.target) {
                 dragContainer.x = 0
-                dragContainer.parent.childrenChanged()
+                dragContainer.parent.allotSpace()
             }
             dragContainer.Drag.drop()
             dragContainer.z = 0

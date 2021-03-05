@@ -43,8 +43,20 @@ Tab::~Tab() {
     delete view;
 }
 
+bool Tab::save() {
+    return m_scene->saveScene(m_scene->fileName());
+}
+
 Scene *Tab::scene() {
     return m_scene;
+}
+
+QString Tab::title() {
+    QString fileName = m_scene->fileName();
+    int idx = fileName.length() - fileName.lastIndexOf("/") - 1;
+    QString title = fileName.right(idx);
+    if (title.isEmpty()) title = "New";
+    return title;
 }
 
 void Tab::setSelected(bool select) {

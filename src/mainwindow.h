@@ -61,7 +61,7 @@ public:
     Q_INVOKABLE void paste();
     Q_INVOKABLE void cut();
     Q_INVOKABLE void deleteItems();
-    Q_INVOKABLE void saveScene();
+    Q_INVOKABLE bool saveScene();
     Q_INVOKABLE void saveSceneAs();
     Q_INVOKABLE void loadScene();
     Q_INVOKABLE void exportTextures();
@@ -72,26 +72,30 @@ public:
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
     Q_INVOKABLE void pin(bool pinned);
+    Q_INVOKABLE void closeTab(Tab *tab);
+    Q_INVOKABLE int tabsCount();
+    Q_INVOKABLE Tab *tab(int index);
     MainWindow(QWindow *parent = nullptr);
     ~MainWindow();
     void keyPressEvent(QKeyEvent *event);
     void duplicate();
     void removeFromFrame();
-    void setActiveTab(Tab *tab);
-    void closeTab(Tab *tab);
+    void addToFrame();
+    void setActiveTab(Tab *tab);    
     Node *pinnedNode();
     Node *activeNode();
-    void activeNodeChanged();
+    void activeItemChanged();
 
 signals:
     void addTab(Tab *tab);
-    void deleteTab(Tab *tab);
+    void tabClosing(Tab *tab);
     void propertiesPanelChanged(QQuickItem *oldPanel, QQuickItem *newPanel);
     void preview3DChanged(QQuickItem *oldPreview, QQuickItem *newPreview);
     void previewUpdate(unsigned int previewData);
     void resolutionChanged(QVector2D res);
 private:
     Tab *activeTab = nullptr;
+    QQuickItem *m_activeItem = nullptr;
     Node *m_activeNode = nullptr;
     Node *m_pinnedNode = nullptr;
     QList<Tab*> tabs;

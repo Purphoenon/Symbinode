@@ -38,6 +38,7 @@ Item {
     property alias startMask: maskStrengthParam.propertyValue
     property alias startInputsCount: inputsCountParam.propertyValue
     property alias startSeed: seedParam.propertyValue
+    property alias startTileScale: scaleParam.propertyValue
     property alias startKeepProportion: keepProportionParam.checked
     property alias startUseAlpha: useAlphaParam.checked
     signal offsetXChanged(real offset)
@@ -53,6 +54,7 @@ Item {
     signal maskChanged(real mask)
     signal inputsCountChanged(int count)
     signal seedChanged(int seed)
+    signal scaleTileChanged(real scale)
     signal keepProportionChanged(bool keep)
     signal useAlphaChanged(bool use)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
@@ -106,8 +108,20 @@ Item {
         }
     }
     ParamSlider {
-        id: scaleXParam
+        id: scaleParam
         y: 132
+        maximum: 4
+        propertyName: "Scale"
+        onPropertyValueChanged: {
+            scaleTileChanged(propertyValue)
+        }
+        onChangingFinished: {
+            propertyChangingFinished("startTileScale", propertyValue, oldValue)
+        }
+    }
+    ParamSlider {
+        id: scaleXParam
+        y: 165
         maximum: 4
         propertyName: "Scale X"
         onPropertyValueChanged: {
@@ -119,7 +133,7 @@ Item {
     }
     ParamSlider {
         id: scaleYParam
-        y: 165
+        y: 198
         maximum: 4
         propertyName: "Scale Y"
         onPropertyValueChanged: {
@@ -131,7 +145,7 @@ Item {
     }
     ParamSlider {
         id: rotationParam
-        y: 198
+        y: 231
         maximum: 360
         step: 1
         propertyName: "Rotation"
@@ -144,7 +158,7 @@ Item {
     }
     ParamSlider {
         id: randPositionParam
-        y: 231
+        y: 264
         propertyName: "Randomizing position"
         onPropertyValueChanged: {
             randPositionChanged(randPositionParam.propertyValue)
@@ -155,7 +169,7 @@ Item {
     }
     ParamSlider {
         id: randRotationParam
-        y: 264
+        y: 297
         propertyName: "Randomizing rotation"
         onPropertyValueChanged: {
             randRotationChanged(randRotationParam.propertyValue)
@@ -166,7 +180,7 @@ Item {
     }
     ParamSlider {
         id: randScaleParam
-        y: 297
+        y: 330
         propertyName: "Randomizing scale"
         onPropertyValueChanged: {
             randScaleChanged(randScaleParam.propertyValue)
@@ -177,7 +191,7 @@ Item {
     }
     ParamSlider {
         id: maskStrengthParam
-        y: 330
+        y: 363
         propertyName: "Mask"
         onPropertyValueChanged: {
             maskChanged(maskStrengthParam.propertyValue)
@@ -188,7 +202,7 @@ Item {
     }
     ParamSlider {
         id: inputsCountParam
-        y: 363
+        y: 396
         minimum: 1
         maximum: 6
         step: 1
@@ -202,7 +216,7 @@ Item {
     }
     ParamSlider {
         id: seedParam
-        y: 396
+        y: 429
         minimum: 1
         maximum: 100
         step: 1
@@ -214,59 +228,21 @@ Item {
             propertyChangingFinished("startSeed", propertyValue, oldValue)
         }
     }
-    CheckBox {
+    ParamCheckbox{
         id: keepProportionParam
-        y: 444
-        leftPadding: 30
-        height: 25
-        width: 140
+        y: 477
         text: qsTr("Keep proportion")
-        checked: false
         onCheckedChanged: {
-            keepProportionChanged(keepProportionParam.checked)            
+            keepProportionChanged(keepProportionParam.checked)
         }
         onToggled: {
             propertyChangingFinished("startKeepProportion", checked, !checked)
             focus = false
         }
-
-        indicator: Item {
-            implicitWidth: 30
-            implicitHeight: 30
-            x: keepProportionParam.contentItem.width + 5
-            anchors.verticalCenter: parent.verticalCenter
-            Rectangle {
-                width: 14
-                height: 14
-                anchors.centerIn: parent
-                color: "transparent"
-                border.color: "#A2A2A2"
-                Rectangle {
-                    width: 6
-                    height: 6
-                    anchors.centerIn: parent
-                    visible: keepProportionParam.checked
-                    color: "#A2A2A2"
-                }
-            }
-        }
-
-        contentItem: Text {
-            topPadding: 0
-            text: keepProportionParam.text
-            color: "#A2A2A2"
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
-        }
     }
-    CheckBox {
+    ParamCheckbox {
         id: useAlphaParam
-        y: 469
-        leftPadding: 30
-        height: 25
-        width: 140
+        y:502
         text: qsTr("Use alpha")
         checked: true
         onCheckedChanged: {
@@ -275,37 +251,6 @@ Item {
         onToggled: {
             propertyChangingFinished("startUseAlpha", checked, !checked)
             focus = false
-        }
-
-        indicator: Item {
-            implicitWidth: 30
-            implicitHeight: 30
-            x: useAlphaParam.contentItem.width + 5
-            anchors.verticalCenter: parent.verticalCenter
-            Rectangle {
-                width: 14
-                height: 14
-                anchors.centerIn: parent
-                color: "transparent"
-                border.color: "#A2A2A2"
-                Rectangle {
-                    width: 6
-                    height: 6
-                    anchors.centerIn: parent
-                    visible: useAlphaParam.checked
-                    color: "#A2A2A2"
-                }
-            }
-        }
-
-        contentItem: Text {
-            topPadding: 0
-            text: useAlphaParam.text
-            color: "#A2A2A2"
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
         }
     }
 }

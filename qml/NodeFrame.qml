@@ -26,6 +26,8 @@ Rectangle {
     property real scaleView: 1.0
     property bool selected: false
     property bool hovered: false
+    property bool bubbleVisible: false
+    property vector3d startColor
     property alias frameName: frameTitle.text
     signal titleChanged(string newTitle, string oldTitle)
     ColorSettings {
@@ -34,7 +36,7 @@ Rectangle {
     id: frame
     width: parent.width
     height: parent.height
-    color: "#E3212121"
+    color: "#B3212121"
     radius: 2*scaleView
     border.color: hovered ? colors.node_hovered : selected ? colors.node_selected : "transparent"
     border.width: Math.max(scaleView, 1)
@@ -66,17 +68,85 @@ Rectangle {
         nameInput.accepted.connect(labelUpdate)
     }
 
-    Label {
-        id: frameTitle
-        y: 10*scaleView
-        leftPadding: 5*scaleView
-        rightPadding: 5*scaleView
-        text: qsTr("Frame")
-        elide: Text.ElideRight
-        font.pointSize: 12*scaleView
-        width: parent.width
-        horizontalAlignment: TextInput.AlignHCenter
-        color: "#C8C8C8"
+    onStartColorChanged: {
+        frame.color = Qt.rgba(startColor.x, startColor.y, startColor.z, 0.7)
+        titleBubbleRect.color = Qt.rgba(startColor.x, startColor.y, startColor.z, 1.0)
+        tailOfBubble.requestPaint()
+    }
+
+    Item {
+        id:bubble
+        parent: frame.parent.parent
+        x: (frame.width - width)*0.5 + frame.parent.x
+        y: frame.parent.y - height
+        z: 6
+        width: textMetrics.tightBoundingRect.width + 30
+        height: 50
+        visible: bubbleVisible && scaleView < 0.6
+        Rectangle {
+            id: titleBubbleRect
+            width: parent.width
+            height: parent.height - 10
+            radius: 3
+            color: "#212121"
+            Label {
+                id: bubbleTitle
+                leftPadding: 5
+                rightPadding: 5
+                text: frameTitle.text
+                elide: Text.ElideRight
+                font.pointSize: 16
+                width: parent.width
+                height: parent.height
+                horizontalAlignment: TextInput.AlignHCenter
+                verticalAlignment: TextInput.AlignVCenter
+                color: "#C8C8C8"
+            }
+            TextMetrics {
+                id: textMetrics
+                text: bubbleTitle.text
+                font:  bubbleTitle.font
+            }
+        }
+        Canvas {
+            id: tailOfBubble
+            width: 6
+            height: 10
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            contextType: "2d"
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.reset();
+                ctx.fillStyle = titleBubbleRect.color
+                ctx.lineTo(6, 0)
+                ctx.lineTo(3, 10)
+                ctx.lineTo(0, 0)
+                ctx.fill()
+            }
+        }
+    }
+
+    Rectangle {
+        id: title
+        width: parent.width - 2*Math.max(scaleView, 1)
+        x: Math.max(scaleView, 1)
+        y: Math.max(scaleView, 1)
+        height: 35*scaleView
+        color: "#801D1D1D"
+        Label {
+            id: frameTitle
+            leftPadding: 5*scaleView
+            rightPadding: 5*scaleView
+            text: qsTr("Frame")
+            elide: Text.ElideRight
+            font.pointSize: 12*scaleView
+            width: parent.width
+            height: parent.height
+            horizontalAlignment: TextInput.AlignHCenter
+            verticalAlignment: TextInput.AlignVCenter
+            color: "#C8C8C8"
+        }
     }
 }
 

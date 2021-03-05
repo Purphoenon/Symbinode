@@ -29,7 +29,7 @@ const float PI = 3.14159265359;
 
 void main()
 {
-    vec3 N = normalize(WorldPos);
+    vec3 N = normalize(WorldPos*vec3(1.0, -1.0, 1.0));
 
     vec3 irradiance = vec3(0.0);
 

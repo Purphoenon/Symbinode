@@ -42,6 +42,12 @@ void BackgroundObject::mousePressEvent(QMouseEvent *event) {
         setFocus(false);
         event->setAccepted(false);
     }
+    else if(event->button() == Qt::RightButton && event->modifiers() == Qt::AltModifier) {
+        lastX = event->pos().x();
+        lastY = event->pos().y();
+        startX = lastX;
+        startY = lastY;
+    }
     else {
         event->setAccepted(false);
     }
@@ -58,6 +64,38 @@ void BackgroundObject::mouseMoveEvent(QMouseEvent *event) {
        isPan = true;
        update();
        emit panChanged(m_pan);
+    }
+    else if(event->buttons() == Qt::RightButton && event->modifiers() == Qt::AltModifier) {
+        if(event->pos().x() > 0) {
+           if((m_scale + 0.005f*(event->pos().x() - lastX)) > 2.0f) scaleStep = 2.0f - m_scale;
+           else scaleStep = 0.005f*(event->pos().x() - lastX);
+        }
+        else {
+            if((m_scale + 0.005f*(event->pos().x() - lastX)) < 0.1f) scaleStep = 0.1f - m_scale;
+            else scaleStep = 0.005f*(event->pos().x() - lastX);
+        }
+
+        if(scaleStep != 0.0f) {
+            float oldScale = m_scale;
+            m_scale += scaleStep;
+            lastX = event->pos().x();
+            lastY = event->pos().y();
+            m_scale = std::min(std::max(m_scale, 0.1f), 2.0f);
+            isScaled = true;
+            float x = startX + m_pan.x();
+            x = x/(oldScale);
+            x = x*m_scale;
+            x = x - startX;
+            m_pan.setX(x);
+            float y = startY + m_pan.y();
+            y = y/(oldScale);
+            y = y*m_scale;
+            y = y - startY;
+            m_pan.setY(y);
+            emit scaleChanged(m_scale);
+            emit panChanged(m_pan);
+            update();
+        }
     }
     else {
         event->setAccepted(false);
@@ -77,32 +115,35 @@ void BackgroundObject::mouseReleaseEvent(QMouseEvent *event) {
 void BackgroundObject::wheelEvent(QWheelEvent *event) {
     if(event->modifiers() != Qt::NoModifier) return;
     if(event->angleDelta().y() > 0) {
-       if((m_scale + 0.001f*event->angleDelta().y()) > 2.0f) return;
-       scaleStep = 0.001f*event->angleDelta().y();
+       if((m_scale + 0.001f*event->angleDelta().y()) > 2.0f) scaleStep = 2.0f - m_scale;
+       else scaleStep = 0.001f*event->angleDelta().y();
     }
     else {
-        if((m_scale + 0.001f*event->angleDelta().y()) < 0.1f) return;
-        scaleStep = 0.001f*event->angleDelta().y();
+        if((m_scale + 0.001f*event->angleDelta().y()) < 0.1f) scaleStep = 0.1f - m_scale;
+        else scaleStep = 0.001f*event->angleDelta().y();
     }
 
-    m_scale += scaleStep;
-    lastX = event->pos().x();
-    lastY = event->pos().y();
-    m_scale = std::min(std::max(m_scale, 0.1f), 2.0f);
-    isScaled = true;
-    float x = lastX + m_pan.x();
-    x = x/(m_scale - scaleStep);
-    x = x*m_scale;
-    x = x - lastX;
-    m_pan.setX(x);
-    float y = lastY + m_pan.y();
-    y = y/(m_scale - scaleStep);
-    y = y*m_scale;
-    y = y - lastY;
-    m_pan.setY(y);
-    emit scaleChanged(m_scale);
-    emit panChanged(m_pan);
-    update();    
+    if(scaleStep != 0.0f) {
+        float oldScale = m_scale;
+        m_scale += scaleStep;
+        lastX = event->pos().x();
+        lastY = event->pos().y();
+        m_scale = std::min(std::max(m_scale, 0.1f), 2.0f);
+        isScaled = true;
+        float x = lastX + m_pan.x();
+        x = x/(oldScale);
+        x = x*m_scale;
+        x = x - lastX;
+        m_pan.setX(x);
+        float y = lastY + m_pan.y();
+        y = y/(oldScale);
+        y = y*m_scale;
+        y = y - lastY;
+        m_pan.setY(y);
+        emit scaleChanged(m_scale);
+        emit panChanged(m_pan);
+        update();
+    }
 }
 
 float BackgroundObject::viewScale() {
