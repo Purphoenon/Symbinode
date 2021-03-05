@@ -207,7 +207,7 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
         mixItem->mixedTex = false;
         firstTexture = mixItem->firstTexture();
         secondTexture = mixItem->secondTexture();
-        if(firstTexture || secondTexture) {
+        if((firstTexture && secondTexture) || (!firstTexture && !secondTexture)) {
             maskTexture = mixItem->maskTexture();
             currentMode = mixItem->mode();
             mixShader->bind();
@@ -224,8 +224,22 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
                 mixFactor = mixItem->factor().toFloat();
             }
             mix();
-            mixItem->setTexture(mixTexture);
-            mixItem->updatePreview(mixTexture);
+            if(firstTexture && secondTexture) {
+                mixItem->setTexture(mixTexture);
+                mixItem->updatePreview(mixTexture);
+            }
+            else {
+                mixItem->setTexture(0);
+                mixItem->updatePreview(0);
+            }
+        }
+        else if(firstTexture) {
+            mixItem->setTexture(firstTexture);
+            mixItem->updatePreview(firstTexture);
+        }
+        else if(secondTexture) {
+            mixItem->setTexture(secondTexture);
+            mixItem->updatePreview(secondTexture);
         }
     }
     if(mixItem->texSaving) {
@@ -247,11 +261,31 @@ void MixRenderer::render() {
     glBindVertexArray(0);
     checkerShader->release();
 
-    if(firstTexture || secondTexture) {
+    if(firstTexture && secondTexture) {
         renderTexture->bind();
         glBindVertexArray(VAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mixTexture);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindVertexArray(0);
+        renderTexture->release();
+    }
+    else if(firstTexture) {
+        renderTexture->bind();
+        glBindVertexArray(VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, firstTexture);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindVertexArray(0);
+        renderTexture->release();
+    }
+    else if(secondTexture) {
+        renderTexture->bind();
+        glBindVertexArray(VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, secondTexture);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindTexture(GL_TEXTURE_2D, 0);
         glBindVertexArray(0);
@@ -315,7 +349,9 @@ void MixRenderer::saveTexture(QString fileName) {
     renderTexture->bind();
     glBindVertexArray(VAO);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, mixTexture);
+    if(firstTexture && secondTexture) glBindTexture(GL_TEXTURE_2D, mixTexture);
+    else if(firstTexture) glBindTexture(GL_TEXTURE_2D, firstTexture);
+    else if(secondTexture) glBindTexture(GL_TEXTURE_2D, secondTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);

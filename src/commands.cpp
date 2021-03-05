@@ -187,6 +187,7 @@ void DeleteCommand::undo() {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
             m_scene->addNode(node);
+            if(node->attachedFrame()) node->attachedFrame()->addNodes(QList<QQuickItem*>({node}));
             node->setParentItem(m_scene);
             m_scene->addSelected(node);
             node->generatePreview();
@@ -221,6 +222,7 @@ void DeleteCommand::redo() {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
             m_scene->deleteNode(node);
+            if(node->attachedFrame()) node->attachedFrame()->removeItem(node);
             node->setParentItem(nullptr);
         }
         else if(qobject_cast<Edge*>(item)) {
@@ -467,6 +469,10 @@ void DetachFromFrameCommand::undo() {
 void DetachFromFrameCommand::redo() {
     for(auto pair: m_data) {
         pair.second->removeItem(pair.first);
+        if(qobject_cast<Node*>(pair.first)) {
+            Node *node = qobject_cast<Node*>(pair.first);
+            node->setAttachedFrame(nullptr);
+        }
     }
 }
 

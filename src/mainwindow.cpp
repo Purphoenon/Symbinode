@@ -34,6 +34,7 @@ MainWindow::~MainWindow() {
     activeTab = nullptr;
     m_activeNode = nullptr;
     m_pinnedNode = nullptr;
+    m_activeItem = nullptr;
     for(auto tab: tabs) {
         delete tab;
     }
@@ -145,7 +146,7 @@ void MainWindow::newDocument() {
     tab->setParent(this);
     tab->setZ(1);
     connect(tab, &Tab::changeActiveTab, this, &MainWindow::setActiveTab);
-    connect(tab, &Tab::closedTab, this, &MainWindow::closeTab);
+    connect(tab, &Tab::closedTab, this, &MainWindow::tabClosing);
     connect(tab->scene(), &Scene::activeItemChanged, this, &MainWindow::activeItemChanged);
     setActiveTab(tab);
     tabs.append(tab);
@@ -178,11 +179,12 @@ void MainWindow::deleteItems() {
     }
 }
 
-void MainWindow::saveScene() {
+bool MainWindow::saveScene() {
     if(activeTab) {
         QString fileName = activeTab->scene()->fileName();
-        activeTab->scene()->saveScene(fileName);
+        return activeTab->scene()->saveScene(fileName);
     }
+    return false;
 }
 
 void MainWindow::saveSceneAs() {
@@ -376,26 +378,38 @@ void MainWindow::setActiveTab(Tab *tab) {
     connect(this, &MainWindow::heightChanged, tab->scene(), &Scene::setHeight);
     connect(this, &MainWindow::widthChanged, tab->scene()->background(), &BackgroundObject::setWidth);
     connect(this, &MainWindow::heightChanged, tab->scene()->background(), &BackgroundObject::setHeight);
-    preview3DChanged(oldPreview, tab->scene()->preview3d());
+
+    preview3DChanged(oldPreview, tab->scene()->preview3d());    
     activeItemChanged();
     resolutionChanged(tab->scene()->resolution());
 }
 
 void MainWindow::closeTab(Tab *tab) {
+    int index = tabs.indexOf(activeTab);
     tabs.removeOne(tab);
-    emit deleteTab(tab);
-    int index = tabs.indexOf(tab) + 1 >= tabs.size() ? tabs.indexOf(tab) - 1 : tabs.indexOf(tab) + 1;
 
-    if(index >= 0) {
+    if(activeTab == tab && tabs.size() > 0) {
+        index = std::min(index, tabs.size() - 1);
         setActiveTab(tabs[index]);
         tabs[index]->setSelected(true);
     }
-    else {
+    else if(tabs.size() == 0) {
        activeTab = nullptr;
-       m_activeNode = nullptr;
+       m_activeItem = nullptr;
        previewUpdate(0);
     }
     tab->deleteLater();
+}
+
+int MainWindow::tabsCount() {
+    return tabs.count();
+}
+
+Tab *MainWindow::tab(int index) {
+    if(index >= 0 && index < tabs.size()) {
+        return tabs[index];
+    }
+    return nullptr;
 }
 
 Node *MainWindow::pinnedNode() {
@@ -416,16 +430,18 @@ void MainWindow::activeItemChanged() {
         oldPanel = qobject_cast<Frame*>(m_activeItem)->getPropertyPanel();
     }
     m_activeItem = activeTab->scene()->activeItem();
+    m_activeNode = nullptr;
     QQuickItem *newPanel = nullptr;
     if(qobject_cast<Node*>(m_activeItem)) {
         Node* node = qobject_cast<Node*>(m_activeItem);
+        m_activeNode = node;
         newPanel = node->getPropertyPanel();
         if(!m_pinnedNode) {
             connect(node, &Node::updatePreview, this, &MainWindow::previewUpdate);
             previewUpdate(node->getPreviewTexture());
         }
     }
-    else if(qobject_cast<Frame*>(m_activeItem)) {
+    else if(qobject_cast<Frame*>(m_activeItem)) {        
         newPanel = qobject_cast<Frame*>(m_activeItem)->getPropertyPanel();
     }
     else if(!m_pinnedNode) {

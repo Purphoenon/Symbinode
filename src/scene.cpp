@@ -112,12 +112,9 @@ Preview3DObject *Scene::preview3d() const {
 bool Scene::addSelected(QQuickItem *item) {
     if(m_selectedItem.contains(item)) return false;
     m_selectedItem.push_back(item);
-    //item->setParentItem(nullptr);
-    //item->setParentItem(this);
     if(qobject_cast<Node*>(item)) {
         Node *n = qobject_cast<Node*>(item);
         n->setZ(5);
-        //n->generatePreview();
         //m_nodes.move(m_nodes.indexOf(n), 0);
         m_activeItem = n;
         activeItemChanged();
@@ -176,21 +173,6 @@ int Scene::countSelected() {
 
 QQuickItem *Scene::atSelected(int idx) {
     return m_selectedItem.at(idx);
-}
-
-QQmlListProperty<Node> Scene::childrenNode() {
-    return {this, this,
-        &Scene::nodesCount,
-        &Scene::node
-    };
-}
-
-int Scene::nodesCount(QQmlListProperty<Node> *nodes) {
-    return reinterpret_cast<Scene*>(nodes->data)->nodesCount();
-}
-
-Node *Scene::node(QQmlListProperty<Node> *nodes, int idx) {
-    return reinterpret_cast<Scene*>(nodes->data)->node(idx);
 }
 
 QQuickItem *Scene::activeItem() {
@@ -690,6 +672,10 @@ bool Scene::loadScene(QString fileName) {
 
 QString Scene::fileName() {
     return m_fileName;
+}
+
+bool Scene::isModified() {
+    return m_modified;
 }
 
 void Scene::undo() {

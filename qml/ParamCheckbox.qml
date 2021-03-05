@@ -23,14 +23,14 @@ CheckBox {
                 height: 6
                 radius: 3
                 visible: param.checked
-                color: "#A2A2A2"
+                color: "#B2B2B2"
             }
         }
 
     contentItem: Text {
         topPadding: 0
         text: param.text
-        color: "#A2A2A2"
+        color: "#B2B2B2"
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight

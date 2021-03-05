@@ -53,6 +53,8 @@ Rectangle {
         anchors.fill: parent
 
         function order(draged, dropped) {
+            if(dropped) console.log("order")
+
             var childrenItem = []
             if(draged) childrenItem.push(drag.source)
             for(var i = 0; i < flowContainer.children.length; ++i) {
@@ -98,6 +100,7 @@ Rectangle {
             gradient.visible = flowContainer.contain ? false : true
         }
         onExited: {
+            console.log("exited")
             gradient.visible = false
             order(false, false)
         }
@@ -109,7 +112,6 @@ Rectangle {
                 if(oldParent.children.length > 1) oldParent.allotSpace()
                 if(flowContainer.children.length > 1) flowContainer.allotSpace()
             }
-
             drag.source.x = 0
             gradient.visible = false
         }

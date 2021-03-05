@@ -155,7 +155,7 @@ MainWindow {
                                 Rectangle {
                                     width: 14
                                     height: 14
-                                    radius: 6
+                                    radius: 6.5
                                     anchors.centerIn: parent
                                     visible: menuResolution.checkable
                                     color: "#484C51"
@@ -615,25 +615,6 @@ MainWindow {
         id:colors
     }
 
-    MessageDialog {
-        id: exitDialog
-        title: "Symbinode"
-        icon: StandardIcon.Warning
-        text: "The document has been modified."
-        informativeText: "Save the changes before closing?"
-        standardButtons: StandardButton.Save | StandardButton.Discard | StandardButton.Cancel
-        onAccepted: {
-            mainWindow.saveScene()
-            Qt.quit()
-        }
-        onDiscard: {
-            Qt.quit()
-        }
-        onRejected: {
-
-        }
-    }
-
     onAddTab: {
         tab.scene.layer.enabled = true
         tab.scene.layer.samples = 8
@@ -642,15 +623,11 @@ MainWindow {
         tab.width = Qt.binding(function(){return 200*tabsList.children.length > tabsList.width ? Math.floor(tabsList.width/tabsList.children.length) : 200})
         tabsList.tabs.push(tab)
     }
-    onDeleteTab: {
-        tabsList.tabs.splice(tabsList.tabs.indexOf(tab), 1)
-    }
     onPropertiesPanelChanged: {
         if(newPanel) {
             newPanel.parent = flickable.contentItem
         }
         if(oldPanel) oldPanel.parent = null
-
     }
 
     onPreviewUpdate: {
@@ -687,13 +664,92 @@ MainWindow {
         }
     }
 
-    /*Connections {
-        target: mainWindow
-        onClosing: {
-            close.accepted = false
-            exitDialog.open()
+    onTabClosing: {
+        if(tab.scene.modified) {
+            var exitDialogComponent = Qt.createComponent("qml/ExitDialog.qml")
+            if(exitDialogComponent.status == Component.Ready) {
+                var exitDialogObject = exitDialogComponent.createObject(mainWindow, {fileName: tab.title})
+                function saveFunction() {
+                    var saved = tab.save()
+                    if(saved) {
+                        var index = tabsList.tabs.indexOf(tab)
+                        if(index >= 0) {
+                            tabsList.tabs.splice(index, 1)
+                            mainWindow.closeTab(tab)
+                        }
+                    }
+                    exitDialogObject.accepted.disconnect(saveFunction)
+                    exitDialogObject.destroy()
+                    //console.log("saved")
+                }
+                exitDialogObject.accepted.connect(saveFunction)
+                exitDialogObject.discard.connect(function() {
+                    //console.log("discard")
+                    var index = tabsList.tabs.indexOf(tab)
+                    if(index >= 0) {
+                        tabsList.tabs.splice(index, 1)
+                        mainWindow.closeTab(tab)
+                    }
+                    exitDialogObject.destroy()
+
+                })
+                exitDialogObject.rejected.connect(function(){
+                    exitDialogObject.destroy()
+                    //console.log("reject")
+                })
+            }
         }
-    }*/
+        else {
+            var index = tabsList.tabs.indexOf(tab)
+            if(index >= 0) {
+                tabsList.tabs.splice(index, 1)
+                mainWindow.closeTab(tab)
+            }
+        }
+    }
+
+    function checkTabsOnExit(index) {
+        if(index < mainWindow.tabsCount()) {
+            var tab = mainWindow.tab(index)
+            /*console.log(tabsList.tabs.length)
+            console.log(tabsList.children.length)
+            console.log("scene " + tab.scene + " tab " + tab)*/
+            if(tab.scene.modified) {
+                var exitDialogComponent = Qt.createComponent("qml/ExitDialog.qml")
+                function saveTabsScene() {
+                    if(tab.save()) checkTabsOnExit(index + 1)
+                    exitDialogObject.accepted.disconnect(saveTabsScene)
+                    exitDialogObject.destroy()
+                }
+                function cancel() {
+                    exitDialogObject.rejected.disconnect(cancel)
+                    exitDialogObject.destroy()
+                    //console.log("cancel")
+                }
+
+                if(exitDialogComponent.status == Component.Ready) {
+                    var exitDialogObject = exitDialogComponent.createObject(mainWindow, {fileName: tab.title})
+                    exitDialogObject.accepted.connect(saveTabsScene)
+                    exitDialogObject.discard.connect(function(){                        
+                        checkTabsOnExit(index + 1)
+                        exitDialogObject.destroy()
+                        //console.log("discard")
+                    })
+                    exitDialogObject.rejected.connect(cancel)
+                }
+            }
+            else checkTabsOnExit(index + 1)
+        }
+        else Qt.quit()
+    }
+
+    Connections {
+        target: mainWindow
+        onClosing: {            
+            close.accepted = false
+            checkTabsOnExit(0)
+        }
+    }
 
     DockPanel {
         id: rightDock

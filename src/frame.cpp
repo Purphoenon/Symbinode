@@ -69,6 +69,8 @@ Frame::Frame(QQuickItem *parent): QQuickItem (parent)
 Frame::~Frame() {
     delete m_grFrame;
     delete m_view;
+    delete m_propertiesPanel;
+    delete m_propView;
 }
 
 float Frame::baseX() {
@@ -382,12 +384,11 @@ void Frame::mouseDoubleClickEvent(QMouseEvent *event) {
 }
 
 void Frame::hoverEnterEvent(QHoverEvent *event) {
-    setZ(2);
     setBubbleVisible(true);
 }
 
 void Frame::hoverMoveEvent(QHoverEvent *event) {
-    if(event->pos().y() < 45.0f) {
+    if(event->pos().y() < 45.0f*m_scale) {
         m_grFrame->setProperty("hovered", true);
     }
     else {
@@ -441,8 +442,6 @@ void Frame::hoverMoveEvent(QHoverEvent *event) {
 void Frame::hoverLeaveEvent(QHoverEvent *event) {
     m_grFrame->setProperty("hovered", false);
     window()->setCursor(QCursor(Qt::ArrowCursor));
-    if(m_selected) setZ(1);
-    else setZ(0);
     setBubbleVisible(false);
 }
 
@@ -460,10 +459,10 @@ void Frame::addNodes(QList<QQuickItem *> nodes) {
 
 void Frame::removeItem(QQuickItem *item) {
     m_content.removeOne(item);
-    if(qobject_cast<Node*>(item)) {
+    /*if(qobject_cast<Node*>(item)) {
         Node *node = qobject_cast<Node*>(item);
         node->setAttachedFrame(nullptr);
-    }
+    }*/
     if(m_content.size() > 0) resizeByContent();
 }
 

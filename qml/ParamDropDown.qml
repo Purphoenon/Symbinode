@@ -41,7 +41,7 @@ ComboBox {
         height: 25
         contentItem: Text {
             text: modelData
-            color: "#A2A2A2"
+            color: "#B2B2B2"
             font: control.font
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
@@ -55,7 +55,7 @@ ComboBox {
     indicator: Canvas {
             id: canvas
             x: control.width - width - control.rightPadding
-            y: control.topPadding + (control.availableHeight - height) / 2
+            y: control.topPadding + (control.availableHeight - height) / 2 + 0.5
             width: 6
             height: 4
             contextType: "2d"
@@ -71,18 +71,19 @@ ComboBox {
                 context.lineTo(width, 0);
                 context.lineTo(width / 2, height);
                 context.closePath();
-                context.fillStyle = "#A2A2A2"
+                context.fillStyle = "#B2B2B2"
                 context.fill();
             }
         }
 
     contentItem: Text {
+        topPadding: 6
         leftPadding: 12
         rightPadding: control.indicator.width + control.spacing
         text: control.displayText
         font: control.font
-        color: "#A2A2A2"
-        verticalAlignment: Text.AlignVCenter
+        color: "#B2B2B2"
+        //verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
 

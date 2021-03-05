@@ -196,4 +196,5 @@ DISTFILES += \
     shaders/checker.vert \
     shaders/checker.frag \
     qml/NodeFrame.qml \
-    qml/ParamCheckbox.qml
+    qml/ParamCheckbox.qml \
+    qml/ExitDialog.qml

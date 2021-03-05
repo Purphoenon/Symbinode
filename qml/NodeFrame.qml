@@ -76,11 +76,13 @@ Rectangle {
 
     Item {
         id:bubble
+        parent: frame.parent.parent
+        x: (frame.width - width)*0.5 + frame.parent.x
+        y: frame.parent.y - height
+        z: 6
         width: textMetrics.tightBoundingRect.width + 30
         height: 50
         visible: bubbleVisible && scaleView < 0.6
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.top
         Rectangle {
             id: titleBubbleRect
             width: parent.width
@@ -131,14 +133,7 @@ Rectangle {
         x: Math.max(scaleView, 1)
         y: Math.max(scaleView, 1)
         height: 35*scaleView
-        //radius: 2
         color: "#801D1D1D"
-       /* Rectangle {
-            width: parent.width
-            height: 2*scaleView
-            anchors.bottom: parent.bottom
-            color: "#1D1D1D"
-        }*/
         Label {
             id: frameTitle
             leftPadding: 5*scaleView

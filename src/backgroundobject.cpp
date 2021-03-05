@@ -67,12 +67,12 @@ void BackgroundObject::mouseMoveEvent(QMouseEvent *event) {
     }
     else if(event->buttons() == Qt::RightButton && event->modifiers() == Qt::AltModifier) {
         if(event->pos().x() > 0) {
-           if((m_scale + 0.01f*(event->pos().x() - lastX)) > 2.0f) scaleStep = 2.0f - m_scale;
-           else scaleStep = 0.01f*(event->pos().x() - lastX);
+           if((m_scale + 0.005f*(event->pos().x() - lastX)) > 2.0f) scaleStep = 2.0f - m_scale;
+           else scaleStep = 0.005f*(event->pos().x() - lastX);
         }
         else {
-            if((m_scale + 0.01f*(event->pos().x() - lastX)) < 0.1f) scaleStep = 0.1f - m_scale;
-            else scaleStep = 0.01f*(event->pos().x() - lastX);
+            if((m_scale + 0.005f*(event->pos().x() - lastX)) < 0.1f) scaleStep = 0.1f - m_scale;
+            else scaleStep = 0.005f*(event->pos().x() - lastX);
         }
 
         if(scaleStep != 0.0f) {

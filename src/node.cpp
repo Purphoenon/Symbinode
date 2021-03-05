@@ -278,7 +278,6 @@ void Node::mouseMoveEvent(QMouseEvent *event) {
         }
 
         Scene* scene = reinterpret_cast<Scene*>(parentItem());
-        scene->isNodesDrag = true;
         QPointF point = mapToItem(scene, QPointF(event->pos().x(), event->pos().y()));
         setX(point.x() - dragX);
         setY(point.y() - dragY);
@@ -320,7 +319,6 @@ void Node::mouseReleaseEvent(QMouseEvent *event) {
             Frame *frame = scene->frameAt(scenePoint.x(), scenePoint.y());
             if(!attachedFrame()) scene->movedNodes(scene->selectedList(), offset, frame);
             else scene->movedNodes(scene->selectedList(), offset, nullptr);
-            scene->isNodesDrag = false;
         }
     }
 }
@@ -329,15 +327,12 @@ void Node::hoverMoveEvent(QHoverEvent *event) {
     if(!grNode->property("hovered").toBool() && event->pos().y() < 207*m_scale) {
         grNode->setProperty("hovered", true);
         if(m_attachedFrame) {
-            m_attachedFrame->setZ(2);
             m_attachedFrame->setBubbleVisible(true);
         }
     }
     else if(grNode->property("hovered").toBool() && event->pos().y() > 207*m_scale) {
         grNode->setProperty("hovered", false);
         if(m_attachedFrame) {
-            if(m_attachedFrame->selected())m_attachedFrame->setZ(1);
-            else m_attachedFrame->setZ(0);
             m_attachedFrame->setBubbleVisible(false);
         }
     }
@@ -346,8 +341,6 @@ void Node::hoverMoveEvent(QHoverEvent *event) {
 void Node::hoverLeaveEvent(QHoverEvent *event) {
     grNode->setProperty("hovered", false);
     if(m_attachedFrame) {
-        if(m_attachedFrame->selected())m_attachedFrame->setZ(1);
-        else m_attachedFrame->setZ(0);
         m_attachedFrame->setBubbleVisible(false);
     }
 }

@@ -40,12 +40,10 @@
 class Scene: public QQuickItem
 {
     Q_OBJECT
-    Q_PROPERTY(BackgroundObject *background READ background)
-    Q_PROPERTY(QQmlListProperty<Node> childrenNode READ childrenNode)
+    Q_PROPERTY(bool modified READ isModified)
 public:
     Scene(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
     ~Scene();
-    QQmlListProperty<Node> childrenNode();
     int nodesCount();
     Node* node(int idx);
     QQuickItem* activeItem();
@@ -80,6 +78,7 @@ public:
     bool saveScene(QString fileName);
     bool loadScene(QString fileName);
     QString fileName();
+    bool isModified();
     void undo();
     void redo();
     void cut();
@@ -105,7 +104,6 @@ public:
     void setResolution(QVector2D res);
 
     bool isEdgeDrag = false;
-    bool isNodesDrag = false;
     Socket* startSocket = nullptr;
     Edge* dragEdge = nullptr;
     Frame* dropFrame = nullptr;
@@ -118,8 +116,6 @@ signals:
     void outputsSave(QString dir);
     void resolutionUpdate(QVector2D res);
 private:
-    static int nodesCount(QQmlListProperty<Node>* nodes);
-    static Node* node(QQmlListProperty<Node>* nodes, int idx);
     BackgroundObject *m_background = nullptr;
     Preview3DObject *m_preview3d = nullptr;
     QList<Node*> m_nodes;

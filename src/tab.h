@@ -29,10 +29,13 @@ class Tab: public QQuickItem
 {
     Q_OBJECT
     Q_PROPERTY(Scene *scene READ scene)
+    Q_PROPERTY(QString title READ title)
 public:
+    Q_INVOKABLE bool save();
     Tab(QQuickItem *parent = nullptr);
     ~Tab();
-    Scene *scene();    
+    Scene *scene();
+    QString title();
     void setTitle(QString fileName, bool modified);
     void setSelected(bool select);
 public slots:
