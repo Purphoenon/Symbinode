@@ -100,6 +100,7 @@ public:
     bool metalConnected();
     bool roughConnected();
     bool normalConnected();
+    bool heightConnected();
     QVector2D resolution();
     void setResolution(QVector2D res);
 
@@ -130,6 +131,7 @@ private:
     bool m_metalConnected = false;
     bool m_roughConnected = false;
     bool m_normalConnected = false;
+    bool m_heightConnected = false;
     QVector2D m_resolution;
 };
 

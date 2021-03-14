@@ -41,7 +41,7 @@ void Preview3DObject::mousePressEvent(QMouseEvent *event) {
             QMatrix4x4 projection = QMatrix4x4();
             projection.perspective(m_zoomCam, (float)width()/(float)height(), 0.1f, 38.0f);
             QMatrix4x4 view = QMatrix4x4();
-            view.translate(0, 0, -19);
+            view.translate(0, 0, 19);
             QMatrix4x4 model = QMatrix4x4();
             model.translate(0.0f, 0.0f, 0.0f);
             QVector3D z = QVector3D(0, 0, 0).project(model*view, projection, QRect(0, 0, width(), height()));
@@ -63,7 +63,7 @@ void Preview3DObject::mouseMoveEvent(QMouseEvent *event) {
         QMatrix4x4 projection = QMatrix4x4();
         projection.perspective(m_zoomCam, (float)width()/(float)height(), 0.1f, 38.0f);
         QMatrix4x4 view = QMatrix4x4();
-        view.translate(0, 0, -19);
+        view.translate(0, 0, 19);
         QMatrix4x4 model = QMatrix4x4();
         model.translate(0.0f, 0.0f, 0.0f);
         QVector3D z = QVector3D(0, 0, 0).project(model*view, projection, QRect(0, 0, width(), height()));
@@ -78,8 +78,8 @@ void Preview3DObject::mouseMoveEvent(QMouseEvent *event) {
         update();
     }
     else if(event->buttons() == Qt::MidButton) {
-        theta += 0.01f*(event->pos().x() - lastX);
-        phi += 0.01f*(lastY - event->pos().y());
+        theta += 0.01f*(lastX - event->pos().x());
+        phi += 0.01f*(event->pos().y() - lastY);
 
         float x = 0;
         float y = sin(theta/2);
@@ -158,7 +158,7 @@ void Preview3DObject::setPrimitivesType(int type) {
     phi = 0;
     m_rotQuat = QQuaternion();
     m_zoomCam = 35.0f;
-    m_posCam = QVector3D(0, 0, -19);
+    m_posCam = QVector3D(0, 0, 19);
     update();
 }
 
@@ -168,6 +168,24 @@ int Preview3DObject::tilesSize() {
 
 void Preview3DObject::setTilesSize(int id) {
     m_tile = id + 1;
+    update();
+}
+
+bool Preview3DObject::isSelfShadow() {
+    return m_selfShadow;
+}
+
+void Preview3DObject::setSelfShadow(bool enable) {
+    m_selfShadow = enable;
+    update();
+}
+
+float Preview3DObject::heightScale() {
+    return m_heightScale;
+}
+
+void Preview3DObject::setHeightScale(float scale) {
+    m_heightScale = scale;
     update();
 }
 
@@ -185,6 +203,10 @@ QVariant Preview3DObject::roughness() {
 
 unsigned int Preview3DObject::normal() {
     return m_normal;
+}
+
+unsigned int Preview3DObject::heightMap() {
+    return m_height;
 }
 
 QVector2D Preview3DObject::texResolution() {
@@ -221,6 +243,12 @@ void Preview3DObject::updateRough(QVariant rough, bool useTexture) {
 void Preview3DObject::updateNormal(unsigned int normal) {
     m_normal = normal;
     changedNormal = true;
+    update();
+}
+
+void Preview3DObject::updateHeight(unsigned int height) {
+    m_height = height;
+    changedHeight = true;
     update();
 }
 
@@ -270,6 +298,7 @@ Preview3DRenderer::Preview3DRenderer() {
     pbrShader->setUniformValue(pbrShader->uniformLocation("normalMap"), 4);
     pbrShader->setUniformValue(pbrShader->uniformLocation("metallicMap"), 5);
     pbrShader->setUniformValue(pbrShader->uniformLocation("roughnessMap"), 6);
+    pbrShader->setUniformValue(pbrShader->uniformLocation("heightMap"), 7);
     pbrShader->setUniformValue(pbrShader->uniformLocation("albedoVal"), QVector3D(0.8f, 0.4f, 0.0f));
     pbrShader->setUniformValue(pbrShader->uniformLocation("metallicVal"), 0.0f);
     pbrShader->setUniformValue(pbrShader->uniformLocation("roughnessVal"), 0.2f);
@@ -509,7 +538,7 @@ Preview3DRenderer::~Preview3DRenderer() {
 QOpenGLFramebufferObject *Preview3DRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
+    format.setSamples(16);
     updateMatrix();
     return new QOpenGLFramebufferObject(size, format);
 }
@@ -547,6 +576,8 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
     }
     pbrShader->bind();
     pbrShader->setUniformValue(pbrShader->uniformLocation("tilesSize"), previewItem->tilesSize());
+    pbrShader->setUniformValue(pbrShader->uniformLocation("enableSelfShadow"), previewItem->isSelfShadow());
+    pbrShader->setUniformValue(pbrShader->uniformLocation("heightScale"), previewItem->heightScale());
     pbrShader->setUniformValue(pbrShader->uniformLocation("useAlbMap"), previewItem->useAlbedoTex);
     if(previewItem->useAlbedoTex) {
         if(previewItem->changedAlbedo) {
@@ -584,6 +615,13 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
     }
     bool useNorm = previewItem->normal() ? true : false;
     pbrShader->setUniformValue(pbrShader->uniformLocation("useNormMap"), useNorm);
+
+    if(previewItem->changedHeight) {
+        previewItem->changedHeight = false;
+        updateOutputsTexture(heightTexture, previewItem->heightMap());
+    }
+    bool useHeight = previewItem->heightMap();
+    pbrShader->setUniformValue(pbrShader->uniformLocation("useHeightMap"), useHeight);
     pbrShader->release();
 }
 
@@ -598,7 +636,7 @@ void Preview3DRenderer::render() {
     pbrShader->setUniformValue(pbrShader->uniformLocation("projection"), projection);
     pbrShader->setUniformValue(pbrShader->uniformLocation("view"), view);
     pbrShader->setUniformValue(pbrShader->uniformLocation("model"), model);
-    pbrShader->setUniformValue(pbrShader->uniformLocation("camPos"), -positionV);
+    pbrShader->setUniformValue(pbrShader->uniformLocation("camPos"), positionV);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
@@ -614,6 +652,8 @@ void Preview3DRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, metalTexture);
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_2D, roughTexture);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, heightTexture);
     switch (primitive) {
         case 0: default:
             renderSphere();
@@ -649,47 +689,47 @@ void Preview3DRenderer::renderCube() {
         unsigned int cubeVBO;
 
         float vertices[] = {
-            -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
-             1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
-             1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,
-             1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
-            -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,
+           -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
+            1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
+            1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,
+            1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
+           -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
+           -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,
 
-            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,
-             1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f,
-             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,
-             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,
-            -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,
-
-            -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f,
-            -1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f,
-            -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f,
-            -1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-            -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f,
-
-             1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-             1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-             1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f,
-             1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-             1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-             1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f,
-
-            -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,
-             1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f,
-             1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,
-             1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,
-            -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f,
-            -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,
-
-            -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f,
-             1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,
-             1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f,
-             1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,
-            -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f,
-            -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f
+           -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,
+            1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,
+            1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,
+            1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,
+           -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // top-left
+           -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // bottom-left
+           // left face
+           -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // top-right
+           -1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+           -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // bottom-left
+           -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // bottom-left
+           -1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+           -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // top-right
+           // right face
+            1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+            1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+            1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // top-right
+            1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+            1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+            1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // bottom-left
+           // bottom face
+           -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // top-right
+            1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // top-left
+            1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // bottom-left
+            1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // bottom-left
+           -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+           -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // top-right
+           // top face
+           -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // top-left
+            1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+            1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f, // top-right
+            1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+           -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // top-left
+           -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f  // bottom-left
         };
         glGenVertexArrays(1, &cubeVAO);
         glGenBuffers(1, &cubeVBO);
@@ -767,7 +807,7 @@ void Preview3DRenderer::renderSphere() {
                 float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
 
                 positions.push_back(QVector3D(xPos, yPos, zPos));
-                uv.push_back(QVector2D(2.0f - xSegment*2, 1.0f - ySegment));
+                uv.push_back(QVector2D(2*xSegment, ySegment));
                 normals.push_back(QVector3D(xPos, yPos, zPos));
             }
         }
@@ -837,10 +877,10 @@ void Preview3DRenderer::renderPlane() {
         unsigned int quadVBO;
 
         float quadVertices[] = {
-            -1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-             1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-             1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            -1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+             1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+             1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
         };
 
         glGenVertexArrays(1, &planeVAO);
@@ -862,11 +902,18 @@ void Preview3DRenderer::renderPlane() {
 }
 
 void Preview3DRenderer::updateMatrix() {
+    float x = 0;
+    float y = 0;
+    float z = sin(3.14f/2);
+    float w = cos(3.14f/2);
+
+    rotZ = QQuaternion(w, x, y, z);
     projection = QMatrix4x4();
     projection.perspective(zoom, (float)wWidth/(float)wHeight, 0.1f, 38.0f);
     view = QMatrix4x4();
-    view.translate(positionV);
-    //view.rotate(rotQuat);
+    view.lookAt(positionV, positionV + QVector3D(0, 0, -1), QVector3D(0, 1, 0));
+    //view.translate(positionV);
+    view.rotate(rotZ);
     model = QMatrix4x4();
     model.translate(0.0f, 0.0f, 0.0f);
     model.rotate(rotQuat);

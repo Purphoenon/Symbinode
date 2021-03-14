@@ -57,6 +57,10 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 3:
                 n = new MappingNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 4:
+                if(activeTab->scene()->heightConnected()) break;
+                n = new HeightNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             case 5:
                 n = new MirrorNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
@@ -254,6 +258,18 @@ void MainWindow::changePrimitive(int id) {
 void MainWindow::changeTilePreview3D(int id) {
     if(activeTab) {
         activeTab->scene()->preview3d()->setTilesSize(id);
+    }
+}
+
+void MainWindow::changeSelfShadow(bool enable) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setSelfShadow(enable);
+    }
+}
+
+void MainWindow::changeHeightScale(qreal scale) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setHeightScale(0.1f*scale);
     }
 }
 

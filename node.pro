@@ -80,7 +80,8 @@ SOURCES += \
     src/threshold.cpp \
     src/cubicbezier.cpp \
     src/cutline.cpp \
-    src/frame.cpp
+    src/frame.cpp \
+    src/heightnode.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -153,7 +154,8 @@ HEADERS += \
     src/threshold.h \
     src/cubicbezier.h \
     src/cutline.h \
-    src/frame.h
+    src/frame.h \
+    src/heightnode.h
 
 DISTFILES += \
     shaders/noise.vert \

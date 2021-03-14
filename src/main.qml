@@ -337,6 +337,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 12)
                 }
             }
+            Action {
+                text: "Height"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 4)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -646,6 +652,9 @@ MainWindow {
             newPreview.width = Qt.binding(function(){return newPreview.parent.width})
             newPreview.height = Qt.binding(function(){return newPreview.parent.height - 27})
             primitivesType.currentIndex = newPreview.primitivesType
+            tilesType.currentIndex = newPreview.tilesSize - 1
+            selfShadow.checked = newPreview.selfShadow
+            heightScale.propertyValue = 10*newPreview.heightScale
         }
     }
 
@@ -918,13 +927,13 @@ MainWindow {
                     id: preview3DParams
                     x: -width + parent.width
                     z: 0
-                    width: 150
+                    width: 170
                     height: contentItem.implicitHeight
                     padding: 0
 
                     MouseArea {
                         id: paramsClose
-                        x: 126
+                        x: parent.width - width
                         z: 1
                         width: 24
                         height: 24
@@ -935,8 +944,8 @@ MainWindow {
                     }
 
                     contentItem: Item {
-                        width: 150
-                        implicitHeight: 200
+                        width: 170
+                        implicitHeight: 230
                         Text {
                             x: 28
                             y: 20
@@ -973,11 +982,34 @@ MainWindow {
                                 changeTilePreview3D(index)
                                 focus = false
                             }
+                        }                        
+
+                        ParamSlider {
+                            id: heightScale
+                            x: 5
+                            y: 125
+                            width: parent.width - 10
+                            maximum: 1
+                            propertyName: "Height scale"
+                            onPropertyValueChanged: {
+                                changeHeightScale(propertyValue)
+                            }
+                        }
+
+                        ParamCheckbox {
+                            id: selfShadow
+                            x: 5
+                            y: 180
+                            width: 100
+                            text: "Self shadow"
+                            onToggled: {
+                                changeSelfShadow(checked)
+                            }
                         }
                     }
                     background:
                         Rectangle {
-                            width: 150
+                            width: 170
                             radius: 2
                             color: "#2C2D2F"
                         }

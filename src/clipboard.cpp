@@ -43,6 +43,7 @@
 #include "metalnode.h"
 #include "roughnode.h"
 #include "normalnode.h"
+#include "heightnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -74,7 +75,7 @@ void Clipboard::copy(Scene *scene) {
     float minX = std::numeric_limits<float>::max();
     float minY = minX;
     for(auto item: selected) {
-        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item))) {
+        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item))) {
             if(qobject_cast<Node*>(item)) {
                 Node *node = qobject_cast<Node*>(item);
                 if(!node->attachedFrame() || !node->attachedFrame()->selected()) sel_nodes.append(node);
@@ -87,7 +88,7 @@ void Clipboard::copy(Scene *scene) {
                     if(sel_edges.contains(edge)) continue;
                     Node *startNode = qobject_cast<Node*>(edge->startSocket()->parentItem());
                     Node *endNode = qobject_cast<Node*>(edge->endSocket()->parentItem());
-                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode)) && endNode->selected())) {
+                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode) || qobject_cast<HeightNode*>(endNode)) && endNode->selected())) {
                         sel_edges.append(edge);
                     }
                 }
@@ -118,7 +119,7 @@ void Clipboard::copy(Scene *scene) {
         QList<QQuickItem*> copiedContent;
         for(auto item: frame->contentList()) {
             Node *baseNode = qobject_cast<Node*>(item);
-            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item)) && baseNode->selected()) {
+            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item)) && baseNode->selected()) {
                 Node *copiedContentNode = nodeCopy(baseNode, scene, nullptr);
                 copiedContentNode->setBaseX(baseNode->baseX());
                 copiedContentNode->setBaseY(baseNode->baseY());
@@ -229,7 +230,7 @@ void Clipboard::duplicate(Scene *scene) {
     QList<Edge*> sel_edges;
     QList<QQuickItem*> pastedItem;
     for(auto item: selected) {
-        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item))) {
+        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item))) {
             if(qobject_cast<Node*>(item)) {
                 Node *node = qobject_cast<Node*>(item);
                 if(!node->attachedFrame() || !node->attachedFrame()->selected()) sel_nodes.append(node);
@@ -238,7 +239,7 @@ void Clipboard::duplicate(Scene *scene) {
                     if(sel_edges.contains(edge)) continue;
                     Node *startNode = qobject_cast<Node*>(edge->startSocket()->parentItem());
                     Node *endNode = qobject_cast<Node*>(edge->endSocket()->parentItem());
-                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode)) && endNode->selected())) {
+                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode) || qobject_cast<HeightNode*>(endNode)) && endNode->selected())) {
                         sel_edges.append(edge);
                     }
                 }
@@ -264,7 +265,7 @@ void Clipboard::duplicate(Scene *scene) {
         QList<QQuickItem*> copiedContent;
         for(auto item: frame->contentList()) {
             Node *baseNode = qobject_cast<Node*>(item);
-            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item)) && baseNode->selected()) {
+            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item)) && baseNode->selected()) {
                 Node *copiedContentNode = nodeCopy(baseNode, scene, scene);
                 copiedContentNode->setBaseX(baseNode->baseX() + 50);
                 copiedContentNode->setBaseY(baseNode->baseY() + 50);

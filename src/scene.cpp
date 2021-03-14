@@ -28,6 +28,7 @@
 #include "mixnode.h"
 #include "normalmapnode.h"
 #include "normalnode.h"
+#include "heightnode.h"
 #include "voronoinode.h"
 #include "polygonnode.h"
 #include "circlenode.h"
@@ -221,6 +222,13 @@ void Scene::deleteNode(Node *node) {
         m_normalConnected = false;
         m_preview3d->updateNormal(0);
     }
+    else if(qobject_cast<HeightNode*>(node)) {
+        HeightNode *heightNode = qobject_cast<HeightNode*>(node);
+        disconnect(heightNode, &HeightNode::heightChanged, m_preview3d, &Preview3DObject::updateHeight);
+        disconnect(this, &Scene::outputsSave, heightNode, &HeightNode::heightSave);
+        m_heightConnected = false;
+        m_preview3d->updateHeight(0);
+    }
     disconnect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
     disconnect(m_background, &BackgroundObject::scaleChanged, node, &Node::scaleUpdate);
     disconnect(m_background, &BackgroundObject::panChanged, node, &Node::setPan);
@@ -256,6 +264,12 @@ void Scene::addNode(Node *node) {
         connect(normNode, &NormalNode::normalChanged, m_preview3d, &Preview3DObject::updateNormal);
         connect(this, &Scene::outputsSave, normNode, &NormalNode::saveNormal);
         m_normalConnected = true;
+    }
+    else if(qobject_cast<HeightNode*>(node)) {
+        HeightNode *heightNode = qobject_cast<HeightNode*>(node);
+        connect(heightNode, &HeightNode::heightChanged, m_preview3d, &Preview3DObject::updateHeight);
+        connect(this, &Scene::outputsSave, heightNode, &HeightNode::heightSave);
+        m_heightConnected = true;
     }
     connect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
     connect(this, &Scene::resolutionUpdate, node, &Node::setResolution);
@@ -559,6 +573,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
     case 3:
         node = new MappingNode(this, m_resolution);
         break;
+    case 4:
+        node = new HeightNode(this, m_resolution);
+        break;
     case 5:
         node = new MirrorNode(this, m_resolution);
         break;
@@ -791,6 +808,10 @@ bool Scene::roughConnected() {
 
 bool Scene::normalConnected() {
     return m_normalConnected;
+}
+
+bool Scene::heightConnected() {
+    return m_heightConnected;
 }
 
 QVector2D Scene::resolution() {

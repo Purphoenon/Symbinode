@@ -31,6 +31,7 @@
 #include "roughnode.h"
 #include "normalmapnode.h"
 #include "normalnode.h"
+#include "heightnode.h"
 #include "voronoinode.h"
 #include "polygonnode.h"
 #include "circlenode.h"
@@ -69,6 +70,8 @@ public:
     Q_INVOKABLE void changeResolution(QVector2D res);
     Q_INVOKABLE void changePrimitive(int id);
     Q_INVOKABLE void changeTilePreview3D(int id);
+    Q_INVOKABLE void changeSelfShadow(bool enable);
+    Q_INVOKABLE void changeHeightScale(qreal scale);
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
     Q_INVOKABLE void pin(bool pinned);

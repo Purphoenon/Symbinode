@@ -88,7 +88,10 @@ void MoveCommand::redo() {
             f->setBaseY(m_newPos[i].y());
         }
     }
-    if(m_frame) m_frame->addNodes(nodesToFrame);
+    if(m_frame) {
+        std::cout << "move to frame" << std::endl;
+        m_frame->addNodes(nodesToFrame);
+    }
 }
 
 AddNode::AddNode(Node *node, Scene *scene, QUndoCommand *parent): QUndoCommand (parent), m_scene(scene), m_node(node)

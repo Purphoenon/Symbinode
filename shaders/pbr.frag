@@ -32,8 +32,11 @@ uniform bool useMetalMap = false;
 uniform bool useRoughMap = false;
 uniform bool useAOMap = false;
 uniform bool useNormMap = false;
+uniform bool useHeightMap = false;
 
 uniform int tilesSize = 1;
+
+uniform float heightScale = 0.04;
 
 uniform vec3 albedoVal = vec3(0.8, 0.8, 0.0);
 uniform float metallicVal;
@@ -45,19 +48,22 @@ uniform sampler2D normalMap;
 uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
+uniform sampler2D heightMap;
 
 uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
 uniform sampler2D brdfLUT;
 
 uniform vec3 camPos;
+uniform vec3 lightPosition = vec3(-5, 5, 19);
+uniform vec3 lightColor = vec3(300, 300, 300);
+uniform bool enableSelfShadow = false;
 
 const float PI = 3.14159265359;
 
 // ----------------------------------------------------------------------------
-vec3 getNormalFromMap()
+vec3 getNormalFromMap(vec2 coords)
 {
-    vec2 coords = TexCoords*tilesSize;
     vec3 tangentNormal = texture(normalMap, coords).xyz*2.0 - vec3(1.0);
 
     vec3 Q1  = dFdx(WorldPos);
@@ -71,6 +77,98 @@ vec3 getNormalFromMap()
     mat3 TBN = mat3(T, B, N);
 
     return normalize(TBN * tangentNormal);
+}
+// ----------------------------------------------------------------------------
+vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
+{
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
+
+    vec3 N  = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+
+    viewDir *= TBN;
+
+    float numLayers = 128;
+
+    float layerDepth = 1.0 / numLayers;
+
+    float currentLayerDepth = 0.0;
+
+    vec2 P = viewDir.xy / viewDir.z * heightScale;
+    vec2 deltaTexCoords = P / numLayers;
+
+    vec2  currentTexCoords     = texCoords;
+    float currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+
+    while(currentLayerDepth < currentDepthMapValue)
+    {
+        currentTexCoords -= deltaTexCoords;
+        currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+        currentLayerDepth += layerDepth;
+    }
+
+    vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+    float afterDepth  = currentDepthMapValue - currentLayerDepth;
+    float beforeDepth = 1.0 - texture(heightMap, prevTexCoords).r - currentLayerDepth + layerDepth;
+
+    float weight = afterDepth / (afterDepth - beforeDepth);
+    vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+    return finalTexCoords;
+}
+// ----------------------------------------------------------------------------
+float ShadowCalc(vec2 texCoords, vec3 lightDir)
+{
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
+
+    vec3 N  = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+    lightDir *= TBN;
+    if ( lightDir.z >= 0.0 )
+        return 0.0;
+
+    float shadowMultiplier = 0.;
+    float numLayers = 128;
+
+    vec2 currentTexCoords = texCoords;
+    float currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+    float currentLayerDepth = currentDepthMapValue;
+
+    float layerDepth = 1.0 / numLayers;
+    vec2 P = lightDir.xy / lightDir.z * heightScale;
+    vec2 deltaTexCoords = P / numLayers;
+
+    int numSamplesUnderSurface = 0;
+    float stepIndex = 1.;
+    while (currentLayerDepth <= currentDepthMapValue && currentLayerDepth > 0.0)
+    {
+        float currentShadowMultiplier = (currentLayerDepth - currentDepthMapValue)*(1. - stepIndex/numLayers);
+
+        shadowMultiplier = max(shadowMultiplier, currentShadowMultiplier);
+
+        ++stepIndex;
+        currentTexCoords += deltaTexCoords;
+        currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+        currentLayerDepth -= layerDepth;
+    }
+
+    if (numSamplesUnderSurface < 1)
+        shadowMultiplier = 1.;
+    else
+        shadowMultiplier = 1. - shadowMultiplier;
+
+    return shadowMultiplier;
 }
 // ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
@@ -123,24 +221,60 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 
 void main()
 {
-    vec2 coords = TexCoords*tilesSize;
+    vec3 V = normalize(camPos - WorldPos);
+
+    vec2 coords = useHeightMap ? ParallaxMapping(TexCoords*tilesSize, V) : TexCoords*tilesSize;
+
     vec4 texAlbedo = vec4(albedoVal, 1.0);
     vec4 texColor = texture(albedoMap, coords);
     if(useAlbMap) texAlbedo = texColor;
 
     vec3 albedo = texAlbedo.rgb;
     albedo = pow(albedo, vec3(2.2));
-    float metallic = useMetalMap ? texture(metallicMap, coords).r : metallicVal;
+    float metallic = useMetalMap ? texture(metallicMap, coords).r :
 
     float roughness = useRoughMap ? texture(roughnessMap, coords).r : roughnessVal;
     roughness = clamp(roughness, 0.05, 1.0);
 
-    vec3 N = useNormMap ? getNormalFromMap() : normalize(Normal);
-    vec3 V = normalize(camPos - WorldPos);
+    vec3 N = useNormMap ? getNormalFromMap(coords) : normalize(Normal);
+
     vec3 R = 2.0*max(dot(N, V), 0.0)*N - V;
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo, metallic);
+
+    vec3 Lo = vec3(0.0);
+
+    //-- point light
+    float selfShadow = 1.0;
+    vec3 L = normalize(lightPosition - WorldPos);
+    vec3 H = normalize(V + L);
+    float distance = length(lightPosition - WorldPos);
+    float attenuation = 1.0 / (distance * distance);
+    vec3 radiance = lightColor * attenuation;
+
+    float NDF = DistributionGGX(N, H, roughness);
+    float G   = GeometrySmith(N, V, L, roughness);
+    vec3 Fp    = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    vec3 nominator    = NDF * G * Fp;
+    float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001;
+    vec3 specularp = nominator / denominator;
+
+    vec3 kSp = Fp;
+    vec3 kDp = vec3(1.0) - kSp;
+    kDp *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+
+    if(enableSelfShadow) {
+        vec3 lightDir = normalize(WorldPos - lightPosition);
+        float dc = max(0.0, dot(-lightDir, N));
+        selfShadow = dc > 0.0 ? ShadowCalc(TexCoords*tilesSize, lightDir) : 0.0;
+    }
+
+    Lo += (kDp * albedo / PI + specularp) * radiance * NdotL * selfShadow;
+    //--
 
     vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
@@ -158,7 +292,7 @@ void main()
 
     vec3 ambient = (kD*diffuse + specular);
 
-    vec3 color = ambient;
+    vec3 color = (ambient + Lo);
 
     color = color / (color + vec3(1.0));
 

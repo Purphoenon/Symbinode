@@ -30,6 +30,9 @@ class Preview3DObject: public QQuickFramebufferObject
 {
     Q_OBJECT
     Q_PROPERTY(int primitivesType READ primitivesType)
+    Q_PROPERTY(int tilesSize READ tilesSize)
+    Q_PROPERTY(bool selfShadow READ isSelfShadow)
+    Q_PROPERTY(float heightScale READ heightScale)
 public:
     Preview3DObject(QQuickItem *parent = nullptr);
     QQuickFramebufferObject::Renderer *createRenderer() const;
@@ -43,10 +46,15 @@ public:
     void setPrimitivesType(int type);
     int tilesSize();
     void setTilesSize(int id);
+    bool isSelfShadow();
+    void setSelfShadow(bool enable);
+    float heightScale();
+    void setHeightScale(float scale);
     QVariant albedo();
     QVariant metalness();
     QVariant roughness();
     unsigned int normal();
+    unsigned int heightMap();
     QVector2D texResolution();
     void setTexResolution(QVector2D res);
     bool translationView = false;
@@ -60,27 +68,32 @@ public:
     bool changedRough = false;
     bool changedMetal = false;
     bool changedNormal = false;
+    bool changedHeight = false;
 public slots:
     void updateAlbedo(QVariant albedo, bool useTexture);
     void updateMetal(QVariant metal, bool useTexture);
     void updateRough(QVariant rough, bool useTexture);
     void updateNormal(unsigned int normal);
+    void updateHeight(unsigned int height);
 private:
     float lastX = 0.0f;
     float lastY = 0.0f;
     float theta = 0.0f;
     float phi = 0.0f;
     QVector3D lastWorldPos;
-    QVector3D m_posCam = QVector3D(0.0f, 0.0f, -19.0f);
+    QVector3D m_posCam = QVector3D(0.0f, 0.0f, 19.0f);
     float m_zoomCam = 35.0f;
     QQuaternion m_rotQuat;
     QVariant m_albedo = QVector3D(1.0f, 1.0f, 1.0f);
     QVariant m_metalness = 0.0f;
     QVariant m_roughness = 0.2f;
     unsigned int m_normal = 0;
+    unsigned int m_height = 0;
     QVector2D m_texResolution = QVector2D(1024, 1024);
     int m_primitive = 0;
     int m_tile = 1;
+    bool m_selfShadow = false;
+    float m_heightScale = 0.04f;
 };
 
 class Preview3DRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -101,6 +114,7 @@ private:
     QMatrix4x4 projection;
     QMatrix4x4 view;
     QMatrix4x4 model;
+    QQuaternion rotZ;
     QVector2D m_texResolution = QVector2D(1024, 1024);
     unsigned int hdrTexture = 0;
     unsigned int envCubemap = 0;
@@ -114,7 +128,7 @@ private:
     unsigned int planeVAO = 0;
     unsigned int indexCount;
     unsigned int wWidth, wHeight;
-    QVector3D positionV = QVector3D(0.0f, 0.0f, -19.0f);
+    QVector3D positionV = QVector3D(0.0f, 0.0f, 19.0f);
     float zoom = 35.0f;
     QQuaternion rotQuat;
     int primitive = 0;
@@ -122,6 +136,7 @@ private:
     unsigned int metalTexture = 0;
     unsigned int roughTexture = 0;
     unsigned int normalTexture = 0;
+    unsigned int heightTexture = 0;
 
     void renderCube();
     void renderQuad();

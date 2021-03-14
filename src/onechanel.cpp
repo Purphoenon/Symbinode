@@ -22,6 +22,7 @@
 #include "onechanel.h"
 #include <QOpenGLFramebufferObjectFormat>
 #include "FreeImage.h"
+#include <iostream>
 
 OneChanelObject::OneChanelObject(QQuickItem *parent, QVector2D resolution): QQuickFramebufferObject (parent),
     m_resolution(resolution)
@@ -144,6 +145,7 @@ void OneChanelRenderer::synchronize(QQuickFramebufferObject *item) {
         oneChanelItem->updatePreview(m_colorTexture);
         oneChanelItem->updateValue(val, false);
     }
+    renderChanel->release();
 
     if(oneChanelItem->texSaving) {
         oneChanelItem->texSaving = false;
@@ -164,6 +166,7 @@ void OneChanelRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, texture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     renderChanel->release();
 }
