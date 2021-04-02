@@ -343,6 +343,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 4)
                 }
             }
+            Action {
+                text: "Emission"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 23)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -655,6 +661,11 @@ MainWindow {
             tilesType.currentIndex = newPreview.tilesSize - 1
             selfShadow.checked = newPreview.selfShadow
             heightScale.propertyValue = 10*newPreview.heightScale
+            emissiveStrenght.propertyValue = newPreview.emissiveStrenght
+            bloomRadius.propertyValue = newPreview.bloomRadius
+            bloomIntensity.propertyValue = newPreview.bloomIntensity
+            bloomThreshold.propertyValue = newPreview.bloomThreshold
+            bloom.checked = newPreview.bloom
         }
     }
 
@@ -927,7 +938,7 @@ MainWindow {
                     id: preview3DParams
                     x: -width + parent.width
                     z: 0
-                    width: 170
+                    width: 200
                     height: contentItem.implicitHeight
                     padding: 0
 
@@ -944,8 +955,8 @@ MainWindow {
                     }
 
                     contentItem: Item {
-                        width: 170
-                        implicitHeight: 230
+                        width: 200
+                        implicitHeight: bloom.checked ? 400 : 300
                         Text {
                             x: 28
                             y: 20
@@ -1006,10 +1017,73 @@ MainWindow {
                                 changeSelfShadow(checked)
                             }
                         }
+
+                        ParamSlider {
+                            id: emissiveStrenght
+                            x: 5
+                            y: 205
+                            width: parent.width - 10
+                            maximum: 10
+                            propertyName: "Emissive strength"
+                            onPropertyValueChanged: {
+                                changeEmissiveStrenght(propertyValue)
+                            }
+                        }
+
+                        ParamCheckbox {
+                            id: bloom
+                            x: 5
+                            y: 260
+                            width: 70
+                            text: "Bloom"
+                            onToggled: {
+                                changeBloom(checked)
+                            }
+                        }
+
+                        ParamSlider {
+                            id: bloomThreshold
+                            visible: bloom.checked
+                            x: 5
+                            y: 285
+                            width: parent.width - 10
+                            maximum: 5
+                            propertyName: "Bloom threshold"
+                            onPropertyValueChanged: {
+                                changeBloomThreshold(propertyValue)
+                            }
+                        }
+
+                        ParamSlider {
+                            id: bloomRadius
+                            visible: bloom.checked
+                            x: 5
+                            y: 318
+                            width: parent.width - 10
+                            minimum: 1
+                            maximum: 10
+                            propertyName: "Bloom radius"
+                            onPropertyValueChanged: {
+                                changeBloomRadius(propertyValue)
+                            }
+                        }
+
+                        ParamSlider {
+                            id: bloomIntensity
+                            visible: bloom.checked
+                            x: 5
+                            y: 351
+                            width: parent.width - 10
+                            maximum: 1
+                            propertyName: "Bloom intensity"
+                            onPropertyValueChanged: {
+                               changeBloomIntensity(propertyValue)
+                            }
+                        }
                     }
                     background:
                         Rectangle {
-                            width: 170
+                            width: 200
                             radius: 2
                             color: "#2C2D2F"
                         }

@@ -132,6 +132,7 @@ private:
     bool m_roughConnected = false;
     bool m_normalConnected = false;
     bool m_heightConnected = false;
+    bool m_emissionConnected = false;
     QVector2D m_resolution;
 };
 

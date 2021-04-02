@@ -29,6 +29,7 @@
 #include "normalmapnode.h"
 #include "normalnode.h"
 #include "heightnode.h"
+#include "emissionnode.h"
 #include "voronoinode.h"
 #include "polygonnode.h"
 #include "circlenode.h"
@@ -229,6 +230,13 @@ void Scene::deleteNode(Node *node) {
         m_heightConnected = false;
         m_preview3d->updateHeight(0);
     }
+    else if(qobject_cast<EmissionNode*>(node)) {
+        EmissionNode *emissionNode = qobject_cast<EmissionNode*>(node);
+        disconnect(emissionNode, &EmissionNode::emissionChanged, m_preview3d, &Preview3DObject::updateEmission);
+        disconnect(this, &Scene::outputsSave, emissionNode, &EmissionNode::emissionSave);
+        m_emissionConnected = false;
+        m_preview3d->updateEmission(0);
+    }
     disconnect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
     disconnect(m_background, &BackgroundObject::scaleChanged, node, &Node::scaleUpdate);
     disconnect(m_background, &BackgroundObject::panChanged, node, &Node::setPan);
@@ -270,6 +278,12 @@ void Scene::addNode(Node *node) {
         connect(heightNode, &HeightNode::heightChanged, m_preview3d, &Preview3DObject::updateHeight);
         connect(this, &Scene::outputsSave, heightNode, &HeightNode::heightSave);
         m_heightConnected = true;
+    }
+    else if(qobject_cast<EmissionNode*>(node)) {
+        EmissionNode *emissionNode = qobject_cast<EmissionNode*>(node);
+        connect(emissionNode, &EmissionNode::emissionChanged, m_preview3d, &Preview3DObject::updateEmission);
+        connect(this, &Scene::outputsSave, emissionNode, &EmissionNode::emissionSave);
+        m_emissionConnected = true;
     }
     connect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
     connect(this, &Scene::resolutionUpdate, node, &Node::setResolution);
@@ -629,6 +643,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 22:
         node = new ThresholdNode(this, m_resolution);
+        break;
+    case 23:
+        node = new EmissionNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

@@ -21,7 +21,8 @@
 
 #version 440 core
 
-out vec4 FragColor;
+layout(location = 0) out vec4 FragColor;
+
 in vec2 TexCoords;
 in vec3 WorldPos;
 in vec3 Pos;
@@ -33,10 +34,13 @@ uniform bool useRoughMap = false;
 uniform bool useAOMap = false;
 uniform bool useNormMap = false;
 uniform bool useHeightMap = false;
+uniform bool useEmisMap = false;
 
 uniform int tilesSize = 1;
 
-uniform float heightScale = 0.04;
+uniform float heightScale = 0.1;
+uniform float emissiveStrenght = 10.0;
+uniform bool bloom = false;
 
 uniform vec3 albedoVal = vec3(0.8, 0.8, 0.0);
 uniform float metallicVal;
@@ -49,6 +53,7 @@ uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
 uniform sampler2D heightMap;
+uniform sampler2D emissionMap;
 
 uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
@@ -83,15 +88,15 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
     vec3 Q1  = dFdx(WorldPos);
     vec3 Q2  = dFdy(WorldPos);
-    vec2 st1 = dFdx(TexCoords);
-    vec2 st2 = dFdy(TexCoords);
+    vec2 st1 = dFdx(texCoords);
+    vec2 st2 = dFdy(texCoords);
 
     vec3 N  = normalize(Normal);
     vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
     vec3 B  = normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
+    mat3 TBN = transpose(mat3(T, B, N));
 
-    viewDir *= TBN;
+    viewDir = TBN*viewDir;
 
     float numLayers = 128;
 
@@ -133,13 +138,13 @@ float ShadowCalc(vec2 texCoords, vec3 lightDir)
     vec3 N  = normalize(Normal);
     vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
     vec3 B  = normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
-    lightDir *= TBN;
+    mat3 TBN = transpose(mat3(T, B, N));
+    lightDir = TBN*lightDir;
     if ( lightDir.z >= 0.0 )
         return 0.0;
 
     float shadowMultiplier = 0.;
-    float numLayers = 128;
+    float numLayers = 64;
 
     vec2 currentTexCoords = texCoords;
     float currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
@@ -231,7 +236,8 @@ void main()
 
     vec3 albedo = texAlbedo.rgb;
     albedo = pow(albedo, vec3(2.2));
-    float metallic = useMetalMap ? texture(metallicMap, coords).r :
+    float metallic = useMetalMap ? texture(metallicMap, coords).r : metallicVal;
+    vec3 emissive = useEmisMap ? texture(emissionMap, coords).rgb*emissiveStrenght : vec3(0.0);
 
     float roughness = useRoughMap ? texture(roughnessMap, coords).r : roughnessVal;
     roughness = clamp(roughness, 0.05, 1.0);
@@ -292,11 +298,12 @@ void main()
 
     vec3 ambient = (kD*diffuse + specular);
 
-    vec3 color = (ambient + Lo);
+    vec3 color = (ambient + Lo + emissive);
 
-    color = color / (color + vec3(1.0));
-
-    color = pow(color, vec3(1.0/2.2));
+    if(!bloom) {
+        color = vec3(1.0) - exp(-color);
+        color = pow(color, vec3(1.0/2.2));
+    }
 
     FragColor = vec4(color , 1.0);
 }

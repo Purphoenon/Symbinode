@@ -81,7 +81,9 @@ SOURCES += \
     src/cubicbezier.cpp \
     src/cutline.cpp \
     src/frame.cpp \
-    src/heightnode.cpp
+    src/heightnode.cpp \
+    src/emissionnode.cpp \
+    src/grayscalenode.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -155,7 +157,9 @@ HEADERS += \
     src/cubicbezier.h \
     src/cutline.h \
     src/frame.h \
-    src/heightnode.h
+    src/heightnode.h \
+    src/emissionnode.h \
+    src/grayscalenode.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -199,4 +203,13 @@ DISTFILES += \
     shaders/checker.frag \
     qml/NodeFrame.qml \
     qml/ParamCheckbox.qml \
-    qml/ExitDialog.qml
+    qml/ExitDialog.qml \
+    shaders/pbrwithtess.vert \
+    shaders/pbrwithtess.tesc \
+    shaders/pbrwithtess.tese \
+    shaders/pbrwithtess.geom \
+    shaders/pbrwithtess.frag \
+    shaders/applybloom.frag \
+    shaders/brightforbloom.frag \
+    shaders/brightblur.frag \
+    shaders/combineblur.frag

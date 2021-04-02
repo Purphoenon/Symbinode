@@ -99,5 +99,14 @@
         <file>../qml/NodeFrame.qml</file>
         <file>../qml/ParamCheckbox.qml</file>
         <file>../qml/ExitDialog.qml</file>
+        <file>../shaders/pbrwithtess.frag</file>
+        <file>../shaders/pbrwithtess.geom</file>
+        <file>../shaders/pbrwithtess.tesc</file>
+        <file>../shaders/pbrwithtess.tese</file>
+        <file>../shaders/pbrwithtess.vert</file>
+        <file>../shaders/applybloom.frag</file>
+        <file>../shaders/brightforbloom.frag</file>
+        <file>../shaders/brightblur.frag</file>
+        <file>../shaders/combineblur.frag</file>
     </qresource>
 </RCC>

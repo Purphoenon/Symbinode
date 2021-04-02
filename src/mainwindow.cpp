@@ -119,6 +119,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 22:
                 n = new ThresholdNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 23:
+                n = new EmissionNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }
@@ -270,6 +273,36 @@ void MainWindow::changeSelfShadow(bool enable) {
 void MainWindow::changeHeightScale(qreal scale) {
     if(activeTab) {
         activeTab->scene()->preview3d()->setHeightScale(0.1f*scale);
+    }
+}
+
+void MainWindow::changeEmissiveStrenght(qreal strenght) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setEmissiveStrenght(strenght);
+    }
+}
+
+void MainWindow::changeBloomRadius(qreal radius) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloomRadius(radius);
+    }
+}
+
+void MainWindow::changeBloomIntensity(qreal intensity) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloomIntensity(intensity);
+    }
+}
+
+void MainWindow::changeBloomThreshold(qreal threshold) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloomThreshold(threshold);
+    }
+}
+
+void MainWindow::changeBloom(bool enable) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloom(enable);
     }
 }
 

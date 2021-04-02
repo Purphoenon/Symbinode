@@ -32,6 +32,7 @@
 #include "normalmapnode.h"
 #include "normalnode.h"
 #include "heightnode.h"
+#include "emissionnode.h"
 #include "voronoinode.h"
 #include "polygonnode.h"
 #include "circlenode.h"
@@ -72,6 +73,11 @@ public:
     Q_INVOKABLE void changeTilePreview3D(int id);
     Q_INVOKABLE void changeSelfShadow(bool enable);
     Q_INVOKABLE void changeHeightScale(qreal scale);
+    Q_INVOKABLE void changeEmissiveStrenght(qreal strenght);
+    Q_INVOKABLE void changeBloomRadius(qreal radius);
+    Q_INVOKABLE void changeBloomIntensity(qreal intensity);
+    Q_INVOKABLE void changeBloomThreshold(qreal threshold);
+    Q_INVOKABLE void changeBloom(bool enable);
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
     Q_INVOKABLE void pin(bool pinned);
@@ -88,7 +94,6 @@ public:
     Node *pinnedNode();
     Node *activeNode();
     void activeItemChanged();
-
 signals:
     void addTab(Tab *tab);
     void tabClosing(Tab *tab);
