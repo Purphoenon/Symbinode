@@ -122,6 +122,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 23:
                 n = new EmissionNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 24:
+                n = new GrayscaleNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

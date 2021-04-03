@@ -107,6 +107,6 @@
         <file>../shaders/applybloom.frag</file>
         <file>../shaders/brightforbloom.frag</file>
         <file>../shaders/brightblur.frag</file>
-        <file>../shaders/combineblur.frag</file>
+        <file>../shaders/grayscale.frag</file>
     </qresource>
 </RCC>

@@ -48,6 +48,7 @@
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
+#include "grayscalenode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow

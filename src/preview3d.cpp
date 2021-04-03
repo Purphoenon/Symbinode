@@ -360,11 +360,6 @@ Preview3DRenderer::Preview3DRenderer() {
     brightShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/brightforbloom.frag");
     brightShader->link();
 
-    combineBlurShader = new QOpenGLShaderProgram();
-    combineBlurShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
-    combineBlurShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/combineblur.frag");
-    combineBlurShader->link();
-
     pbrShader->bind();
     pbrShader->setUniformValue(pbrShader->uniformLocation("irradianceMap"), 0);
     pbrShader->setUniformValue(pbrShader->uniformLocation("prefilterMap"), 1);
@@ -400,11 +395,6 @@ Preview3DRenderer::Preview3DRenderer() {
     brightShader->bind();
     brightShader->setUniformValue(brightShader->uniformLocation("textureSample"), 0);
     brightShader->release();
-
-    combineBlurShader->bind();
-    combineBlurShader->setUniformValue(combineBlurShader->uniformLocation("bright"), 0);
-    combineBlurShader->setUniformValue(combineBlurShader->uniformLocation("blur"), 0);
-    combineBlurShader->release();
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);

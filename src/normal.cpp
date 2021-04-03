@@ -111,6 +111,7 @@ void NormalRenderer::synchronize(QQuickFramebufferObject *item) {
 
 void NormalRenderer::render() {
     glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     if(m_normalTexture) {

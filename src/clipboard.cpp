@@ -45,6 +45,7 @@
 #include "normalnode.h"
 #include "heightnode.h"
 #include "emissionnode.h"
+#include "grayscalenode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -394,7 +395,6 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         return blurNode;
     }
     else if(qobject_cast<InverseNode*>(node)) {
-        InverseNode *baseNode = qobject_cast<InverseNode*>(node);
         InverseNode *inverseNode = new InverseNode(parent, scene->resolution());
         return inverseNode;
     }
@@ -437,6 +437,10 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         ThresholdNode *thresholdNode = new ThresholdNode(parent, scene->resolution(),
                                                     baseNode->threshold());
         return thresholdNode;
+    }
+    else if (qobject_cast<GrayscaleNode*>(node)) {
+        GrayscaleNode *grayscaleNode = new GrayscaleNode(parent, scene->resolution());
+        return  grayscaleNode;
     }
     return nullptr;
 }

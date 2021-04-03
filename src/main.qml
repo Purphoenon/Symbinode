@@ -477,6 +477,13 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 22)
                 }
             }
+            Action {
+                text:  "Grayscale"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 24)
+                }
+            }
+
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30

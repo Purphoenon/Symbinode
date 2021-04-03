@@ -83,7 +83,8 @@ SOURCES += \
     src/frame.cpp \
     src/heightnode.cpp \
     src/emissionnode.cpp \
-    src/grayscalenode.cpp
+    src/grayscalenode.cpp \
+    src/grayscale.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -159,7 +160,8 @@ HEADERS += \
     src/frame.h \
     src/heightnode.h \
     src/emissionnode.h \
-    src/grayscalenode.h
+    src/grayscalenode.h \
+    src/grayscale.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -212,4 +214,4 @@ DISTFILES += \
     shaders/applybloom.frag \
     shaders/brightforbloom.frag \
     shaders/brightblur.frag \
-    shaders/combineblur.frag
+    shaders/grayscale.frag

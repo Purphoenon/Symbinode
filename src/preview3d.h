@@ -140,7 +140,6 @@ private:
     QOpenGLShaderProgram *blurShader;
     QOpenGLShaderProgram *bloomShader;
     QOpenGLShaderProgram *brightShader;
-    QOpenGLShaderProgram *combineBlurShader;
     QMatrix4x4 projection;
     QMatrix4x4 view;
     QMatrix4x4 model;
