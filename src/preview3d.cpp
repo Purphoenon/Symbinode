@@ -998,16 +998,16 @@ void Preview3DRenderer::renderSphere() {
             {
                 for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
                 {
-                    indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
                     indices.push_back(y * (X_SEGMENTS + 1) + x);
+                    indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
                 }
             }
             else
             {
                 for (int x = X_SEGMENTS; x >= 0; --x)
                 {
-                    indices.push_back(y * (X_SEGMENTS + 1) + x);
                     indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+                    indices.push_back(y * (X_SEGMENTS + 1) + x);
                 }
             }
             oddRow = !oddRow;
@@ -1127,7 +1127,6 @@ void Preview3DRenderer::renderForBloom() {
 
     glViewport(0, 0, wWidth, wHeight);
     glEnable(GL_MULTISAMPLE);
-    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -1137,7 +1136,6 @@ void Preview3DRenderer::renderForBloom() {
     renderScene();
 
     glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, multisampleFBO);

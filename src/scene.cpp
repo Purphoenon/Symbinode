@@ -46,6 +46,7 @@
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
 #include "grayscalenode.h"
+#include "gradientnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -650,6 +651,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 24:
         node = new GrayscaleNode(this, m_resolution);
+        break;
+    case 25:
+        node = new GradientNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

@@ -46,6 +46,7 @@
 #include "heightnode.h"
 #include "emissionnode.h"
 #include "grayscalenode.h"
+#include "gradientnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -441,6 +442,13 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     else if (qobject_cast<GrayscaleNode*>(node)) {
         GrayscaleNode *grayscaleNode = new GrayscaleNode(parent, scene->resolution());
         return  grayscaleNode;
+    }
+    else if (qobject_cast<GradientNode*>(node)) {
+        GradientNode *baseNode = qobject_cast<GradientNode*>(node);
+        GradientNode *gradientNode = new GradientNode(parent, scene->resolution(), baseNode->linearParam(),
+                                                      baseNode->reflectedParam(), baseNode->angularParam(),
+                                                      baseNode->radialParam(), baseNode->gradientType());
+        return gradientNode;
     }
     return nullptr;
 }

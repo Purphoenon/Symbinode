@@ -125,6 +125,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 24:
                 n = new GrayscaleNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 25:
+                n = new GradientNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

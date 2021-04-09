@@ -14,7 +14,7 @@ GrayscaleNode::GrayscaleNode(QQuickItem *parent, QVector2D resolution): Node(par
     preview->setY(30*s);
     preview->setScale(s);
     connect(this, &Node::changeScaleView, this, &GrayscaleNode::updateScale);
-    //connect(this, &Node::generatePreview, this, &InverseNode::previewGenerated);
+    connect(this, &Node::generatePreview, this, &GrayscaleNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &GrayscaleObject::setResolution);
     connect(preview, &GrayscaleObject::textureChanged, this, &GrayscaleNode::setOutput);
     connect(preview, &GrayscaleObject::updatePreview, this, &GrayscaleNode::updatePreview);

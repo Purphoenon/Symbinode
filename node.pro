@@ -84,7 +84,9 @@ SOURCES += \
     src/heightnode.cpp \
     src/emissionnode.cpp \
     src/grayscalenode.cpp \
-    src/grayscale.cpp
+    src/grayscale.cpp \
+    src/gradientnode.cpp \
+    src/gradient.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -161,7 +163,9 @@ HEADERS += \
     src/heightnode.h \
     src/emissionnode.h \
     src/grayscalenode.h \
-    src/grayscale.h
+    src/grayscale.h \
+    src/gradientnode.h \
+    src/gradient.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -214,4 +218,6 @@ DISTFILES += \
     shaders/applybloom.frag \
     shaders/brightforbloom.frag \
     shaders/brightblur.frag \
-    shaders/grayscale.frag
+    shaders/grayscale.frag \
+    shaders/gradient.frag \
+    qml/GradientProperty.qml

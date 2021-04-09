@@ -407,6 +407,13 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 1)
                 }
             }
+            Action {
+                text: "Gradient"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 25)
+                }
+            }
+
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -727,6 +734,7 @@ MainWindow {
             }
         }
         else {
+            console.log(tabsList)
             var index = tabsList.tabs.indexOf(tab)
             if(index >= 0) {
                 tabsList.tabs.splice(index, 1)

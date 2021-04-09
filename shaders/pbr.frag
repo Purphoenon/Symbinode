@@ -88,8 +88,8 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
     vec3 Q1  = dFdx(WorldPos);
     vec3 Q2  = dFdy(WorldPos);
-    vec2 st1 = dFdx(texCoords);
-    vec2 st2 = dFdy(texCoords);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
 
     vec3 N  = normalize(Normal);
     vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
@@ -98,13 +98,13 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 
     viewDir = TBN*viewDir;
 
-    float numLayers = 128;
+    float numLayers = 64;
 
     float layerDepth = 1.0 / numLayers;
 
     float currentLayerDepth = 0.0;
 
-    vec2 P = viewDir.xy / viewDir.z * heightScale;
+    vec2 P = viewDir.xy * heightScale;
     vec2 deltaTexCoords = P / numLayers;
 
     vec2  currentTexCoords     = texCoords;

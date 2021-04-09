@@ -108,5 +108,7 @@
         <file>../shaders/brightforbloom.frag</file>
         <file>../shaders/brightblur.frag</file>
         <file>../shaders/grayscale.frag</file>
+        <file>../shaders/gradient.frag</file>
+        <file>../qml/GradientProperty.qml</file>
     </qresource>
 </RCC>
