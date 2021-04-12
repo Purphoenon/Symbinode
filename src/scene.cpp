@@ -47,6 +47,7 @@
 #include "thresholdnode.h"
 #include "grayscalenode.h"
 #include "gradientnode.h"
+#include "directionalwarpnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -654,6 +655,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 25:
         node = new GradientNode(this, m_resolution);
+        break;
+    case 26:
+        node = new DirectionalWarpNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

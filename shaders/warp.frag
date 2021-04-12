@@ -36,7 +36,7 @@ void main()
     vec2 r = vec2(texture(warpTexture, texCoords).x, texture(warpTexture, texCoords + vec2(5.2, 1.3)).x);
     vec2 warp = vec2(texture(warpTexture, texCoords + intensity*r + vec2(1.7, 9.2)).x,
                      texture(warpTexture, texCoords + intensity*r + vec2(8.3, 2.8)).x);
-    vec4 result = texture(sourceTexture, texCoords + vec2(0.0, 1.0)*warp*intensity);
+    vec4 result = texture(sourceTexture, texCoords + warp*intensity);
     if(useMask) {
         vec4 maskColor = texture(maskTexture, texCoords);
         float mask = 0.33333*(maskColor.r + maskColor.g + maskColor.b);

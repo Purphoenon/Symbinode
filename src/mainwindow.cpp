@@ -128,6 +128,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 25:
                 n = new GradientNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 26:
+                n = new DirectionalWarpNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

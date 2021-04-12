@@ -86,7 +86,9 @@ SOURCES += \
     src/grayscalenode.cpp \
     src/grayscale.cpp \
     src/gradientnode.cpp \
-    src/gradient.cpp
+    src/gradient.cpp \
+    src/directionalwarpnode.cpp \
+    src/directionalwarp.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -165,7 +167,9 @@ HEADERS += \
     src/grayscalenode.h \
     src/grayscale.h \
     src/gradientnode.h \
-    src/gradient.h
+    src/gradient.h \
+    src/directionalwarpnode.h \
+    src/directionalwarp.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -220,4 +224,6 @@ DISTFILES += \
     shaders/brightblur.frag \
     shaders/grayscale.frag \
     shaders/gradient.frag \
-    qml/GradientProperty.qml
+    qml/GradientProperty.qml \
+    shaders/directionalwarp.frag \
+    qml/DirectionalWarpProperty.qml

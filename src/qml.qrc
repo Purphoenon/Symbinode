@@ -110,5 +110,7 @@
         <file>../shaders/grayscale.frag</file>
         <file>../shaders/gradient.frag</file>
         <file>../qml/GradientProperty.qml</file>
+        <file>../shaders/directionalwarp.frag</file>
+        <file>../qml/DirectionalWarpProperty.qml</file>
     </qresource>
 </RCC>

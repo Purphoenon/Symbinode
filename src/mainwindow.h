@@ -50,6 +50,7 @@
 #include "thresholdnode.h"
 #include "grayscalenode.h"
 #include "gradientnode.h"
+#include "directionalwarpnode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow
