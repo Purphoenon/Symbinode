@@ -21,6 +21,8 @@
 
 #version 440 core
 
+#define PI 3.14159265359
+
 uniform sampler2D sourceTexture;
 uniform sampler2D maskTexture;
 uniform float intensity = 0.5;

@@ -131,6 +131,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 26:
                 n = new DirectionalWarpNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 27:
+                n = new DirectionalBlurNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

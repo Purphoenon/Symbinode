@@ -112,5 +112,7 @@
         <file>../qml/GradientProperty.qml</file>
         <file>../shaders/directionalwarp.frag</file>
         <file>../qml/DirectionalWarpProperty.qml</file>
+        <file>../shaders/directionalblur.frag</file>
+        <file>../qml/DirectionalBlurProperty.qml</file>
     </qresource>
 </RCC>

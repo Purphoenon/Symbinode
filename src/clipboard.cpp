@@ -48,6 +48,7 @@
 #include "grayscalenode.h"
 #include "gradientnode.h"
 #include "directionalwarpnode.h"
+#include "directionalblurnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -457,6 +458,13 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
                                                                            baseNode->intensity(),
                                                                            baseNode->angle());
         return directionalWarpNode;
+    }
+    else if (qobject_cast<DirectionalBlurNode*>(node)) {
+        DirectionalBlurNode *baseNode = qobject_cast<DirectionalBlurNode*>(node);
+        DirectionalBlurNode *directionalBlurNode = new DirectionalBlurNode(parent, scene->resolution(),
+                                                                           baseNode->intensity(),
+                                                                           baseNode->angle());
+        return directionalBlurNode;
     }
     return nullptr;
 }

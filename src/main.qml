@@ -531,6 +531,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 19)
                 }
             }
+            Action {
+                text: "Directional Blur"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 27)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
