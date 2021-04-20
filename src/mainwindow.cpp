@@ -134,6 +134,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 27:
                 n = new DirectionalBlurNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 28:
+                n = new SlopeBlurNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

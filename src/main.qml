@@ -532,9 +532,15 @@ MainWindow {
                 }
             }
             Action {
-                text: "Directional Blur"
+                text: "Blur Directional"
                 onTriggered: {
                     mainWindow.createNode(addNode.x, addNode.y, 27)
+                }
+            }
+            Action {
+                text: "Slope Blur"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 28)
                 }
             }
             background: Rectangle {

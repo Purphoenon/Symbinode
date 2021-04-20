@@ -114,5 +114,7 @@
         <file>../qml/DirectionalWarpProperty.qml</file>
         <file>../shaders/directionalblur.frag</file>
         <file>../qml/DirectionalBlurProperty.qml</file>
+        <file>../shaders/slopeblur.frag</file>
+        <file>../qml/SlopeBlurProperty.qml</file>
     </qresource>
 </RCC>

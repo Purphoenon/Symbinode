@@ -52,6 +52,7 @@
 #include "gradientnode.h"
 #include "directionalwarpnode.h"
 #include "directionalblurnode.h"
+#include "slopeblurnode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow

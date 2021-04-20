@@ -49,6 +49,7 @@
 #include "gradientnode.h"
 #include "directionalwarpnode.h"
 #include "directionalblurnode.h"
+#include "slopeblurnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -465,6 +466,12 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
                                                                            baseNode->intensity(),
                                                                            baseNode->angle());
         return directionalBlurNode;
+    }
+    else if(qobject_cast<SlopeBlurNode*>(node)) {
+        SlopeBlurNode *baseNode = qobject_cast<SlopeBlurNode*>(node);
+        SlopeBlurNode *slopeBlurNode = new SlopeBlurNode(parent, scene->resolution(), baseNode->mode(),
+                                                         baseNode->intensity(), baseNode->samples());
+        return slopeBlurNode;
     }
     return nullptr;
 }

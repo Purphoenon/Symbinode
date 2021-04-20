@@ -90,7 +90,9 @@ SOURCES += \
     src/directionalwarpnode.cpp \
     src/directionalwarp.cpp \
     src/directionalblurnode.cpp \
-    src/directionalblur.cpp
+    src/directionalblur.cpp \
+    src/slopeblurnode.cpp \
+    src/slopeblur.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -173,7 +175,9 @@ HEADERS += \
     src/directionalwarpnode.h \
     src/directionalwarp.h \
     src/directionalblurnode.h \
-    src/directionalblur.h
+    src/directionalblur.h \
+    src/slopeblurnode.h \
+    src/slopeblur.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -232,4 +236,6 @@ DISTFILES += \
     shaders/directionalwarp.frag \
     qml/DirectionalWarpProperty.qml \
     shaders/directionalblur.frag \
-    qml/DirectionalBlurProperty.qml
+    qml/DirectionalBlurProperty.qml \
+    shaders/slopeblur.frag \
+    qml/SlopeBlurProperty.qml

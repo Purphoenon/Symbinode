@@ -32,32 +32,26 @@ void main() {
     vec2 st = gl_FragCoord.xy/res;
     st.x *= res.x/res.y;
     vec2 offset = vec2(1.0)/res*size;
-    vec2 offsets[9] = vec2[](
-         vec2(-offset.x,  offset.y), // top-left
-         vec2( 0.0f,    offset.y), // top-center
-         vec2( offset.x,  offset.y), // top-right
-         vec2(-offset.x,  0.0f),   // center-left
-         vec2( 0.0f,    0.0f),   // center-center
-         vec2( offset.x,  0.0f),   // center-right
-         vec2(-offset.x, -offset.y), // bottom-left
-         vec2( 0.0f,   -offset.y), // bottom-center
-         vec2( offset.x, -offset.y)  // bottom-right
-     );
-    float sobelX[9] = float[](-1, 0, 1,
-                              -2, 0, 2,
-                              -1, 0, 1);
-    float sobelY[9] = float[](-1, -2, -1,
-                               0,  0,  0,
-                               1,  2,  1);
 
     float dx = 0.0;
     float dy = 0.0;
+    float tl = texture(grayscaleTexture, st + vec2(-offset.x, offset.y)).x;
+    float t = texture(grayscaleTexture, st + vec2(0.0, offset.y)).x;
+    float tr = texture(grayscaleTexture, st + vec2(offset.x, offset.y)).x;
+    float bl = texture(grayscaleTexture, st + vec2(-offset.x, -offset.y)).x;
+    float b = texture(grayscaleTexture, st + vec2(0.0, -offset.y)).x;
+    float br = texture(grayscaleTexture, st + vec2(offset.x, -offset.y)).x;
+    float l = texture(grayscaleTexture, st + vec2(-offset.x, 0.0)).x;
+    float r = texture(grayscaleTexture, st + vec2(offset.x, 0.0)).x;
+    float c = texture(grayscaleTexture, st + vec2(0.0, 0.0)).x;
 
-    for(int i = 0; i < 9; ++i) {
-        vec4 texColor = texture(grayscaleTexture, st + offsets[i]);
-        dx += sobelX[i] * texColor.r*texColor.a;
-        dy += sobelY[i] * texColor.r*texColor.a;
-    }
+    float top_side = tl + 2.0*t + tr;
+    float bottom_side = bl + 2.0*b + br;
+    float right_side = tr + 2.0*r + br;
+    float left_side = tl + 2.0*l + bl;
+    dx = right_side - left_side;
+    dy = bottom_side - top_side;
+
     float s = strength == 0 ? 0.05 : strength;
     vec3 norm = normalize(vec3(dx, dy, 1.0/abs(s))) * 0.5 + 0.5;
     if(strength > 0) {

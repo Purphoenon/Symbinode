@@ -49,6 +49,7 @@
 #include "gradientnode.h"
 #include "directionalwarpnode.h"
 #include "directionalblurnode.h"
+#include "slopeblurnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -662,6 +663,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 27:
         node = new DirectionalBlurNode(this, m_resolution);
+        break;
+    case 28:
+        node = new SlopeBlurNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;
