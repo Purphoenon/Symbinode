@@ -16,6 +16,7 @@ void main()
 {
     vec2 step = vec2(0.001);
     vec2 uv = texCoords;
+
     float tl = texture(slopeTexture, uv + vec2(-step.x, step.y)).x;
     float t = texture(slopeTexture, uv + vec2(0.0, step.y)).x;
     float tr = texture(slopeTexture, uv + vec2(step.x, step.y)).x;

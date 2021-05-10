@@ -50,6 +50,7 @@
 #include "directionalwarpnode.h"
 #include "directionalblurnode.h"
 #include "slopeblurnode.h"
+#include "bevelnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -472,6 +473,12 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         SlopeBlurNode *slopeBlurNode = new SlopeBlurNode(parent, scene->resolution(), baseNode->mode(),
                                                          baseNode->intensity(), baseNode->samples());
         return slopeBlurNode;
+    }
+    else if (qobject_cast<BevelNode*>(node)) {
+        BevelNode *baseNode = qobject_cast<BevelNode*>(node);
+        BevelNode *bevelNode = new BevelNode(parent, scene->resolution(), baseNode->distance(),
+                                             baseNode->smooth(), baseNode->useAlpha());
+        return bevelNode;
     }
     return nullptr;
 }

@@ -50,6 +50,7 @@
 #include "directionalwarpnode.h"
 #include "directionalblurnode.h"
 #include "slopeblurnode.h"
+#include "bevelnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -666,6 +667,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 28:
         node = new SlopeBlurNode(this, m_resolution);
+        break;
+    case 29:
+        node = new BevelNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

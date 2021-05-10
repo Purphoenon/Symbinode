@@ -47,7 +47,7 @@ void main() {
     float a = atan(st.x,st.y)+PI;
     float r = TWO_PI/float(N);
 
-    d = cos(floor(.5+a/r)*r-a)*length(st);
+    d = (cos(floor(.5+a/r)*r-a))*length(st);
 
     float p = 1.0-smoothstep(scale - smoothValue*scale, scale,d);
     color = vec4(p);

@@ -227,6 +227,7 @@ void SlopeBlurRenderer::createSlopeBlur() {
     glClear(GL_COLOR_BUFFER_BIT);
     glBindVertexArray(textureVAO);
     slopeBlurShader->bind();
+    slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("useMask"), maskTexture);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
     glActiveTexture(GL_TEXTURE1);

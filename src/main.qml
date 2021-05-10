@@ -543,6 +543,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 28)
                 }
             }
+            Action {
+                text: "Bevel"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 29)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30

@@ -92,7 +92,9 @@ SOURCES += \
     src/directionalblurnode.cpp \
     src/directionalblur.cpp \
     src/slopeblurnode.cpp \
-    src/slopeblur.cpp
+    src/slopeblur.cpp \
+    src/bevelnode.cpp \
+    src/bevel.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -177,7 +179,9 @@ HEADERS += \
     src/directionalblurnode.h \
     src/directionalblur.h \
     src/slopeblurnode.h \
-    src/slopeblur.h
+    src/slopeblur.h \
+    src/bevelnode.h \
+    src/bevel.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -238,4 +242,8 @@ DISTFILES += \
     shaders/directionalblur.frag \
     qml/DirectionalBlurProperty.qml \
     shaders/slopeblur.frag \
-    qml/SlopeBlurProperty.qml
+    qml/SlopeBlurProperty.qml \
+    shaders/beveldisplay.frag \
+    shaders/jumpflooding.frag \
+    shaders/fillforjfa.frag \
+    qml/BevelProperty.qml

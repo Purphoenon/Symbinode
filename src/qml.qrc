@@ -116,5 +116,9 @@
         <file>../qml/DirectionalBlurProperty.qml</file>
         <file>../shaders/slopeblur.frag</file>
         <file>../qml/SlopeBlurProperty.qml</file>
+        <file>../shaders/beveldisplay.frag</file>
+        <file>../shaders/jumpflooding.frag</file>
+        <file>../shaders/fillforjfa.frag</file>
+        <file>../qml/BevelProperty.qml</file>
     </qresource>
 </RCC>

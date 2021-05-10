@@ -137,6 +137,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 28:
                 n = new SlopeBlurNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 29:
+                n = new BevelNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }
