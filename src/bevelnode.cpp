@@ -34,6 +34,10 @@ BevelNode::BevelNode(QQuickItem *parent, QVector2D resolution, float distance, f
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
+BevelNode::~BevelNode() {
+    delete preview;
+}
+
 void BevelNode::operation() {
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());

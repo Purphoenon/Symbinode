@@ -100,10 +100,6 @@ BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
     textureShader->link();
-    renderChanel = new QOpenGLShaderProgram();
-    renderChanel->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
-    renderChanel->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/onechanel.frag");
-    renderChanel->link();
     bevelShader = new QOpenGLShaderProgram();
     bevelShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     bevelShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/beveldisplay.frag");
@@ -123,10 +119,6 @@ BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
     textureShader->release();
-    renderChanel->bind();
-    renderChanel->setUniformValue(renderChanel->uniformLocation("useTex"), true);
-    renderChanel->setUniformValue(renderChanel->uniformLocation("tex"), 0);
-    renderChanel->release();
     bevelShader->bind();
     bevelShader->setUniformValue(bevelShader->uniformLocation("dfTexture"), 0);
     bevelShader->setUniformValue(bevelShader->uniformLocation("maskTexture"), 1);
@@ -226,7 +218,12 @@ BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
 
 BevelRenderer::~BevelRenderer()
 {
-
+    delete checkerShader;
+    delete textureShader;
+    delete blurShader;
+    delete bevelShader;
+    delete preparationShader;
+    delete jfaShader;
 }
 
 QOpenGLFramebufferObject *BevelRenderer::createFramebufferObject(const QSize &size) {

@@ -120,5 +120,7 @@
         <file>../shaders/jumpflooding.frag</file>
         <file>../shaders/fillforjfa.frag</file>
         <file>../qml/BevelProperty.qml</file>
+        <file>../shaders/polartransform.frag</file>
+        <file>../qml/PolarTransformProperty.qml</file>
     </qresource>
 </RCC>

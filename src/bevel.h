@@ -69,7 +69,6 @@ private:
     unsigned int bevelFBO = 0;
     QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *textureShader;
-    QOpenGLShaderProgram *renderChanel;
     QOpenGLShaderProgram *bevelShader;
     QOpenGLShaderProgram *preparationShader;
     QOpenGLShaderProgram *jfaShader;

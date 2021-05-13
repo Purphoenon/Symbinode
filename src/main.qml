@@ -608,6 +608,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 26)
                 }
             }
+            Action {
+                text: "Polar Transform"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 30)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30

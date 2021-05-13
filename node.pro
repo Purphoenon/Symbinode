@@ -94,7 +94,9 @@ SOURCES += \
     src/slopeblurnode.cpp \
     src/slopeblur.cpp \
     src/bevelnode.cpp \
-    src/bevel.cpp
+    src/bevel.cpp \
+    src/polartransformnode.cpp \
+    src/polartransform.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -181,7 +183,9 @@ HEADERS += \
     src/slopeblurnode.h \
     src/slopeblur.h \
     src/bevelnode.h \
-    src/bevel.h
+    src/bevel.h \
+    src/polartransformnode.h \
+    src/polartransform.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -246,4 +250,6 @@ DISTFILES += \
     shaders/beveldisplay.frag \
     shaders/jumpflooding.frag \
     shaders/fillforjfa.frag \
-    qml/BevelProperty.qml
+    qml/BevelProperty.qml \
+    shaders/polartransform.frag \
+    qml/PolarTransformProperty.qml

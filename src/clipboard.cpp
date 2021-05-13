@@ -51,6 +51,7 @@
 #include "directionalblurnode.h"
 #include "slopeblurnode.h"
 #include "bevelnode.h"
+#include "polartransformnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -479,6 +480,12 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         BevelNode *bevelNode = new BevelNode(parent, scene->resolution(), baseNode->distance(),
                                              baseNode->smooth(), baseNode->useAlpha());
         return bevelNode;
+    }
+    else if(qobject_cast<PolarTransformNode*>(node)) {
+        PolarTransformNode *baseNode = qobject_cast<PolarTransformNode*>(node);
+        PolarTransformNode *polarNode = new PolarTransformNode(parent, scene->resolution(), baseNode->radius(),
+                                                               baseNode->clamp(), baseNode->angle());
+        return polarNode;
     }
     return nullptr;
 }

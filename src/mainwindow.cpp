@@ -140,6 +140,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 29:
                 n = new BevelNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 30:
+                n = new PolarTransformNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }
