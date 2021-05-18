@@ -52,6 +52,7 @@
 #include "slopeblurnode.h"
 #include "bevelnode.h"
 #include "polartransformnode.h"
+#include "bricksnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -674,6 +675,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 30:
         node = new PolarTransformNode(this, m_resolution);
+        break;
+    case 31:
+        node = new BricksNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

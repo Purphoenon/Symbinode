@@ -52,6 +52,7 @@
 #include "slopeblurnode.h"
 #include "bevelnode.h"
 #include "polartransformnode.h"
+#include "bricksnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -486,6 +487,14 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         PolarTransformNode *polarNode = new PolarTransformNode(parent, scene->resolution(), baseNode->radius(),
                                                                baseNode->clamp(), baseNode->angle());
         return polarNode;
+    }
+    else if (qobject_cast<BricksNode*>(node)) {
+        BricksNode *baseNode = qobject_cast<BricksNode*>(node);
+        BricksNode *bricksNode = new BricksNode(parent, scene->resolution(), baseNode->columns(),
+                                                baseNode->rows(), baseNode->offset(), baseNode->bricksWidth(),
+                                                baseNode->bricksHeight(), baseNode->smoothX(),
+                                                baseNode->smoothY(), baseNode->mask(), baseNode->seed());
+        return bricksNode;
     }
     return nullptr;
 }

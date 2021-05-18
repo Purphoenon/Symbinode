@@ -413,6 +413,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 25)
                 }
             }
+            Action {
+                text: "Bricks"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 31)
+                }
+            }
 
             background: Rectangle {
                             implicitWidth: 100

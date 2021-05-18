@@ -96,7 +96,9 @@ SOURCES += \
     src/bevelnode.cpp \
     src/bevel.cpp \
     src/polartransformnode.cpp \
-    src/polartransform.cpp
+    src/polartransform.cpp \
+    src/bricksnode.cpp \
+    src/bricks.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -185,7 +187,9 @@ HEADERS += \
     src/bevelnode.h \
     src/bevel.h \
     src/polartransformnode.h \
-    src/polartransform.h
+    src/polartransform.h \
+    src/bricksnode.h \
+    src/bricks.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -252,4 +256,6 @@ DISTFILES += \
     shaders/fillforjfa.frag \
     qml/BevelProperty.qml \
     shaders/polartransform.frag \
-    qml/PolarTransformProperty.qml
+    qml/PolarTransformProperty.qml \
+    shaders/bricks.frag \
+    qml/BricksProperty.qml

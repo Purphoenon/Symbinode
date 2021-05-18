@@ -143,6 +143,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 30:
                 n = new PolarTransformNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 31:
+                n = new BricksNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

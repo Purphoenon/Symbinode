@@ -55,6 +55,7 @@
 #include "slopeblurnode.h"
 #include "bevelnode.h"
 #include "polartransformnode.h"
+#include "bricksnode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow

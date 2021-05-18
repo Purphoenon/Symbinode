@@ -122,5 +122,7 @@
         <file>../qml/BevelProperty.qml</file>
         <file>../shaders/polartransform.frag</file>
         <file>../qml/PolarTransformProperty.qml</file>
+        <file>../shaders/bricks.frag</file>
+        <file>../qml/BricksProperty.qml</file>
     </qresource>
 </RCC>
