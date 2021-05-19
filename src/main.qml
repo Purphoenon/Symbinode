@@ -419,6 +419,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 31)
                 }
             }
+            Action {
+                text: "Hexagons"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 32)
+                }
+            }
 
             background: Rectangle {
                             implicitWidth: 100

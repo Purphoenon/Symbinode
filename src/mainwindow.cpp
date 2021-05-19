@@ -146,6 +146,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 31:
                 n = new BricksNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 32:
+                n = new HexagonsNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

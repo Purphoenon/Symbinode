@@ -53,6 +53,7 @@
 #include "bevelnode.h"
 #include "polartransformnode.h"
 #include "bricksnode.h"
+#include "hexagonsnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -495,6 +496,13 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
                                                 baseNode->bricksHeight(), baseNode->smoothX(),
                                                 baseNode->smoothY(), baseNode->mask(), baseNode->seed());
         return bricksNode;
+    }
+    else if(qobject_cast<HexagonsNode*>(node)) {
+        HexagonsNode *baseNode = qobject_cast<HexagonsNode*>(node);
+        HexagonsNode *hexagonsNode = new HexagonsNode(parent, scene->resolution(), baseNode->columns(),
+                                                      baseNode->rows(), baseNode->hexSize(),
+                                                      baseNode->hexSmooth());
+        return hexagonsNode;
     }
     return nullptr;
 }

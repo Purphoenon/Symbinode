@@ -98,7 +98,9 @@ SOURCES += \
     src/polartransformnode.cpp \
     src/polartransform.cpp \
     src/bricksnode.cpp \
-    src/bricks.cpp
+    src/bricks.cpp \
+    src/hexagonsnode.cpp \
+    src/hexagons.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -189,7 +191,9 @@ HEADERS += \
     src/polartransformnode.h \
     src/polartransform.h \
     src/bricksnode.h \
-    src/bricks.h
+    src/bricks.h \
+    src/hexagonsnode.h \
+    src/hexagons.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -258,4 +262,6 @@ DISTFILES += \
     shaders/polartransform.frag \
     qml/PolarTransformProperty.qml \
     shaders/bricks.frag \
-    qml/BricksProperty.qml
+    qml/BricksProperty.qml \
+    shaders/hexagons.frag \
+    qml/HexagonsProperty.qml

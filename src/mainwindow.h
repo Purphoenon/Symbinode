@@ -56,6 +56,7 @@
 #include "bevelnode.h"
 #include "polartransformnode.h"
 #include "bricksnode.h"
+#include "hexagonsnode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow

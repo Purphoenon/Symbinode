@@ -124,5 +124,7 @@
         <file>../qml/PolarTransformProperty.qml</file>
         <file>../shaders/bricks.frag</file>
         <file>../qml/BricksProperty.qml</file>
+        <file>../shaders/hexagons.frag</file>
+        <file>../qml/HexagonsProperty.qml</file>
     </qresource>
 </RCC>
