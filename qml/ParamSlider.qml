@@ -50,7 +50,7 @@ Item {
         id: slider
         x: 5
         y: 15
-        width: parent.width - 10
+        width: parent.width - 25
         height: 25
         clip: true
         stepSize: 0.01
@@ -127,7 +127,7 @@ Item {
 
     StepValueBox {
         id: valueBox
-        x: parent.width - 25
+        x: parent.width - 30
         y: 15
         width: 20
         height: 25
@@ -140,6 +140,11 @@ Item {
             oldValue = slider.value
             slider.value = value
             changingFinished()
+        }
+        onMouseMoved: {
+            console.log("mouse move")
+            var obj = slider.mapFromItem(area, x, y)
+            slider.value = slider.valueAt(obj.x/slider.width)
         }
     }
 }

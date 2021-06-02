@@ -27,6 +27,7 @@
 PreviewObject::PreviewObject(QQuickItem *parent): QQuickFramebufferObject (parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
+    setAcceptHoverEvents(true);
 }
 
 QQuickFramebufferObject::Renderer *PreviewObject::createRenderer() const{
@@ -94,6 +95,14 @@ void PreviewObject::mouseReleaseEvent(QMouseEvent *event) {
     }
 }
 
+void PreviewObject::hoverEnterEvent(QHoverEvent *event) {
+    setFocus(true);
+}
+
+void PreviewObject::hoverLeaveEvent(QHoverEvent *event) {
+    setFocus(false);
+}
+
 void PreviewObject::wheelEvent(QWheelEvent *event) {
     if(event->angleDelta().y() > 0) {
        if((m_scale + 0.001f*event->angleDelta().y()) > 2.0f) scaleStep = 2.0f - m_scale;
@@ -122,7 +131,13 @@ void PreviewObject::wheelEvent(QWheelEvent *event) {
         m_pan.setY(y);
         update();
     }
+}
 
+void PreviewObject::keyPressEvent(QKeyEvent *event) {
+    if(event->key() == Qt::Key_F) {
+        resetView();
+        update();
+    }
 }
 
 float PreviewObject::previewScale() {

@@ -9,7 +9,7 @@ class HexagonsObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    HexagonsObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f);
+    HexagonsObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f, float mask = 0.0f, int seed = 1);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -24,6 +24,10 @@ public:
     void setHexSize(float size);
     float hexSmooth();
     void setHexSmooth(float smooth);
+    float mask();
+    void setMask(float mask);
+    int seed();
+    void setSeed(int seed);
     QVector2D resolution();
     void setResolution(QVector2D res);
     bool generatedTex = true;
@@ -41,6 +45,8 @@ private:
     int m_rows = 6;
     float m_size = 0.8f;
     float m_smooth = 0.0f;
+    float m_mask = 0.0f;
+    int m_seed = 1;
 };
 
 class HexagonsRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {

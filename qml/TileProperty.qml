@@ -41,6 +41,7 @@ Item {
     property alias startTileScale: scaleParam.propertyValue
     property alias startKeepProportion: keepProportionParam.checked
     property alias startUseAlpha: useAlphaParam.checked
+    property alias startDepthMask: depthMaskParam.checked
     signal offsetXChanged(real offset)
     signal offsetYChanged(real offset)
     signal columnsChanged(int columns)
@@ -57,6 +58,7 @@ Item {
     signal scaleTileChanged(real scale)
     signal keepProportionChanged(bool keep)
     signal useAlphaChanged(bool use)
+    signal depthMaskChanged(bool depth)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: columnsParam
@@ -241,8 +243,21 @@ Item {
         }
     }
     ParamCheckbox {
-        id: useAlphaParam
+        id: depthMaskParam
         y:502
+        text: qsTr("Depth mask")
+        checked: true
+        onCheckedChanged: {
+            depthMaskChanged(depthMaskParam.checked)
+        }
+        onToggled: {
+            propertyChangingFinished("startDepthMask", checked, !checked)
+            focus = false
+        }
+    }
+    ParamCheckbox {
+        id: useAlphaParam
+        y: 527
         text: qsTr("Use alpha")
         checked: true
         onCheckedChanged: {
