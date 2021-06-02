@@ -4,9 +4,8 @@
 #include <iostream>
 
 HexagonsObject::HexagonsObject(QQuickItem *parent, QVector2D resolution, int columns, int rows, float size,
-                               float smooth, float mask, int seed): QQuickFramebufferObject (parent),
-    m_resolution(resolution), m_columns(columns), m_rows(rows), m_size(size), m_smooth(smooth), m_mask(mask),
-    m_seed(seed)
+                               float smooth): QQuickFramebufferObject (parent), m_resolution(resolution),
+    m_columns(columns), m_rows(rows), m_size(size), m_smooth(smooth)
 {
 
 }
@@ -80,26 +79,6 @@ void HexagonsObject::setHexSmooth(float smooth) {
     update();
 }
 
-float HexagonsObject::mask() {
-    return m_mask;
-}
-
-void HexagonsObject::setMask(float mask) {
-    m_mask = mask;
-    generatedTex = true;
-    update();
-}
-
-int HexagonsObject::seed() {
-    return m_seed;
-}
-
-void HexagonsObject::setSeed(int seed) {
-    m_seed = seed;
-    generatedTex = true;
-    update();
-}
-
 QVector2D HexagonsObject::resolution() {
     return m_resolution;
 }
@@ -153,7 +132,7 @@ HexagonsRenderer::HexagonsRenderer(QVector2D res): m_resolution(res) {
     glBindFramebuffer(GL_FRAMEBUFFER, hexagonsFBO);
     glBindTexture(GL_TEXTURE_2D, m_hexagonsTexture);
     glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -189,8 +168,6 @@ void HexagonsRenderer::synchronize(QQuickFramebufferObject *item) {
         hexagonsShader->setUniformValue(hexagonsShader->uniformLocation("rows"), hexagonsItem->rows());
         hexagonsShader->setUniformValue(hexagonsShader->uniformLocation("size"), hexagonsItem->hexSize());
         hexagonsShader->setUniformValue(hexagonsShader->uniformLocation("hexSmooth"), hexagonsItem->hexSmooth());
-        hexagonsShader->setUniformValue(hexagonsShader->uniformLocation("maskStrength"), hexagonsItem->mask());
-        hexagonsShader->setUniformValue(hexagonsShader->uniformLocation("seed"), hexagonsItem->seed());
         hexagonsShader->setUniformValue(hexagonsShader->uniformLocation("useMask"), m_maskTexture);
         createHexagons();
         hexagonsItem->setTexture(m_hexagonsTexture);
@@ -256,7 +233,7 @@ void HexagonsRenderer::createHexagons() {
 void HexagonsRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_hexagonsTexture);
     glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
     glBindTexture(GL_TEXTURE_2D, 0);
 }

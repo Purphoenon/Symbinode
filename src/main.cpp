@@ -27,7 +27,6 @@
 #include "scene.h"
 #include "node.h"
 #include "mainwindow.h"
-#include <iostream>
 
 int main(int argc, char *argv[])
 {
@@ -49,15 +48,6 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-
-    if(QApplication::arguments().size() > 1) {
-        const QString filename = QApplication::arguments().at(1);
-        if(engine.rootObjects().size() > 0) {
-            MainWindow *win = static_cast<MainWindow*>(engine.rootObjects().at(0));
-            win->loadFile(filename);
-        }
-    }
-
     if (engine.rootObjects().isEmpty())
         return -1;
 

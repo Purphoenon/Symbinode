@@ -7,14 +7,10 @@ Item {
     property alias startRows: rowsParam.propertyValue
     property alias startSize: sizeParam.propertyValue
     property alias startSmooth: smoothParam.propertyValue
-    property alias startMask: maskParam.propertyValue
-    property alias startSeed: seedParam.propertyValue
     signal columnsChanged(int columns)
     signal rowsChanged(int rows)
     signal hexSizeChanged(real size)
     signal hexSmoothChanged(real smooth)
-    signal maskChanged(real mask)
-    signal seedChanged(int seed);
     signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: columnsParam
@@ -63,31 +59,6 @@ Item {
         }
         onChangingFinished: {
             propertyChangingFinished("startSmooth", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: maskParam
-        y: 132
-        propertyName: "Mask"
-        onPropertyValueChanged: {
-            maskChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startMask", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: seedParam
-        y: 165
-        propertyName: "Seed"
-        minimum: 1
-        maximum: 100
-        step: 1
-        onPropertyValueChanged: {
-            seedChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSeed", propertyValue, oldValue)
         }
     }
 }

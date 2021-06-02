@@ -291,6 +291,12 @@ void MainWindow::changeTilePreview3D(int id) {
     }
 }
 
+void MainWindow::changeSelfShadow(bool enable) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setSelfShadow(enable);
+    }
+}
+
 void MainWindow::changeHeightScale(qreal scale) {
     if(activeTab) {
         activeTab->scene()->preview3d()->setHeightScale(0.1f*scale);
@@ -402,13 +408,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     }
     else if(event->key() == Qt::Key_F && event->modifiers() == Qt::AltModifier) {
         removeFromFrame();
-    }
-    else if(event->key() == Qt::Key_F) {
-        if(activeFocusItem() && activeFocusItem() != contentItem()) {
-            QApplication::sendEvent(activeFocusItem(), event);
-        }
-        else focusNode();
-    }
+    }    
     else {
         QApplication::sendEvent(activeFocusItem(), event);
     }
@@ -428,12 +428,6 @@ void MainWindow::removeFromFrame() {
 void MainWindow::addToFrame() {
     if(activeTab) {
         activeTab->scene()->addToFrame();
-    }
-}
-
-void MainWindow::focusNode() {
-    if(activeTab) {
-        activeTab->scene()->focusNode();
     }
 }
 
@@ -464,14 +458,6 @@ void MainWindow::setActiveTab(Tab *tab) {
     preview3DChanged(oldPreview, tab->scene()->preview3d());    
     activeItemChanged();
     resolutionChanged(tab->scene()->resolution());
-}
-
-void MainWindow::loadFile(QString filename) {
-    newDocument();
-    if(activeTab) {
-        activeTab->scene()->loadScene(filename);
-        resolutionChanged(activeTab->scene()->resolution());
-    }
 }
 
 void MainWindow::closeTab(Tab *tab) {

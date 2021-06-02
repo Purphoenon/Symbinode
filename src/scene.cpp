@@ -795,27 +795,6 @@ void Scene::addToFrame() {
     }
 }
 
-void Scene::focusNode() {
-    //m_background->setViewScale(1.0f);
-    if(m_nodes.size() > 0) {
-        float maxX = m_nodes[0]->x() + m_nodes[0]->width();
-        float maxY = m_nodes[0]->y() + m_nodes[0]->height();
-        float minX = m_nodes[0]->x();
-        float minY = m_nodes[0]->y();
-        for(int i = 1; i< m_nodes.size(); ++i) {
-            auto n = m_nodes[i];
-            maxX = std::max(maxX, static_cast<float>(n->x() + n->width()));
-            maxY = std::max(maxY, static_cast<float>(n->y() + n->height()));
-            minX = std::min(minX, static_cast<float>(n->x()));
-            minY = std::min(minY, static_cast<float>(n->y()));
-        }
-        QVector2D center = QVector2D((maxX - minX)*0.5 + minX, (maxY - minY)*0.5 + minY);
-
-        m_background->setViewPan((m_background->viewPan() + center) - QVector2D(width()*0.5, height()*0.5));
-    }
-
-}
-
 void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame) {
     m_undoStack->push(new MoveCommand(nodes, vec, frame));
     if(!m_modified) {

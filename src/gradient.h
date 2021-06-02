@@ -10,7 +10,7 @@ class GradientObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    GradientObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString type = "linear", float startX = 0.0f, float startY = 0.0f, float endX = 0.0f, float endY = 1.0f, float centerWidth = 0.0f, bool tiling = false);
+    GradientObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString type = "linear", float startX = 0.0f, float startY = 0.0f, float endX = 1.0f, float endY = 1.0f, float centerWidth = 0.0f, bool tiling = false);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     QString gradientType();
     void setGradientType(QString type);
@@ -44,7 +44,7 @@ private:
     QString m_gradientType = "linear";
     float m_startX = 0.0f;
     float m_startY = 0.0f;
-    float m_endX = 0.0f;
+    float m_endX = 1.0f;
     float m_endY = 1.0f;
     float m_reflectedWidth = 0.0f;
     bool m_tiling = false;

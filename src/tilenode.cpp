@@ -26,11 +26,11 @@
 TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
                    int rows, float scale, float scaleX, float scaleY, int rotation, float randPosition,
                    float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
-                   bool keepProportion, bool useAlpha, bool depthMask): Node(parent, resolution),
-    m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows), m_scaleX(scaleX),
-    m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition), m_randRotation(randRotation),
+                   bool keepProportion, bool useAlpha): Node(parent, resolution), m_offsetX(offsetX),
+    m_offsetY(offsetY), m_columns(columns), m_rows(rows), m_scaleX(scaleX), m_scaleY(scaleY),
+    m_rotationAngle(rotation), m_randPosition(randPosition), m_randRotation(randRotation),
     m_randScale(randScale), m_maskStrength(maskStrength), m_inputsCount(inputsCount), m_seed(seed),
-    m_scale(scale), m_keepProportion(keepProportion), m_useAlpha(useAlpha), m_depthMask(depthMask)
+    m_scale(scale), m_keepProportion(keepProportion), m_useAlpha(useAlpha)
 {
     preview = new TileObject(grNode, m_resolution, m_offsetX, m_offsetY, m_columns, m_rows, m_scale, m_scaleX, m_scaleY, m_rotationAngle, m_randPosition, m_randRotation, m_randScale, m_maskStrength, m_inputsCount, m_seed, m_keepProportion, m_useAlpha);
     float s = scaleView();
@@ -62,7 +62,6 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(this, &TileNode::tileScaleChanged, preview, &TileObject::setTileScale);
     connect(this, &TileNode::keepProportionChanged, preview, &TileObject::setKeepProportion);
     connect(this, &TileNode::useAlphaChanged, preview, &TileObject::setUseAlpha);
-    connect(this, &TileNode::depthMaskChanged, preview, &TileObject::setDepthMask);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/TileProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -82,7 +81,6 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     propertiesPanel->setProperty("startSeed", m_seed);
     propertiesPanel->setProperty("startKeepProportion", m_keepProportion);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
-    propertiesPanel->setProperty("startUseAlpha", m_depthMask);
     connect(propertiesPanel, SIGNAL(offsetXChanged(qreal)), this, SLOT(updateOffsetX(qreal)));
     connect(propertiesPanel, SIGNAL(offsetYChanged(qreal)), this, SLOT(updateOffsetY(qreal)));
     connect(propertiesPanel, SIGNAL(columnsChanged(int)), this, SLOT(updateColums(int)));
@@ -99,7 +97,6 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(propertiesPanel, SIGNAL(scaleTileChanged(qreal)), this, SLOT(updateTileScale(qreal)));
     connect(propertiesPanel, SIGNAL(keepProportionChanged(bool)), this, SLOT(updateKeepProportion(bool)));
     connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
-    connect(propertiesPanel, SIGNAL(depthMaskChanged(bool)), this, SLOT(updateDepthMask(bool)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     createAdditionalInputs(5);
@@ -164,7 +161,6 @@ void TileNode::serialize(QJsonObject &json) const {
     json["seed"] = m_seed;
     json["keepProportion"] = m_keepProportion;
     json["useAlpha"] = m_useAlpha;
-    json["depthMask"] = m_depthMask;
 }
 
 void TileNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
@@ -217,9 +213,6 @@ void TileNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash
     if(json.contains("useAlpha")) {
         m_useAlpha = json["useAlpha"].toBool();
     }
-    if(json.contains("depthMask")) {
-        m_depthMask = json["depthMask"].toBool();
-    }
     for(int i = 0; i < 5; ++i) {
         Socket *s = m_additionalInputs[i];
         if(i < m_inputsCount - 1) {
@@ -245,7 +238,6 @@ void TileNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash
     propertiesPanel->setProperty("startSeed", m_seed);
     propertiesPanel->setProperty("startKeepProportion", m_keepProportion);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
-    propertiesPanel->setProperty("startDepthMask", m_depthMask);
 }
 
 float TileNode::offsetX() {
@@ -408,15 +400,6 @@ void TileNode::setUseAlpha(bool use) {
     useAlphaChanged(use);
 }
 
-bool TileNode::depthMask() {
-    return m_depthMask;
-}
-
-void TileNode::setDepthMask(bool depth) {
-    m_depthMask = depth;
-    depthMaskChanged(depth);
-}
-
 void TileNode::setOutput() {
     m_socketOutput[0]->setValue(preview->texture());
 }
@@ -527,12 +510,6 @@ void TileNode::updateKeepProportion(bool keep) {
 
 void TileNode::updateUseAlpha(bool use) {
     setUseAlpha(use);
-    operation();
-    dataChanged();
-}
-
-void TileNode::updateDepthMask(bool depth) {
-    setDepthMask(depth);
     operation();
     dataChanged();
 }

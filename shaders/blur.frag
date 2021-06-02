@@ -29,7 +29,7 @@ uniform float intensity = 0.5;
 uniform vec2 resolution;
 uniform vec2 direction;
 uniform bool useMask = false;
-vec2 size = 0.001*resolution*intensity;
+vec2 size = 0.003*resolution*intensity;
 
 uniform float offset[3] = float[](0.0, 1.3846153846, 3.2307692308);
 uniform float weight[3] = float[](0.2270270270, 0.3162162162, 0.0702702703);

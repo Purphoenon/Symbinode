@@ -183,7 +183,7 @@ BricksRenderer::BricksRenderer(QVector2D res): m_resolution(res) {
     glBindFramebuffer(GL_FRAMEBUFFER, bricksFBO);
     glBindTexture(GL_TEXTURE_2D, m_bricksTexture);
     glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -289,7 +289,7 @@ void BricksRenderer::createBricks() {
 void BricksRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_bricksTexture);
     glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
     );
     glBindTexture(GL_TEXTURE_2D, 0);
 }

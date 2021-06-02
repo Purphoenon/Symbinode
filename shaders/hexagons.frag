@@ -9,20 +9,11 @@ uniform int columns = 5;
 uniform int rows = 6;
 uniform float hexSmooth = 0.0;
 uniform float size = 0.9;
-uniform float maskStrength = 0.0;
-uniform int seed = 1;
 uniform bool useMask = false;
 
 in vec2 texCoords;
 
 out vec4 FragColor;
-
-const float PHI = 1.61803398874989484820459;
-
-float gold_noise(vec2 xy, int seed)
-{
-    return fract(tan(distance(xy*PHI, xy)*1367.454541*seed)*xy.x);
-}
 
 void main()
 {
@@ -49,12 +40,10 @@ void main()
             float a = atan(coords.x,coords.y)+PI*0.5;
             float r = TWO_PI/float(N);
 
-            float mask = 1.0 - gold_noise(cell_t + 1.0, seed)*maskStrength;
-
             float d = (cos(floor(.5+a/r)*r-a))*length(coords);
 
             float p = 1.0-smoothstep(size - hexSmooth, size, d);
-            color = max(color, vec3(p)*mask);
+            color = max(color, vec3(p));
         }
     }
 

@@ -14,7 +14,7 @@ out vec4 FragColor;
 
 void main()
 {
-    vec2 step = vec2(0.3);
+    vec2 step = vec2(0.001);
     vec2 uv = texCoords;
 
     float tl = texture(slopeTexture, uv + vec2(-step.x, step.y)).x;
@@ -32,34 +32,32 @@ void main()
     float left_side = tl + 2.0*l + bl;
     vec2 n = vec2(right_side - left_side, top_side - bottom_side);
 
-    float offset = (intensity*0.1)/samples;
+    float offset = intensity/samples;
     float f = offset;
     vec4 result = texture(sourceTexture, uv + f*n);
-    vec4 color = texture(sourceTexture, uv);
     vec4 s = vec4(0.0);
     if(mode == 0) { //average
         for(int i = 1; i < samples; ++i) {
             f += offset;
             s = texture(sourceTexture, uv + f*n);
-            if(dot(color.rgb, vec3(0.2126, 0.7152, 0.0722)) > 0.0) result += s;
-            else result += max(s, color);
+            result += s;
         }
     }
     else if(mode == 1) { //min
         for(int i = 1; i < samples; ++i) {
             f += offset;
             s = texture(sourceTexture, uv + f*n);
-            if(dot(color.rgb, vec3(0.2126, 0.7152, 0.0722)) > 0.0) result += s;
+            result += min(s, result);
         }
     }
     else if(mode == 2) { //max
         for(int i = 1; i < samples; ++i) {
             f += offset;
             s = texture(sourceTexture, uv + f*n);
-            result += max(s, color);
+            result += max(s, result);
         }
     }
-    result.rgb /= samples;
+    result /= samples;
     if(useMask) {
         vec4 maskColor = texture(maskTexture, uv);
         float mask = 0.33333*(maskColor.r + maskColor.g + maskColor.b);

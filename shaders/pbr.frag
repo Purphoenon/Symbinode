@@ -27,10 +27,6 @@ in vec2 TexCoords;
 in vec3 WorldPos;
 in vec3 Pos;
 in vec3 Normal;
-in vec3 Tangent;
-in vec3 Bitangent;
-in vec3 tangentView;
-in vec3 tangentFragPos;
 
 uniform bool useAlbMap = false;
 uniform bool useMetalMap = false;
@@ -63,9 +59,10 @@ uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
 uniform sampler2D brdfLUT;
 
-in vec3 camPos;
+uniform vec3 camPos;
 uniform vec3 lightPosition = vec3(-5, 5, 19);
 uniform vec3 lightColor = vec3(300, 300, 300);
+uniform bool enableSelfShadow = false;
 
 const float PI = 3.14159265359;
 
@@ -74,14 +71,34 @@ vec3 getNormalFromMap(vec2 coords)
 {
     vec3 tangentNormal = texture(normalMap, coords).xyz*2.0 - vec3(1.0);
 
-    mat3 TBN = mat3(Tangent, -Bitangent, Normal);
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
+
+    vec3 N   = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
 
     return normalize(TBN * tangentNormal);
 }
 // ----------------------------------------------------------------------------
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-    float numLayers = 128;
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
+
+    vec3 N  = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = normalize(cross(N, T));
+    mat3 TBN = transpose(mat3(T, B, N));
+
+    viewDir = TBN*viewDir;
+
+    float numLayers = 64;
 
     float layerDepth = 1.0 / numLayers;
 
@@ -109,6 +126,54 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 
     return finalTexCoords;
+}
+// ----------------------------------------------------------------------------
+float ShadowCalc(vec2 texCoords, vec3 lightDir)
+{
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
+
+    vec3 N  = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = normalize(cross(N, T));
+    mat3 TBN = transpose(mat3(T, B, N));
+    lightDir = TBN*lightDir;
+    if ( lightDir.z >= 0.0 )
+        return 0.0;
+
+    float shadowMultiplier = 0.;
+    float numLayers = 64;
+
+    vec2 currentTexCoords = texCoords;
+    float currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+    float currentLayerDepth = currentDepthMapValue;
+
+    float layerDepth = 1.0 / numLayers;
+    vec2 P = lightDir.xy / lightDir.z * heightScale;
+    vec2 deltaTexCoords = P / numLayers;
+
+    int numSamplesUnderSurface = 0;
+    float stepIndex = 1.;
+    while (currentLayerDepth <= currentDepthMapValue && currentLayerDepth > 0.0)
+    {
+        float currentShadowMultiplier = (currentLayerDepth - currentDepthMapValue)*(1. - stepIndex/numLayers);
+
+        shadowMultiplier = max(shadowMultiplier, currentShadowMultiplier);
+
+        ++stepIndex;
+        currentTexCoords += deltaTexCoords;
+        currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+        currentLayerDepth -= layerDepth;
+    }
+
+    if (numSamplesUnderSurface < 1)
+        shadowMultiplier = 1.;
+    else
+        shadowMultiplier = 1. - shadowMultiplier;
+
+    return shadowMultiplier;
 }
 // ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
@@ -163,7 +228,7 @@ void main()
 {
     vec3 V = normalize(camPos - WorldPos);
 
-    vec2 coords = useHeightMap ? ParallaxMapping(TexCoords*tilesSize, normalize(tangentView - tangentFragPos)) : TexCoords*tilesSize;
+    vec2 coords = useHeightMap ? ParallaxMapping(TexCoords*tilesSize, V) : TexCoords*tilesSize;
 
     vec4 texAlbedo = vec4(albedoVal, 1.0);
     vec4 texColor = texture(albedoMap, coords);
@@ -207,6 +272,12 @@ void main()
     kDp *= 1.0 - metallic;
 
     float NdotL = max(dot(N, L), 0.0);
+
+    if(enableSelfShadow) {
+        vec3 lightDir = normalize(WorldPos - lightPosition);
+        float dc = max(0.0, dot(-lightDir, N));
+        selfShadow = dc > 0.0 ? ShadowCalc(TexCoords*tilesSize, lightDir) : 0.0;
+    }
 
     Lo += (kDp * albedo / PI + specularp) * radiance * NdotL * selfShadow;
     //--

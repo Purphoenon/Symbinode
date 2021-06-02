@@ -35,7 +35,6 @@ uniform float randScale = 0.0;
 uniform float maskStrength = 0.0;
 uniform bool keepProportion = false;
 uniform bool useAlpha = true;
-uniform bool depthMask = true;
 uniform int inputCount = 1;
 uniform bool useMask = false;
 uniform sampler2D textureTile;
@@ -123,7 +122,7 @@ void main()
             float maskS = 1.0 - (random.x + random.y)*0.5*maskStrength;
 
             if(image.a > 0) {
-                if(maskS > priority && depthMask)
+                if(maskS > priority)
                 {
                     if(image.a < 1.0) {
                         float a = image.a + color.a*(1 - image.a);

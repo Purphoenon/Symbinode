@@ -212,7 +212,7 @@ void BlurRenderer::render() {
 void BlurRenderer::createBlur() {
     bool first_iteration = true;
     QVector2D dir = QVector2D(1, 0);
-    int amount = 50;
+    int amount = 10;
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     for (unsigned int i = 0; i < amount; i++)

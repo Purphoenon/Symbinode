@@ -27,12 +27,12 @@
 TileObject::TileObject(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
                        int rows, float scale, float scaleX, float scaleY, int rotation, float randPosition,
                        float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
-                       bool keepProportion, bool useAlpha, bool depthMask): QQuickFramebufferObject (parent),
+                       bool keepProportion, bool useAlpha): QQuickFramebufferObject (parent),
     m_resolution(resolution), m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows),
     m_scaleX(scaleX), m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition),
     m_randRotation(randRotation), m_randScale(randScale), m_maskStrength(maskStrength),
     m_inputsCount(inputsCount), m_seed(seed), m_scale(scale), m_keepProportion(keepProportion),
-    m_useAlpha(useAlpha), m_depthMask(depthMask)
+    m_useAlpha(useAlpha)
 {
 
 }
@@ -286,16 +286,6 @@ void TileObject::setUseAlpha(bool use) {
     update();
 }
 
-bool TileObject::depthMask() {
-    return m_depthMask;
-}
-
-void TileObject::setDepthMask(bool depth) {
-    m_depthMask = depth;
-    tiledTex = true;
-    update();
-}
-
 QVector2D TileObject::resolution() {
     return m_resolution;
 }
@@ -438,7 +428,6 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
             tileShader->setUniformValue(tileShader->uniformLocation("inputCount"), tileItem->inputsCount());
             tileShader->setUniformValue(tileShader->uniformLocation("keepProportion"), tileItem->keepProportion());
             tileShader->setUniformValue(tileShader->uniformLocation("useAlpha"), tileItem->useAlpha());
-            tileShader->setUniformValue(tileShader->uniformLocation("depthMask"), tileItem->depthMask());
             tileShader->setUniformValue(tileShader->uniformLocation("useMask"), maskTexture);
             tileShader->release();
             createTile();
