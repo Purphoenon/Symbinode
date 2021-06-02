@@ -756,11 +756,9 @@ MainWindow {
                     }
                     exitDialogObject.accepted.disconnect(saveFunction)
                     exitDialogObject.destroy()
-                    //console.log("saved")
                 }
                 exitDialogObject.accepted.connect(saveFunction)
                 exitDialogObject.discard.connect(function() {
-                    //console.log("discard")
                     var index = tabsList.tabs.indexOf(tab)
                     if(index >= 0) {
                         tabsList.tabs.splice(index, 1)
@@ -771,7 +769,6 @@ MainWindow {
                 })
                 exitDialogObject.rejected.connect(function(){
                     exitDialogObject.destroy()
-                    //console.log("reject")
                 })
             }
         }
