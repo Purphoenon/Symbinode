@@ -389,7 +389,7 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
                                           baseNode->randRotation(), baseNode->randScale(),
                                           baseNode->maskStrength(), baseNode->inputsCount(),
                                           baseNode->seed(), baseNode->keepProportion(),
-                                          baseNode->useAlpha());
+                                          baseNode->useAlpha(), baseNode->depthMask());
         return tileNode;
     }
     else if(qobject_cast<WarpNode*>(node)) {
@@ -501,7 +501,8 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         HexagonsNode *baseNode = qobject_cast<HexagonsNode*>(node);
         HexagonsNode *hexagonsNode = new HexagonsNode(parent, scene->resolution(), baseNode->columns(),
                                                       baseNode->rows(), baseNode->hexSize(),
-                                                      baseNode->hexSmooth());
+                                                      baseNode->hexSmooth(), baseNode->mask(),
+                                                      baseNode->seed());
         return hexagonsNode;
     }
     return nullptr;

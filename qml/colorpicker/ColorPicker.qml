@@ -134,6 +134,7 @@ Item {
             source: "qrc:/icons/color-chager.svg"
             MouseArea {
                 anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     colorText.visibleRGB = !colorText.visibleRGB
                 }

@@ -7,7 +7,7 @@
 struct GradientParams {
     float startX = 0.0f;
     float startY = 0.0f;
-    float endX = 1.0f;
+    float endX = 0.0f;
     float endY = 1.0f;
     float centerWidth = 0.0f;//for reflected gradient
     bool tiling = false;//for linear and reflected gradients

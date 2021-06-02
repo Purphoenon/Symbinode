@@ -28,6 +28,7 @@ Item {
     property real maximumValue: 360
     property real offsetX: 14
     property real boxWidth: 25
+    property Item nextBox
     Label {
         id: label
         text: "H"

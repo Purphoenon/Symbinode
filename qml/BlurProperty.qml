@@ -30,7 +30,7 @@ Item {
     signal propertyChangingFinished(string name, var newValue, var oldValue)
     ParamSlider {
         id: intensityParam
-        maximum: 2
+        maximum: 3
         propertyName: "Intensity"
         onPropertyValueChanged: {
             intensityChanged(intensityParam.propertyValue)

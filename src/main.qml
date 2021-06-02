@@ -360,8 +360,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuOutputs.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -437,8 +435,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuTextures.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -514,8 +510,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuColors.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -572,8 +566,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuFilters.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -637,8 +629,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuFunctions.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -715,7 +705,6 @@ MainWindow {
             newPreview.height = Qt.binding(function(){return newPreview.parent.height - 27})
             primitivesType.currentIndex = newPreview.primitivesType
             tilesType.currentIndex = newPreview.tilesSize - 1
-            selfShadow.checked = newPreview.selfShadow
             heightScale.propertyValue = 10*newPreview.heightScale
             emissiveStrenght.propertyValue = newPreview.emissiveStrenght
             bloomRadius.propertyValue = newPreview.bloomRadius
@@ -749,10 +738,8 @@ MainWindow {
                     var saved = tab.save()
                     if(saved) {
                         var index = tabsList.tabs.indexOf(tab)
-                        if(index >= 0) {
-                            tabsList.tabs.splice(index, 1)
-                            mainWindow.closeTab(tab)
-                        }
+                        tabsList.tabs.splice(index, 1)
+                        mainWindow.closeTab(tab)
                     }
                     exitDialogObject.accepted.disconnect(saveFunction)
                     exitDialogObject.destroy()
@@ -762,10 +749,8 @@ MainWindow {
                 exitDialogObject.discard.connect(function() {
                     //console.log("discard")
                     var index = tabsList.tabs.indexOf(tab)
-                    if(index >= 0) {
-                        tabsList.tabs.splice(index, 1)
-                        mainWindow.closeTab(tab)
-                    }
+                    tabsList.tabs.splice(index, 1)
+                    mainWindow.closeTab(tab)
                     exitDialogObject.destroy()
 
                 })
@@ -778,10 +763,8 @@ MainWindow {
         else {
             console.log(tabsList)
             var index = tabsList.tabs.indexOf(tab)
-            if(index >= 0) {
-                tabsList.tabs.splice(index, 1)
-                mainWindow.closeTab(tab)
-            }
+            tabsList.tabs.splice(index, 1)
+            mainWindow.closeTab(tab)
         }
     }
 
@@ -1013,18 +996,18 @@ MainWindow {
 
                     contentItem: Item {
                         width: 200
-                        implicitHeight: bloom.checked ? 400 : 300
+                        implicitHeight: bloom.checked ? 330 : 230
                         Text {
-                            x: 28
-                            y: 20
+                            x: 15
+                            y: 26
                             text: qsTr("Mesh")
                             color: "#A2A2A2"
                         }
                         ParamDropDown {
                             id: primitivesType
                             width: 90
-                            x: 5
-                            y: 40
+                            x: 40
+                            y: 20
                             model: ["Sphere", "Cube", "Plane"]
                             popupColor: "#353638"
                             onActivated: {
@@ -1034,16 +1017,16 @@ MainWindow {
                         }
 
                         Text {
-                            x: 28
-                            y:80
+                            x: 15
+                            y: 61
                             text: qsTr("Tile")
                             color: "#A2A2A2"
                         }
                         ParamDropDown {
                             id: tilesType
                             width: 70
-                            x: 5
-                            y: 100
+                            x: 40
+                            y: 55
                             model: ["1x", "2x", "3x", "4x"]
                             popupColor: "#353638"
                             onActivated: {
@@ -1055,7 +1038,7 @@ MainWindow {
                         ParamSlider {
                             id: heightScale
                             x: 5
-                            y: 125
+                            y: 90
                             width: parent.width - 10
                             maximum: 1
                             propertyName: "Height scale"
@@ -1064,21 +1047,10 @@ MainWindow {
                             }
                         }
 
-                        ParamCheckbox {
-                            id: selfShadow
-                            x: 5
-                            y: 180
-                            width: 100
-                            text: "Self shadow"
-                            onToggled: {
-                                changeSelfShadow(checked)
-                            }
-                        }
-
                         ParamSlider {
                             id: emissiveStrenght
                             x: 5
-                            y: 205
+                            y: 125
                             width: parent.width - 10
                             maximum: 10
                             propertyName: "Emissive strength"
@@ -1090,7 +1062,7 @@ MainWindow {
                         ParamCheckbox {
                             id: bloom
                             x: 5
-                            y: 260
+                            y: 180
                             width: 70
                             text: "Bloom"
                             onToggled: {
@@ -1102,7 +1074,7 @@ MainWindow {
                             id: bloomThreshold
                             visible: bloom.checked
                             x: 5
-                            y: 285
+                            y: 195
                             width: parent.width - 10
                             maximum: 5
                             propertyName: "Bloom threshold"
@@ -1115,7 +1087,7 @@ MainWindow {
                             id: bloomRadius
                             visible: bloom.checked
                             x: 5
-                            y: 318
+                            y: 230
                             width: parent.width - 10
                             minimum: 1
                             maximum: 10
@@ -1129,7 +1101,7 @@ MainWindow {
                             id: bloomIntensity
                             visible: bloom.checked
                             x: 5
-                            y: 351
+                            y: 265
                             width: parent.width - 10
                             maximum: 1
                             propertyName: "Bloom intensity"
