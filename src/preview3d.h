@@ -31,7 +31,6 @@ class Preview3DObject: public QQuickFramebufferObject
     Q_OBJECT
     Q_PROPERTY(int primitivesType READ primitivesType)
     Q_PROPERTY(int tilesSize READ tilesSize)
-    Q_PROPERTY(bool selfShadow READ isSelfShadow)
     Q_PROPERTY(float heightScale READ heightScale)
     Q_PROPERTY(float emissiveStrenght READ emissiveStrenght)
     Q_PROPERTY(float bloomRadius READ bloomRadius)
@@ -44,6 +43,9 @@ public:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void wheelEvent(QWheelEvent *event);
+    void keyPressEvent(QKeyEvent *event);
+    void hoverEnterEvent(QHoverEvent *event);
+    void hoverLeaveEvent(QHoverEvent *event);
     QVector3D posCam();
     float zoomCam();
     QQuaternion rotQuat();
@@ -51,8 +53,6 @@ public:
     void setPrimitivesType(int type);
     int tilesSize();
     void setTilesSize(int id);
-    bool isSelfShadow();
-    void setSelfShadow(bool enable);
     float heightScale();
     void setHeightScale(float scale);
     float emissiveStrenght();
@@ -112,7 +112,6 @@ private:
     QVector2D m_texResolution = QVector2D(1024, 1024);
     int m_primitive = 0;
     int m_tile = 1;
-    bool m_selfShadow = false;
     float m_heightScale = 0.04f;
     float m_emissiveStrenght = 1.0f;
     float m_bloomRadius = 1.0f;

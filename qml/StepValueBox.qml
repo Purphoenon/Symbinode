@@ -28,12 +28,13 @@ Item {
     property real value: 0
     property alias text: textValue.text
     signal newValueChanged(real value)
+    signal mouseMoved(Item area, real x, real y)
 
     onValueChanged: {
         text = value
     }
 
-    width: 20
+    width: 35
     height: 24
 
     TextInput {
@@ -85,7 +86,6 @@ Item {
                     break
                 }
             }
-
             var newText
             var newValue
             var pointIndex = text.lastIndexOf(".")
@@ -131,6 +131,7 @@ Item {
     }
 
     MouseArea {
+        id: mouseArea
         x: parent.width - 50
         y: 5
         width: 20
@@ -139,10 +140,14 @@ Item {
         onDoubleClicked: {
             textValue.focus = true
         }
+
         onPositionChanged: {
             if(textValue.focus) {
                 var cursorSel = textValue.positionAt(mouse.x, mouse.y, TextInput.CursorOnCharacter)
                 textValue.moveCursorSelection(cursorSel, TextInput.SelectCharacters)
+            }
+            else {
+                mouseMoved(mouseArea, mouse.x, mouse.y)
             }
         }
     }
@@ -150,7 +155,7 @@ Item {
     MouseArea {
         property bool hovered: false
         id: upValue
-        x: textValue.x + textValue.width + 5
+        x: textValue.x + textValue.width + 20
         y: 1
         cursorShape: Qt.PointingHandCursor
         hoverEnabled: true
@@ -191,7 +196,7 @@ Item {
     MouseArea {
         property bool hovered: false
         id: downValue
-        x: textValue.x + textValue.width + 5
+        x: textValue.x + textValue.width + 20
         y: parent.height - height
         width: 6
         height: parent.height/2 - 2

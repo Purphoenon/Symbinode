@@ -80,7 +80,6 @@ public:
     Q_INVOKABLE void changeResolution(QVector2D res);
     Q_INVOKABLE void changePrimitive(int id);
     Q_INVOKABLE void changeTilePreview3D(int id);
-    Q_INVOKABLE void changeSelfShadow(bool enable);
     Q_INVOKABLE void changeHeightScale(qreal scale);
     Q_INVOKABLE void changeEmissiveStrenght(qreal strenght);
     Q_INVOKABLE void changeBloomRadius(qreal radius);
@@ -99,10 +98,12 @@ public:
     void duplicate();
     void removeFromFrame();
     void addToFrame();
+    void focusNode();
     void setActiveTab(Tab *tab);    
     Node *pinnedNode();
     Node *activeNode();
     void activeItemChanged();
+    void loadFile(QString filename);
 signals:
     void addTab(Tab *tab);
     void tabClosing(Tab *tab);

@@ -142,7 +142,7 @@ SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res): m_resolution(res)
     glBindFramebuffer(GL_FRAMEBUFFER, slopeFBO);
     glGenTextures(1, &m_slopedTexture);
     glBindTexture(GL_TEXTURE_2D, m_slopedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -244,7 +244,7 @@ void SlopeBlurRenderer::createSlopeBlur() {
 
 void SlopeBlurRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_slopedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 

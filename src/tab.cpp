@@ -21,6 +21,7 @@
 
 #include "tab.h"
 #include <iostream>
+#include <QRegularExpression>
 
 Tab::Tab(QQuickItem *parent): QQuickItem (parent)
 {
@@ -74,7 +75,7 @@ void Tab::close() {
 }
 
 void Tab::setTitle(QString fileName, bool modified) {
-    int idx = fileName.length() - fileName.lastIndexOf("/") - 1;
+    int idx = fileName.length() - fileName.lastIndexOf(QRegularExpression("/|\\\\")) - 1;
     QString title = fileName.right(idx);
     if(modified) {
         title = grTab->property("fileName").toString();
