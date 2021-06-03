@@ -80,7 +80,27 @@ SOURCES += \
     src/threshold.cpp \
     src/cubicbezier.cpp \
     src/cutline.cpp \
-    src/frame.cpp
+    src/frame.cpp \
+    src/heightnode.cpp \
+    src/emissionnode.cpp \
+    src/grayscalenode.cpp \
+    src/grayscale.cpp \
+    src/gradientnode.cpp \
+    src/gradient.cpp \
+    src/directionalwarpnode.cpp \
+    src/directionalwarp.cpp \
+    src/directionalblurnode.cpp \
+    src/directionalblur.cpp \
+    src/slopeblurnode.cpp \
+    src/slopeblur.cpp \
+    src/bevelnode.cpp \
+    src/bevel.cpp \
+    src/polartransformnode.cpp \
+    src/polartransform.cpp \
+    src/bricksnode.cpp \
+    src/bricks.cpp \
+    src/hexagonsnode.cpp \
+    src/hexagons.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -153,7 +173,27 @@ HEADERS += \
     src/threshold.h \
     src/cubicbezier.h \
     src/cutline.h \
-    src/frame.h
+    src/frame.h \
+    src/heightnode.h \
+    src/emissionnode.h \
+    src/grayscalenode.h \
+    src/grayscale.h \
+    src/gradientnode.h \
+    src/gradient.h \
+    src/directionalwarpnode.h \
+    src/directionalwarp.h \
+    src/directionalblurnode.h \
+    src/directionalblur.h \
+    src/slopeblurnode.h \
+    src/slopeblur.h \
+    src/bevelnode.h \
+    src/bevel.h \
+    src/polartransformnode.h \
+    src/polartransform.h \
+    src/bricksnode.h \
+    src/bricks.h \
+    src/hexagonsnode.h \
+    src/hexagons.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -197,4 +237,31 @@ DISTFILES += \
     shaders/checker.frag \
     qml/NodeFrame.qml \
     qml/ParamCheckbox.qml \
-    qml/ExitDialog.qml
+    qml/ExitDialog.qml \
+    shaders/pbrwithtess.vert \
+    shaders/pbrwithtess.tesc \
+    shaders/pbrwithtess.tese \
+    shaders/pbrwithtess.geom \
+    shaders/pbrwithtess.frag \
+    shaders/applybloom.frag \
+    shaders/brightforbloom.frag \
+    shaders/brightblur.frag \
+    shaders/grayscale.frag \
+    shaders/gradient.frag \
+    qml/GradientProperty.qml \
+    shaders/directionalwarp.frag \
+    qml/DirectionalWarpProperty.qml \
+    shaders/directionalblur.frag \
+    qml/DirectionalBlurProperty.qml \
+    shaders/slopeblur.frag \
+    qml/SlopeBlurProperty.qml \
+    shaders/beveldisplay.frag \
+    shaders/jumpflooding.frag \
+    shaders/fillforjfa.frag \
+    qml/BevelProperty.qml \
+    shaders/polartransform.frag \
+    qml/PolarTransformProperty.qml \
+    shaders/bricks.frag \
+    qml/BricksProperty.qml \
+    shaders/hexagons.frag \
+    qml/HexagonsProperty.qml

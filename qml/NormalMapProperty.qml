@@ -32,7 +32,7 @@ Item {
     ParamSlider {
         id: strenghtParam
         minimum: -1
-        propertyName: "Strenght"
+        propertyName: "Strength"
         propertyValue: startStrenght
         onPropertyValueChanged: {
             strenghtChanged(strenghtParam.propertyValue*10)

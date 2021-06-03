@@ -31,6 +31,8 @@
 #include "roughnode.h"
 #include "normalmapnode.h"
 #include "normalnode.h"
+#include "heightnode.h"
+#include "emissionnode.h"
 #include "voronoinode.h"
 #include "polygonnode.h"
 #include "circlenode.h"
@@ -46,6 +48,15 @@
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
+#include "grayscalenode.h"
+#include "gradientnode.h"
+#include "directionalwarpnode.h"
+#include "directionalblurnode.h"
+#include "slopeblurnode.h"
+#include "bevelnode.h"
+#include "polartransformnode.h"
+#include "bricksnode.h"
+#include "hexagonsnode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow
@@ -69,6 +80,12 @@ public:
     Q_INVOKABLE void changeResolution(QVector2D res);
     Q_INVOKABLE void changePrimitive(int id);
     Q_INVOKABLE void changeTilePreview3D(int id);
+    Q_INVOKABLE void changeHeightScale(qreal scale);
+    Q_INVOKABLE void changeEmissiveStrenght(qreal strenght);
+    Q_INVOKABLE void changeBloomRadius(qreal radius);
+    Q_INVOKABLE void changeBloomIntensity(qreal intensity);
+    Q_INVOKABLE void changeBloomThreshold(qreal threshold);
+    Q_INVOKABLE void changeBloom(bool enable);
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
     Q_INVOKABLE void pin(bool pinned);
@@ -81,11 +98,12 @@ public:
     void duplicate();
     void removeFromFrame();
     void addToFrame();
+    void focusNode();
     void setActiveTab(Tab *tab);    
     Node *pinnedNode();
     Node *activeNode();
     void activeItemChanged();
-
+    void loadFile(QString filename);
 signals:
     void addTab(Tab *tab);
     void tabClosing(Tab *tab);

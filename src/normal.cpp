@@ -111,8 +111,8 @@ void NormalRenderer::synchronize(QQuickFramebufferObject *item) {
 
 void NormalRenderer::render() {
     glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
+    glEnable(GL_BLEND);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     if(m_normalTexture) {
         renderNormal->bind();
@@ -142,7 +142,7 @@ void NormalRenderer::saveTexture(QString name) {
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
     glDisable(GL_DEPTH_TEST);
-    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     renderNormal->bind();
     glActiveTexture(GL_TEXTURE0);

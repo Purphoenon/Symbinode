@@ -99,5 +99,32 @@
         <file>../qml/NodeFrame.qml</file>
         <file>../qml/ParamCheckbox.qml</file>
         <file>../qml/ExitDialog.qml</file>
+        <file>../shaders/pbrwithtess.frag</file>
+        <file>../shaders/pbrwithtess.geom</file>
+        <file>../shaders/pbrwithtess.tesc</file>
+        <file>../shaders/pbrwithtess.tese</file>
+        <file>../shaders/pbrwithtess.vert</file>
+        <file>../shaders/applybloom.frag</file>
+        <file>../shaders/brightforbloom.frag</file>
+        <file>../shaders/brightblur.frag</file>
+        <file>../shaders/grayscale.frag</file>
+        <file>../shaders/gradient.frag</file>
+        <file>../qml/GradientProperty.qml</file>
+        <file>../shaders/directionalwarp.frag</file>
+        <file>../qml/DirectionalWarpProperty.qml</file>
+        <file>../shaders/directionalblur.frag</file>
+        <file>../qml/DirectionalBlurProperty.qml</file>
+        <file>../shaders/slopeblur.frag</file>
+        <file>../qml/SlopeBlurProperty.qml</file>
+        <file>../shaders/beveldisplay.frag</file>
+        <file>../shaders/jumpflooding.frag</file>
+        <file>../shaders/fillforjfa.frag</file>
+        <file>../qml/BevelProperty.qml</file>
+        <file>../shaders/polartransform.frag</file>
+        <file>../qml/PolarTransformProperty.qml</file>
+        <file>../shaders/bricks.frag</file>
+        <file>../qml/BricksProperty.qml</file>
+        <file>../shaders/hexagons.frag</file>
+        <file>../qml/HexagonsProperty.qml</file>
     </qresource>
 </RCC>

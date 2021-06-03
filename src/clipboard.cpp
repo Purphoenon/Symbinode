@@ -43,6 +43,17 @@
 #include "metalnode.h"
 #include "roughnode.h"
 #include "normalnode.h"
+#include "heightnode.h"
+#include "emissionnode.h"
+#include "grayscalenode.h"
+#include "gradientnode.h"
+#include "directionalwarpnode.h"
+#include "directionalblurnode.h"
+#include "slopeblurnode.h"
+#include "bevelnode.h"
+#include "polartransformnode.h"
+#include "bricksnode.h"
+#include "hexagonsnode.h"
 #include <iostream>
 
 Clipboard::Clipboard()
@@ -74,7 +85,7 @@ void Clipboard::copy(Scene *scene) {
     float minX = std::numeric_limits<float>::max();
     float minY = minX;
     for(auto item: selected) {
-        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item))) {
+        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item) || qobject_cast<EmissionNode*>(item))) {
             if(qobject_cast<Node*>(item)) {
                 Node *node = qobject_cast<Node*>(item);
                 if(!node->attachedFrame() || !node->attachedFrame()->selected()) sel_nodes.append(node);
@@ -87,7 +98,7 @@ void Clipboard::copy(Scene *scene) {
                     if(sel_edges.contains(edge)) continue;
                     Node *startNode = qobject_cast<Node*>(edge->startSocket()->parentItem());
                     Node *endNode = qobject_cast<Node*>(edge->endSocket()->parentItem());
-                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode)) && endNode->selected())) {
+                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode) || qobject_cast<HeightNode*>(endNode) || qobject_cast<EmissionNode*>(endNode)) && endNode->selected())) {
                         sel_edges.append(edge);
                     }
                 }
@@ -118,7 +129,7 @@ void Clipboard::copy(Scene *scene) {
         QList<QQuickItem*> copiedContent;
         for(auto item: frame->contentList()) {
             Node *baseNode = qobject_cast<Node*>(item);
-            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item)) && baseNode->selected()) {
+            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item) || qobject_cast<EmissionNode*>(item)) && baseNode->selected()) {
                 Node *copiedContentNode = nodeCopy(baseNode, scene, nullptr);
                 copiedContentNode->setBaseX(baseNode->baseX());
                 copiedContentNode->setBaseY(baseNode->baseY());
@@ -229,7 +240,7 @@ void Clipboard::duplicate(Scene *scene) {
     QList<Edge*> sel_edges;
     QList<QQuickItem*> pastedItem;
     for(auto item: selected) {
-        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item))) {
+        if(!(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item) || qobject_cast<EmissionNode*>(item))) {
             if(qobject_cast<Node*>(item)) {
                 Node *node = qobject_cast<Node*>(item);
                 if(!node->attachedFrame() || !node->attachedFrame()->selected()) sel_nodes.append(node);
@@ -238,7 +249,7 @@ void Clipboard::duplicate(Scene *scene) {
                     if(sel_edges.contains(edge)) continue;
                     Node *startNode = qobject_cast<Node*>(edge->startSocket()->parentItem());
                     Node *endNode = qobject_cast<Node*>(edge->endSocket()->parentItem());
-                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode)) && endNode->selected())) {
+                    if((startNode && startNode->selected()) && (!(qobject_cast<AlbedoNode*>(endNode) || qobject_cast<MetalNode*>(endNode) || qobject_cast<RoughNode*>(endNode) || qobject_cast<NormalNode*>(endNode) || qobject_cast<HeightNode*>(endNode) || qobject_cast<EmissionNode*>(endNode)) && endNode->selected())) {
                         sel_edges.append(edge);
                     }
                 }
@@ -264,7 +275,7 @@ void Clipboard::duplicate(Scene *scene) {
         QList<QQuickItem*> copiedContent;
         for(auto item: frame->contentList()) {
             Node *baseNode = qobject_cast<Node*>(item);
-            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item)) && baseNode->selected()) {
+            if(baseNode && !(qobject_cast<AlbedoNode*>(item) || qobject_cast<MetalNode*>(item) || qobject_cast<RoughNode*>(item) || qobject_cast<NormalNode*>(item) || qobject_cast<HeightNode*>(item) || qobject_cast<EmissionNode*>(item)) && baseNode->selected()) {
                 Node *copiedContentNode = nodeCopy(baseNode, scene, scene);
                 copiedContentNode->setBaseX(baseNode->baseX() + 50);
                 copiedContentNode->setBaseY(baseNode->baseY() + 50);
@@ -378,7 +389,7 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
                                           baseNode->randRotation(), baseNode->randScale(),
                                           baseNode->maskStrength(), baseNode->inputsCount(),
                                           baseNode->seed(), baseNode->keepProportion(),
-                                          baseNode->useAlpha());
+                                          baseNode->useAlpha(), baseNode->depthMask());
         return tileNode;
     }
     else if(qobject_cast<WarpNode*>(node)) {
@@ -392,7 +403,6 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         return blurNode;
     }
     else if(qobject_cast<InverseNode*>(node)) {
-        InverseNode *baseNode = qobject_cast<InverseNode*>(node);
         InverseNode *inverseNode = new InverseNode(parent, scene->resolution());
         return inverseNode;
     }
@@ -435,6 +445,65 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
         ThresholdNode *thresholdNode = new ThresholdNode(parent, scene->resolution(),
                                                     baseNode->threshold());
         return thresholdNode;
+    }
+    else if (qobject_cast<GrayscaleNode*>(node)) {
+        GrayscaleNode *grayscaleNode = new GrayscaleNode(parent, scene->resolution());
+        return  grayscaleNode;
+    }
+    else if (qobject_cast<GradientNode*>(node)) {
+        GradientNode *baseNode = qobject_cast<GradientNode*>(node);
+        GradientNode *gradientNode = new GradientNode(parent, scene->resolution(), baseNode->linearParam(),
+                                                      baseNode->reflectedParam(), baseNode->angularParam(),
+                                                      baseNode->radialParam(), baseNode->gradientType());
+        return gradientNode;
+    }
+    else if(qobject_cast<DirectionalWarpNode*>(node)) {
+        DirectionalWarpNode *baseNode = qobject_cast<DirectionalWarpNode*>(node);
+        DirectionalWarpNode *directionalWarpNode = new DirectionalWarpNode(parent, scene->resolution(),
+                                                                           baseNode->intensity(),
+                                                                           baseNode->angle());
+        return directionalWarpNode;
+    }
+    else if (qobject_cast<DirectionalBlurNode*>(node)) {
+        DirectionalBlurNode *baseNode = qobject_cast<DirectionalBlurNode*>(node);
+        DirectionalBlurNode *directionalBlurNode = new DirectionalBlurNode(parent, scene->resolution(),
+                                                                           baseNode->intensity(),
+                                                                           baseNode->angle());
+        return directionalBlurNode;
+    }
+    else if(qobject_cast<SlopeBlurNode*>(node)) {
+        SlopeBlurNode *baseNode = qobject_cast<SlopeBlurNode*>(node);
+        SlopeBlurNode *slopeBlurNode = new SlopeBlurNode(parent, scene->resolution(), baseNode->mode(),
+                                                         baseNode->intensity(), baseNode->samples());
+        return slopeBlurNode;
+    }
+    else if (qobject_cast<BevelNode*>(node)) {
+        BevelNode *baseNode = qobject_cast<BevelNode*>(node);
+        BevelNode *bevelNode = new BevelNode(parent, scene->resolution(), baseNode->distance(),
+                                             baseNode->smooth(), baseNode->useAlpha());
+        return bevelNode;
+    }
+    else if(qobject_cast<PolarTransformNode*>(node)) {
+        PolarTransformNode *baseNode = qobject_cast<PolarTransformNode*>(node);
+        PolarTransformNode *polarNode = new PolarTransformNode(parent, scene->resolution(), baseNode->radius(),
+                                                               baseNode->clamp(), baseNode->angle());
+        return polarNode;
+    }
+    else if (qobject_cast<BricksNode*>(node)) {
+        BricksNode *baseNode = qobject_cast<BricksNode*>(node);
+        BricksNode *bricksNode = new BricksNode(parent, scene->resolution(), baseNode->columns(),
+                                                baseNode->rows(), baseNode->offset(), baseNode->bricksWidth(),
+                                                baseNode->bricksHeight(), baseNode->smoothX(),
+                                                baseNode->smoothY(), baseNode->mask(), baseNode->seed());
+        return bricksNode;
+    }
+    else if(qobject_cast<HexagonsNode*>(node)) {
+        HexagonsNode *baseNode = qobject_cast<HexagonsNode*>(node);
+        HexagonsNode *hexagonsNode = new HexagonsNode(parent, scene->resolution(), baseNode->columns(),
+                                                      baseNode->rows(), baseNode->hexSize(),
+                                                      baseNode->hexSmooth(), baseNode->mask(),
+                                                      baseNode->seed());
+        return hexagonsNode;
     }
     return nullptr;
 }

@@ -337,6 +337,18 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 12)
                 }
             }
+            Action {
+                text: "Height"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 4)
+                }
+            }
+            Action {
+                text: "Emission"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 23)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -348,8 +360,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuOutputs.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -395,6 +405,25 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 1)
                 }
             }
+            Action {
+                text: "Gradient"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 25)
+                }
+            }
+            Action {
+                text: "Bricks"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 31)
+                }
+            }
+            Action {
+                text: "Hexagons"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 32)
+                }
+            }
+
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -406,8 +435,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuTextures.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -465,6 +492,13 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 22)
                 }
             }
+            Action {
+                text:  "Grayscale"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 24)
+                }
+            }
+
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -476,8 +510,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuColors.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -505,6 +537,24 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 19)
                 }
             }
+            Action {
+                text: "Blur Directional"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 27)
+                }
+            }
+            Action {
+                text: "Slope Blur"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 28)
+                }
+            }
+            Action {
+                text: "Bevel"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 29)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -516,8 +566,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuFilters.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -557,7 +605,19 @@ MainWindow {
                 onTriggered: {
                     mainWindow.createNode(addNode.x, addNode.y, 5)
                 }
-            }            
+            }
+            Action {
+                text: "Warp Directional "
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 26)
+                }
+            }
+            Action {
+                text: "Polar Transform"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 30)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
@@ -569,8 +629,6 @@ MainWindow {
                 height: 30
                 leftPadding: 15
                 contentItem: Text {
-                            leftPadding: 10
-                            rightPadding: 10
                             text: menuFunctions.text
                             color: "#A2A2A2"
                             horizontalAlignment: Text.AlignLeft
@@ -646,6 +704,13 @@ MainWindow {
             newPreview.width = Qt.binding(function(){return newPreview.parent.width})
             newPreview.height = Qt.binding(function(){return newPreview.parent.height - 27})
             primitivesType.currentIndex = newPreview.primitivesType
+            tilesType.currentIndex = newPreview.tilesSize - 1
+            heightScale.propertyValue = 10*newPreview.heightScale
+            emissiveStrenght.propertyValue = newPreview.emissiveStrenght
+            bloomRadius.propertyValue = newPreview.bloomRadius
+            bloomIntensity.propertyValue = newPreview.bloomIntensity
+            bloomThreshold.propertyValue = newPreview.bloomThreshold
+            bloom.checked = newPreview.bloom
         }
     }
 
@@ -673,38 +738,30 @@ MainWindow {
                     var saved = tab.save()
                     if(saved) {
                         var index = tabsList.tabs.indexOf(tab)
-                        if(index >= 0) {
-                            tabsList.tabs.splice(index, 1)
-                            mainWindow.closeTab(tab)
-                        }
-                    }
-                    exitDialogObject.accepted.disconnect(saveFunction)
-                    exitDialogObject.destroy()
-                    //console.log("saved")
-                }
-                exitDialogObject.accepted.connect(saveFunction)
-                exitDialogObject.discard.connect(function() {
-                    //console.log("discard")
-                    var index = tabsList.tabs.indexOf(tab)
-                    if(index >= 0) {
                         tabsList.tabs.splice(index, 1)
                         mainWindow.closeTab(tab)
                     }
+                    exitDialogObject.accepted.disconnect(saveFunction)
+                    exitDialogObject.destroy()
+                }
+                exitDialogObject.accepted.connect(saveFunction)
+                exitDialogObject.discard.connect(function() {
+                    var index = tabsList.tabs.indexOf(tab)
+                    tabsList.tabs.splice(index, 1)
+                    mainWindow.closeTab(tab)
                     exitDialogObject.destroy()
 
                 })
                 exitDialogObject.rejected.connect(function(){
                     exitDialogObject.destroy()
-                    //console.log("reject")
                 })
             }
         }
         else {
+            console.log(tabsList)
             var index = tabsList.tabs.indexOf(tab)
-            if(index >= 0) {
-                tabsList.tabs.splice(index, 1)
-                mainWindow.closeTab(tab)
-            }
+            tabsList.tabs.splice(index, 1)
+            mainWindow.closeTab(tab)
         }
     }
 
@@ -918,13 +975,13 @@ MainWindow {
                     id: preview3DParams
                     x: -width + parent.width
                     z: 0
-                    width: 150
+                    width: 200
                     height: contentItem.implicitHeight
                     padding: 0
 
                     MouseArea {
                         id: paramsClose
-                        x: 126
+                        x: parent.width - width
                         z: 1
                         width: 24
                         height: 24
@@ -935,19 +992,19 @@ MainWindow {
                     }
 
                     contentItem: Item {
-                        width: 150
-                        implicitHeight: 200
+                        width: 200
+                        implicitHeight: bloom.checked ? 330 : 230
                         Text {
-                            x: 28
-                            y: 20
+                            x: 15
+                            y: 26
                             text: qsTr("Mesh")
                             color: "#A2A2A2"
                         }
                         ParamDropDown {
                             id: primitivesType
                             width: 90
-                            x: 5
-                            y: 40
+                            x: 40
+                            y: 20
                             model: ["Sphere", "Cube", "Plane"]
                             popupColor: "#353638"
                             onActivated: {
@@ -957,27 +1014,102 @@ MainWindow {
                         }
 
                         Text {
-                            x: 28
-                            y:80
+                            x: 15
+                            y: 61
                             text: qsTr("Tile")
                             color: "#A2A2A2"
                         }
                         ParamDropDown {
                             id: tilesType
                             width: 70
-                            x: 5
-                            y: 100
+                            x: 40
+                            y: 55
                             model: ["1x", "2x", "3x", "4x"]
                             popupColor: "#353638"
                             onActivated: {
                                 changeTilePreview3D(index)
                                 focus = false
                             }
+                        }                        
+
+                        ParamSlider {
+                            id: heightScale
+                            x: 5
+                            y: 90
+                            width: parent.width - 10
+                            maximum: 1
+                            propertyName: "Height scale"
+                            onPropertyValueChanged: {
+                                changeHeightScale(propertyValue)
+                            }
+                        }
+
+                        ParamSlider {
+                            id: emissiveStrenght
+                            x: 5
+                            y: 125
+                            width: parent.width - 10
+                            maximum: 10
+                            propertyName: "Emissive strength"
+                            onPropertyValueChanged: {
+                                changeEmissiveStrenght(propertyValue)
+                            }
+                        }
+
+                        ParamCheckbox {
+                            id: bloom
+                            x: 5
+                            y: 180
+                            width: 70
+                            text: "Bloom"
+                            onToggled: {
+                                changeBloom(checked)
+                            }
+                        }
+
+                        ParamSlider {
+                            id: bloomThreshold
+                            visible: bloom.checked
+                            x: 5
+                            y: 195
+                            width: parent.width - 10
+                            maximum: 5
+                            propertyName: "Bloom threshold"
+                            onPropertyValueChanged: {
+                                changeBloomThreshold(propertyValue)
+                            }
+                        }
+
+                        ParamSlider {
+                            id: bloomRadius
+                            visible: bloom.checked
+                            x: 5
+                            y: 230
+                            width: parent.width - 10
+                            minimum: 1
+                            maximum: 10
+                            propertyName: "Bloom radius"
+                            onPropertyValueChanged: {
+                                changeBloomRadius(propertyValue)
+                            }
+                        }
+
+                        ParamSlider {
+                            id: bloomIntensity
+                            visible: bloom.checked
+                            x: 5
+                            y: 265
+                            width: parent.width - 10
+                            maximum: 1
+                            propertyName: "Bloom intensity"
+                            onPropertyValueChanged: {
+                               changeBloomIntensity(propertyValue)
+                            }
                         }
                     }
                     background:
                         Rectangle {
-                            width: 150
+                            width: 200
                             radius: 2
                             color: "#2C2D2F"
                         }

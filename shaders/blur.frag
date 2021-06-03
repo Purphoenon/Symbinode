@@ -21,13 +21,18 @@
 
 #version 440 core
 
+#define PI 3.14159265359
+
 uniform sampler2D sourceTexture;
 uniform sampler2D maskTexture;
 uniform float intensity = 0.5;
 uniform vec2 resolution;
 uniform vec2 direction;
 uniform bool useMask = false;
-vec2 size = 0.0015*resolution*intensity;
+vec2 size = 0.001*resolution*intensity;
+
+uniform float offset[3] = float[](0.0, 1.3846153846, 3.2307692308);
+uniform float weight[3] = float[](0.2270270270, 0.3162162162, 0.0702702703);
 
 in vec2 texCoords;
 
@@ -41,19 +46,15 @@ float gauss (float x, float sigma)
 void main()
 {
     vec4 color = vec4(0.0);
-    float total = 0.0;
-    float g = gauss(0, 5.0);
-    vec4 texColor = texture(sourceTexture, texCoords);
-    color += texColor*g;
-    total += g;
-    for(int i = 1; i < 10; ++i) {
-        float w = gauss(i, 5.0);
-        total += 2*w;
-        color += w * texture(sourceTexture, texCoords + (direction*i/resolution)*size);
-        color += w * texture(sourceTexture, texCoords - (direction*i/resolution)*size);
+    color = texture2D(sourceTexture, vec2(gl_FragCoord) / resolution) * weight[0];
+    for (int i=1; i<3; i++) {
+        color +=
+            texture2D(sourceTexture, (vec2(gl_FragCoord) + direction*offset[i]*size) / resolution)
+                * weight[i];
+        color +=
+            texture2D(sourceTexture, (vec2(gl_FragCoord) - direction*offset[i]*size) / resolution)
+                * weight[i];
     }
-
-    color /= total;
 
     if(useMask) {
         vec4 maskColor = texture(maskTexture, texCoords);

@@ -57,6 +57,10 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 3:
                 n = new MappingNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 4:
+                if(activeTab->scene()->heightConnected()) break;
+                n = new HeightNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             case 5:
                 n = new MirrorNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
@@ -114,6 +118,36 @@ void MainWindow::createNode(float x, float y, int nodeType) {
                 break;
             case 22:
                 n = new ThresholdNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 23:
+                n = new EmissionNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 24:
+                n = new GrayscaleNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 25:
+                n = new GradientNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 26:
+                n = new DirectionalWarpNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 27:
+                n = new DirectionalBlurNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 28:
+                n = new SlopeBlurNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 29:
+                n = new BevelNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 30:
+                n = new PolarTransformNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 31:
+                n = new BricksNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
+            case 32:
+                n = new HexagonsNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
             default:
                 break;
@@ -257,6 +291,42 @@ void MainWindow::changeTilePreview3D(int id) {
     }
 }
 
+void MainWindow::changeHeightScale(qreal scale) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setHeightScale(0.1f*scale);
+    }
+}
+
+void MainWindow::changeEmissiveStrenght(qreal strenght) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setEmissiveStrenght(strenght);
+    }
+}
+
+void MainWindow::changeBloomRadius(qreal radius) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloomRadius(radius);
+    }
+}
+
+void MainWindow::changeBloomIntensity(qreal intensity) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloomIntensity(intensity);
+    }
+}
+
+void MainWindow::changeBloomThreshold(qreal threshold) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloomThreshold(threshold);
+    }
+}
+
+void MainWindow::changeBloom(bool enable) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setBloom(enable);
+    }
+}
+
 void MainWindow::undo() {
     if(activeTab) {
         activeTab->scene()->undo();
@@ -332,7 +402,13 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     }
     else if(event->key() == Qt::Key_F && event->modifiers() == Qt::AltModifier) {
         removeFromFrame();
-    }    
+    }
+    else if(event->key() == Qt::Key_F) {
+        if(activeFocusItem() && activeFocusItem() != contentItem()) {
+            QApplication::sendEvent(activeFocusItem(), event);
+        }
+        else focusNode();
+    }
     else {
         QApplication::sendEvent(activeFocusItem(), event);
     }
@@ -352,6 +428,12 @@ void MainWindow::removeFromFrame() {
 void MainWindow::addToFrame() {
     if(activeTab) {
         activeTab->scene()->addToFrame();
+    }
+}
+
+void MainWindow::focusNode() {
+    if(activeTab) {
+        activeTab->scene()->focusNode();
     }
 }
 
@@ -382,6 +464,14 @@ void MainWindow::setActiveTab(Tab *tab) {
     preview3DChanged(oldPreview, tab->scene()->preview3d());    
     activeItemChanged();
     resolutionChanged(tab->scene()->resolution());
+}
+
+void MainWindow::loadFile(QString filename) {
+    newDocument();
+    if(activeTab) {
+        activeTab->scene()->loadScene(filename);
+        resolutionChanged(activeTab->scene()->resolution());
+    }
 }
 
 void MainWindow::closeTab(Tab *tab) {

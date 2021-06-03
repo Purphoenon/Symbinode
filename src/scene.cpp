@@ -28,6 +28,8 @@
 #include "mixnode.h"
 #include "normalmapnode.h"
 #include "normalnode.h"
+#include "heightnode.h"
+#include "emissionnode.h"
 #include "voronoinode.h"
 #include "polygonnode.h"
 #include "circlenode.h"
@@ -43,6 +45,15 @@
 #include "mirrornode.h"
 #include "brightnesscontrastnode.h"
 #include "thresholdnode.h"
+#include "grayscalenode.h"
+#include "gradientnode.h"
+#include "directionalwarpnode.h"
+#include "directionalblurnode.h"
+#include "slopeblurnode.h"
+#include "bevelnode.h"
+#include "polartransformnode.h"
+#include "bricksnode.h"
+#include "hexagonsnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -221,6 +232,20 @@ void Scene::deleteNode(Node *node) {
         m_normalConnected = false;
         m_preview3d->updateNormal(0);
     }
+    else if(qobject_cast<HeightNode*>(node)) {
+        HeightNode *heightNode = qobject_cast<HeightNode*>(node);
+        disconnect(heightNode, &HeightNode::heightChanged, m_preview3d, &Preview3DObject::updateHeight);
+        disconnect(this, &Scene::outputsSave, heightNode, &HeightNode::heightSave);
+        m_heightConnected = false;
+        m_preview3d->updateHeight(0);
+    }
+    else if(qobject_cast<EmissionNode*>(node)) {
+        EmissionNode *emissionNode = qobject_cast<EmissionNode*>(node);
+        disconnect(emissionNode, &EmissionNode::emissionChanged, m_preview3d, &Preview3DObject::updateEmission);
+        disconnect(this, &Scene::outputsSave, emissionNode, &EmissionNode::emissionSave);
+        m_emissionConnected = false;
+        m_preview3d->updateEmission(0);
+    }
     disconnect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
     disconnect(m_background, &BackgroundObject::scaleChanged, node, &Node::scaleUpdate);
     disconnect(m_background, &BackgroundObject::panChanged, node, &Node::setPan);
@@ -256,6 +281,18 @@ void Scene::addNode(Node *node) {
         connect(normNode, &NormalNode::normalChanged, m_preview3d, &Preview3DObject::updateNormal);
         connect(this, &Scene::outputsSave, normNode, &NormalNode::saveNormal);
         m_normalConnected = true;
+    }
+    else if(qobject_cast<HeightNode*>(node)) {
+        HeightNode *heightNode = qobject_cast<HeightNode*>(node);
+        connect(heightNode, &HeightNode::heightChanged, m_preview3d, &Preview3DObject::updateHeight);
+        connect(this, &Scene::outputsSave, heightNode, &HeightNode::heightSave);
+        m_heightConnected = true;
+    }
+    else if(qobject_cast<EmissionNode*>(node)) {
+        EmissionNode *emissionNode = qobject_cast<EmissionNode*>(node);
+        connect(emissionNode, &EmissionNode::emissionChanged, m_preview3d, &Preview3DObject::updateEmission);
+        connect(this, &Scene::outputsSave, emissionNode, &EmissionNode::emissionSave);
+        m_emissionConnected = true;
     }
     connect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
     connect(this, &Scene::resolutionUpdate, node, &Node::setResolution);
@@ -559,6 +596,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
     case 3:
         node = new MappingNode(this, m_resolution);
         break;
+    case 4:
+        node = new HeightNode(this, m_resolution);
+        break;
     case 5:
         node = new MirrorNode(this, m_resolution);
         break;
@@ -612,6 +652,36 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 22:
         node = new ThresholdNode(this, m_resolution);
+        break;
+    case 23:
+        node = new EmissionNode(this, m_resolution);
+        break;
+    case 24:
+        node = new GrayscaleNode(this, m_resolution);
+        break;
+    case 25:
+        node = new GradientNode(this, m_resolution);
+        break;
+    case 26:
+        node = new DirectionalWarpNode(this, m_resolution);
+        break;
+    case 27:
+        node = new DirectionalBlurNode(this, m_resolution);
+        break;
+    case 28:
+        node = new SlopeBlurNode(this, m_resolution);
+        break;
+    case 29:
+        node = new BevelNode(this, m_resolution);
+        break;
+    case 30:
+        node = new PolarTransformNode(this, m_resolution);
+        break;
+    case 31:
+        node = new BricksNode(this, m_resolution);
+        break;
+    case 32:
+        node = new HexagonsNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;
@@ -725,6 +795,27 @@ void Scene::addToFrame() {
     }
 }
 
+void Scene::focusNode() {
+    //m_background->setViewScale(1.0f);
+    if(m_nodes.size() > 0) {
+        float maxX = m_nodes[0]->x() + m_nodes[0]->width();
+        float maxY = m_nodes[0]->y() + m_nodes[0]->height();
+        float minX = m_nodes[0]->x();
+        float minY = m_nodes[0]->y();
+        for(int i = 1; i< m_nodes.size(); ++i) {
+            auto n = m_nodes[i];
+            maxX = std::max(maxX, static_cast<float>(n->x() + n->width()));
+            maxY = std::max(maxY, static_cast<float>(n->y() + n->height()));
+            minX = std::min(minX, static_cast<float>(n->x()));
+            minY = std::min(minY, static_cast<float>(n->y()));
+        }
+        QVector2D center = QVector2D((maxX - minX)*0.5 + minX, (maxY - minY)*0.5 + minY);
+
+        m_background->setViewPan((m_background->viewPan() + center) - QVector2D(width()*0.5, height()*0.5));
+    }
+
+}
+
 void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame) {
     m_undoStack->push(new MoveCommand(nodes, vec, frame));
     if(!m_modified) {
@@ -791,6 +882,10 @@ bool Scene::roughConnected() {
 
 bool Scene::normalConnected() {
     return m_normalConnected;
+}
+
+bool Scene::heightConnected() {
+    return m_heightConnected;
 }
 
 QVector2D Scene::resolution() {
