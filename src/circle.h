@@ -31,7 +31,7 @@ class CircleObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    CircleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
+    CircleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
@@ -48,9 +48,12 @@ public:
     void setUseAlpha(bool use);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool generatedCircle = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -58,6 +61,7 @@ signals:
     void changedTexture();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_texture;
     unsigned int m_maskTexture = 0;
     int m_interpolation = 1;
@@ -68,7 +72,7 @@ private:
 
 class CircleRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    CircleRenderer(QVector2D resolution);
+    CircleRenderer(QVector2D resolution, GLint bpc);
     ~CircleRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -85,6 +89,7 @@ private:
     unsigned int circleTexture;
     unsigned int maskTexture = 0;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
 };
 
 #endif // CIRCLE_H

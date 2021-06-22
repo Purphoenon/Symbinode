@@ -1,13 +1,14 @@
 #include "bevelnode.h"
 
-BevelNode::BevelNode(QQuickItem *parent, QVector2D resolution, float distance, float smooth, bool useAlpha):
-    Node(parent, resolution), m_dist(distance), m_smooth(smooth), m_alpha(useAlpha)
+BevelNode::BevelNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float distance, float smooth,
+                     bool useAlpha): Node(parent, resolution, bpc), m_dist(distance), m_smooth(smooth),
+    m_alpha(useAlpha)
 {
     createSockets(2, 1);
     setTitle("Bevel");
     m_socketsInput[0]->setTip("Height");
     m_socketsInput[1]->setTip("Mask");
-    preview = new BevelObject(grNode, m_resolution, m_dist, m_smooth, m_alpha);
+    preview = new BevelObject(grNode, m_resolution, m_bpc, m_dist, m_smooth, m_alpha);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -22,15 +23,19 @@ BevelNode::BevelNode(QQuickItem *parent, QVector2D resolution, float distance, f
     connect(this, &BevelNode::smoothChanged, preview, &BevelObject::setSmooth);
     connect(this, &BevelNode::useAlphaChanged, preview, &BevelObject::setUseAlpha);
     connect(this, &Node::changeResolution, preview, &BevelObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &BevelObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/BevelProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startDistance", m_dist);
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startUseAlpha", m_alpha);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(distanceChanged(qreal)), this, SLOT(updateDistance(qreal)));
     connect(propertiesPanel, SIGNAL(bevelSmoothChanged(qreal)), this, SLOT(updateSmooth(qreal)));
     connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -39,6 +44,14 @@ BevelNode::~BevelNode() {
 }
 
 void BevelNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
@@ -74,6 +87,8 @@ void BevelNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &has
     propertiesPanel->setProperty("startDistance", m_dist);
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startUseAlpha", m_alpha);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 float BevelNode::distance() {

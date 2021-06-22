@@ -21,11 +21,11 @@
 
 #include "mappingnode.h"
 
-MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, float inputMin, float inputMax,
-                         float outputMin, float outputMax):Node(parent, resolution), m_inputMin(inputMin),
-    m_inputMax(inputMax), m_outputMin(outputMin), m_outputMax(outputMax)
+MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float inputMin,
+                         float inputMax, float outputMin, float outputMax):Node(parent, resolution, bpc),
+    m_inputMin(inputMin), m_inputMax(inputMax), m_outputMin(outputMin), m_outputMax(outputMax)
 {
-    preview = new MappingObject(grNode, m_resolution, m_inputMin, m_inputMax, m_outputMin, m_outputMax);
+    preview = new MappingObject(grNode, m_resolution, m_bpc, m_inputMin, m_inputMax, m_outputMin, m_outputMax);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -36,6 +36,7 @@ MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, float inputMi
     connect(this, &Node::changeScaleView, this, &MappingNode::updateScale);
     connect(this, &Node::generatePreview, this, &MappingNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &MappingObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &MappingObject::setBPC);
     connect(preview, &MappingObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MappingObject::textureChanged, this, &MappingNode::setOutput);
     connect(this, &MappingNode::inputMinChanged, preview, &MappingObject::setInputMin);
@@ -49,11 +50,14 @@ MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, float inputMi
     connect(propertiesPanel, SIGNAL(inputMaxChanged(qreal)), this, SLOT(updateInputMax(qreal)));
     connect(propertiesPanel, SIGNAL(outputMinChanged(qreal)), this, SLOT(updateOutputMin(qreal)));
     connect(propertiesPanel, SIGNAL(outputMaxChanged(qreal)), this, SLOT(updateOutputMax(qreal)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     propertiesPanel->setProperty("startInputMin", m_inputMin);
     propertiesPanel->setProperty("startInputMax", m_inputMax);
     propertiesPanel->setProperty("startOutputMin", m_outputMin);
     propertiesPanel->setProperty("startOutputMax", m_outputMax);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     createSockets(2, 1);
     setTitle("Map Range");
     m_socketsInput[0]->setTip("Texture");
@@ -66,6 +70,14 @@ MappingNode::~MappingNode() {
 
 void MappingNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
@@ -106,6 +118,8 @@ void MappingNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &ha
         updateOutputMax(json["outputMax"].toVariant().toReal());
         propertiesPanel->setProperty("startOutputMax", m_outputMax);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 float MappingNode::inputMin() {

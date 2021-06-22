@@ -31,7 +31,7 @@ class BrightnessContrastObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    BrightnessContrastObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float brightness = 0.0f, float contrast = 0.0f);
+    BrightnessContrastObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float brightness = 0.0f, float contrast = 0.0f);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -44,9 +44,12 @@ public:
     void setContrast(float value);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool created = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -54,6 +57,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_sourceTexture = 0;
     unsigned int m_texture = 0;
     float m_brightness = 0.0f;
@@ -62,7 +66,7 @@ private:
 
 class BrightnessContrastRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    BrightnessContrastRenderer(QVector2D res);
+    BrightnessContrastRenderer(QVector2D res, GLint bpc);
     ~BrightnessContrastRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -72,6 +76,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int brightnessContrastFBO;
     unsigned int m_brightnessContrastTexture = 0;
     unsigned int m_sourceTexture = 0;

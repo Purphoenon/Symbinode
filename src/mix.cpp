@@ -23,15 +23,16 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int foregroundOpacity,
-                     int backgroundOpacity, int mode, bool includingAlpha): QQuickFramebufferObject (parent),
-     m_factor(factor), m_fOpacity(foregroundOpacity), m_bOpacity(backgroundOpacity),
-     m_mode(mode), m_includingAlpha(includingAlpha), m_resolution(resolution)
+MixObject::MixObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float factor,
+                     int foregroundOpacity, int backgroundOpacity, int mode, bool includingAlpha):
+    QQuickFramebufferObject (parent), m_factor(factor), m_fOpacity(foregroundOpacity),
+    m_bOpacity(backgroundOpacity), m_mode(mode), m_includingAlpha(includingAlpha), m_resolution(resolution),
+    m_bpc(bpc)
 {
 }
 
 QQuickFramebufferObject::Renderer *MixObject::createRenderer() const {
-    return new MixRenderer(m_resolution);
+    return new MixRenderer(m_resolution, m_bpc);
 }
 
 unsigned int MixObject::maskTexture() {
@@ -114,6 +115,16 @@ void MixObject::setResolution(QVector2D res) {
     update();
 }
 
+GLint MixObject::bpc() {
+    return m_bpc;
+}
+
+void MixObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
 unsigned int &MixObject::texture() {
     return m_texture;
 }
@@ -127,9 +138,12 @@ MixRenderer::~MixRenderer() {
     delete mixShader;
     delete checkerShader;
     delete renderTexture;
+    glDeleteTextures(1, &mixTexture);
+    glDeleteFramebuffers(1, &mixFBO);
+    glDeleteVertexArrays(1, &VAO);
 }
 
-MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
+MixRenderer::MixRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     mixShader = new QOpenGLShaderProgram();
@@ -179,7 +193,12 @@ MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindFramebuffer(GL_FRAMEBUFFER, mixFBO);
     glGenTextures(1, &mixTexture);
     glBindTexture(GL_TEXTURE_2D, mixTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -202,6 +221,12 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
         mixItem->resUpdated = false;
         m_resolution = mixItem->resolution();
         updateTextureRes();
+    }
+    if(mixItem->bpcUpdated) {
+        mixItem->bpcUpdated = false;
+        m_bpc = mixItem->bpc();
+        updateTextureRes();
+        mix();
     }
     if(mixItem->mixedTex) {
         mixItem->mixedTex = false;
@@ -291,6 +316,7 @@ void MixRenderer::render() {
         glBindVertexArray(0);
         renderTexture->release();
     }
+    glFlush();
 }
 
 void MixRenderer::mix() {
@@ -318,11 +344,18 @@ void MixRenderer::mix() {
     glBindVertexArray(0);
     mixShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void MixRenderer::updateTextureRes() {
     glBindTexture(GL_TEXTURE_2D, mixTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -334,7 +367,12 @@ void MixRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -357,14 +395,42 @@ void MixRenderer::saveTexture(QString fileName) {
     glBindVertexArray(0);
     renderTexture->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

@@ -12,6 +12,7 @@ Item {
     property alias startSmoothX: smoothXParam.propertyValue
     property alias startSmoothY: smoothYParam.propertyValue
     property alias startSeed: seedParam.propertyValue
+    property alias startBits: control.currentIndex
     signal columnsChanged(int columns)
     signal rowsChanged(int rows)
     signal offsetChanged(real offset)
@@ -21,9 +22,28 @@ Item {
     signal smoothXChanged(real smooth)
     signal smoothYChanged(real smooth)
     signal seedChanged(int seed)
+    signal bitsChanged(int bitsType);
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: control
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamSlider {
         id: columnsParam
+        y: 38
         step: 1
         minimum: 1
         maximum: 20
@@ -37,7 +57,7 @@ Item {
     }
     ParamSlider {
         id: rowsParam
-        y: 33
+        y: 71
         minimum: 1
         maximum: 20
         step: 1
@@ -51,7 +71,7 @@ Item {
     }
     ParamSlider {
         id: offsetParam
-        y: 66
+        y: 104
         propertyName: "Offset"
         onPropertyValueChanged: {
             offsetChanged(propertyValue)
@@ -62,7 +82,7 @@ Item {
     }
     ParamSlider {
         id: widthParam
-        y: 99
+        y: 137
         propertyName: "Bricks Width"
         onPropertyValueChanged: {
             bricksWidthChanged(propertyValue)
@@ -73,7 +93,7 @@ Item {
     }
     ParamSlider {
         id: heightParam
-        y: 132
+        y: 170
         propertyName: "Bricks Height"
         onPropertyValueChanged: {
             bricksHeightChanged(propertyValue)
@@ -84,7 +104,7 @@ Item {
     }
     ParamSlider {
         id: smoothXParam
-        y: 165
+        y: 203
         propertyName: "Smooth X"
         onPropertyValueChanged: {
             smoothXChanged(propertyValue)
@@ -95,7 +115,7 @@ Item {
     }
     ParamSlider {
         id: smoothYParam
-        y: 198
+        y: 236
         propertyName: "Smooth Y"
         onPropertyValueChanged: {
             smoothYChanged(propertyValue)
@@ -106,7 +126,7 @@ Item {
     }
     ParamSlider {
         id: maskParam
-        y: 231
+        y: 269
         propertyName: "Mask"
         onPropertyValueChanged: {
             maskChanged(propertyValue)
@@ -117,7 +137,7 @@ Item {
     }
     ParamSlider {
         id: seedParam
-        y: 264
+        y: 302
         propertyName: "Seed"
         minimum: 1
         maximum: 100

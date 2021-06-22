@@ -3,15 +3,16 @@
 #include "FreeImage.h"
 #include <iostream>
 
-PolarTransformObject::PolarTransformObject(QQuickItem *parent, QVector2D resolution, float radius,
-                                           bool clamp, int angle): QQuickFramebufferObject (parent),
-    m_resolution(resolution), m_radius(radius), m_clamp(clamp), m_angle(angle)
+PolarTransformObject::PolarTransformObject(QQuickItem *parent, QVector2D resolution, GLint bpc,
+                                           float radius, bool clamp, int angle):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc), m_radius(radius), m_clamp(clamp),
+    m_angle(angle)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *PolarTransformObject::createRenderer() const {
-    return new PolarTransformRenderer(m_resolution);
+    return new PolarTransformRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &PolarTransformObject::texture() {
@@ -29,8 +30,6 @@ unsigned int PolarTransformObject::maskTexture() {
 
 void PolarTransformObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
-    polaredTex = true;
-    update();
 }
 
 void PolarTransformObject::saveTexture(QString fileName) {
@@ -45,8 +44,6 @@ unsigned int PolarTransformObject::sourceTexture() {
 
 void PolarTransformObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
-    polaredTex = true;
-    update();
 }
 
 float PolarTransformObject::radius() {
@@ -89,7 +86,17 @@ void PolarTransformObject::setResolution(QVector2D res) {
     update();
 }
 
-PolarTransformRenderer::PolarTransformRenderer(QVector2D res): m_resolution(res) {
+GLint PolarTransformObject::bpc() {
+    return m_bpc;
+}
+
+void PolarTransformObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
+PolarTransformRenderer::PolarTransformRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     polarShader = new QOpenGLShaderProgram();
@@ -131,9 +138,16 @@ PolarTransformRenderer::PolarTransformRenderer(QVector2D res): m_resolution(res)
     glGenTextures(1, &m_polarTexture);
     glBindFramebuffer(GL_FRAMEBUFFER, polarFBO);
     glBindTexture(GL_TEXTURE_2D, m_polarTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -149,6 +163,9 @@ PolarTransformRenderer::~PolarTransformRenderer() {
     delete polarShader;
     delete textureShader;
     delete checkerShader;
+    glDeleteTextures(1, &m_polarTexture);
+    glDeleteFramebuffers(1, &polarFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *PolarTransformRenderer::createFramebufferObject(const QSize &size) {
@@ -181,6 +198,12 @@ void PolarTransformRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = polarItem->resolution();
         updateTexResolution();
     }
+    if(polarItem->bpcUpdated) {
+        polarItem->bpcUpdated = false;
+        m_bpc = polarItem->bpc();
+        updateTexResolution();
+        transformToPolar();
+    }
     if(polarItem->texSaving) {
         polarItem->texSaving = false;
         saveTexture(polarItem->saveName);
@@ -210,6 +233,7 @@ void PolarTransformRenderer::render() {
         textureShader->release();
         glBindVertexArray(0);
     }
+    glFlush();
 }
 
 void PolarTransformRenderer::transformToPolar() {
@@ -231,13 +255,22 @@ void PolarTransformRenderer::transformToPolar() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void PolarTransformRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_polarTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -248,7 +281,12 @@ void PolarTransformRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -270,14 +308,42 @@ void PolarTransformRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

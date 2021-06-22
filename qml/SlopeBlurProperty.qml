@@ -6,13 +6,32 @@ Item {
     property alias mode: control.currentIndex
     property alias startIntensity: intensityParam.propertyValue
     property alias startSamples: samplesParam.propertyValue
+    property alias startBits: bitsParam.currentIndex
     signal blendModeChanged(int mode)
     signal intensityChanged(real intensity)
     signal samplesChanged(int samples)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamDropDown{
         id: control
-        y: 15
+        y: 53
         model: ["Average", "Min", "Max"]
         onCurrentIndexChanged: {
             blendModeChanged(currentIndex)
@@ -26,7 +45,7 @@ Item {
     }
     ParamSlider {
         id: intensityParam
-        y: 38
+        y: 76
         propertyName: "Intensity"
         onPropertyValueChanged: {
             intensityChanged(propertyValue)
@@ -37,7 +56,7 @@ Item {
     }
     ParamSlider {
         id: samplesParam
-        y: 71
+        y: 109
         propertyName: "Samples"
         maximum: 16
         minimum: 1

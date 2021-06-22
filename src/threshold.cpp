@@ -23,14 +23,14 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include "FreeImage.h"
 
-ThresholdObject::ThresholdObject(QQuickItem *parent, QVector2D resolution, float threshold):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_threshold(threshold)
+ThresholdObject::ThresholdObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float threshold):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc), m_threshold(threshold)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *ThresholdObject::createRenderer() const {
-    return new ThresholdRenderer(m_resolution);
+    return new ThresholdRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &ThresholdObject::texture() {
@@ -48,8 +48,6 @@ unsigned int ThresholdObject::maskTexture() {
 
 void ThresholdObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
-    created = true;
-    update();
 }
 
 unsigned int ThresholdObject::sourceTexture() {
@@ -58,8 +56,6 @@ unsigned int ThresholdObject::sourceTexture() {
 
 void ThresholdObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
-    created = true;
-    update();
 }
 
 void ThresholdObject::saveTexture(QString fileName) {
@@ -88,7 +84,17 @@ void ThresholdObject::setResolution(QVector2D res) {
     update();
 }
 
-ThresholdRenderer::ThresholdRenderer(QVector2D res): m_resolution(res) {
+GLint ThresholdObject::bpc() {
+    return m_bpc;
+}
+
+void ThresholdObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
+ThresholdRenderer::ThresholdRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     thresholdShader = new QOpenGLShaderProgram();
     thresholdShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -130,7 +136,16 @@ ThresholdRenderer::ThresholdRenderer(QVector2D res): m_resolution(res) {
     glBindFramebuffer(GL_FRAMEBUFFER, thresholdFBO);
     glGenTextures(1, &m_thresholdTexture);
     glBindTexture(GL_TEXTURE_2D, m_thresholdTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -144,6 +159,9 @@ ThresholdRenderer::~ThresholdRenderer() {
     delete thresholdShader;
     delete checkerShader;
     delete textureShader;
+    glDeleteTextures(1, &m_thresholdTexture);
+    glDeleteFramebuffers(1, &thresholdFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *ThresholdRenderer::createFramebufferObject(const QSize &size) {
@@ -159,6 +177,12 @@ void ThresholdRenderer::synchronize(QQuickFramebufferObject *item) {
         thresholdItem->resUpdated = false;
         m_resolution = thresholdItem->resolution();
         updateTexResolution();
+    }
+    if(thresholdItem->bpcUpdated) {
+        thresholdItem->bpcUpdated = false;
+        m_bpc = thresholdItem->bpc();
+        updateTexResolution();
+        create();
     }
     if(thresholdItem->created) {
         thresholdItem->created = false;
@@ -203,6 +227,7 @@ void ThresholdRenderer::render() {
         textureShader->release();
         glBindVertexArray(0);
     }
+    glFlush();
 }
 
 void ThresholdRenderer::create() {
@@ -221,13 +246,22 @@ void ThresholdRenderer::create() {
     thresholdShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void ThresholdRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_thresholdTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -238,7 +272,12 @@ void ThresholdRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &tex);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -258,14 +297,42 @@ void ThresholdRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &tex);
+    glDeleteFramebuffers(1, &fbo);
 }

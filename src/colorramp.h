@@ -33,7 +33,7 @@ class ColorRampObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    ColorRampObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QJsonArray stops = {QJsonArray{1, 1, 1, 1}, QJsonArray{0, 0, 0, 0}});
+    ColorRampObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, QJsonArray stops = {QJsonArray{1, 1, 1, 1}, QJsonArray{0, 0, 0, 0}});
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -46,9 +46,12 @@ public:
     void setGradientsStops(QJsonArray stops);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool rampedTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 public slots:
@@ -61,6 +64,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_texture = 0;
     unsigned int m_sourceTexture = 0;    
     unsigned int m_maskTexture = 0;
@@ -69,7 +73,7 @@ private:
 
 class ColorRampRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core{
 public:
-    ColorRampRenderer(QVector2D res);
+    ColorRampRenderer(QVector2D res, GLint bpc);
     ~ColorRampRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -79,6 +83,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int colorFBO;
     unsigned int m_colorTexture = 0;
     unsigned int m_sourceTexture = 0;

@@ -41,9 +41,9 @@ class VoronoiNode: public Node
     Q_OBJECT
 public:
     VoronoiNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024),
-                VoronoiParams crystals = VoronoiParams(), VoronoiParams borders = VoronoiParams(),
-                VoronoiParams solid = VoronoiParams(), VoronoiParams worley = VoronoiParams(),
-                QString voronoiType = "crystals");
+                GLint bpc = GL_RGBA16, VoronoiParams crystals = VoronoiParams(),
+                VoronoiParams borders = VoronoiParams(), VoronoiParams solid = VoronoiParams(),
+                VoronoiParams worley = VoronoiParams(), QString voronoiType = "crystals");
     ~VoronoiNode();
     void operation();
     unsigned int &getPreviewTexture();

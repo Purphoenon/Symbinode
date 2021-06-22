@@ -24,14 +24,14 @@
 #include "FreeImage.h"
 #include <iostream>
 
-OneChanelObject::OneChanelObject(QQuickItem *parent, QVector2D resolution): QQuickFramebufferObject (parent),
-    m_resolution(resolution)
+OneChanelObject::OneChanelObject(QQuickItem *parent, QVector2D resolution, GLint bpc): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_bpc(bpc)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *OneChanelObject::createRenderer() const {
-    return new OneChanelRenderer(m_resolution);
+    return new OneChanelRenderer(m_resolution, m_bpc);
 }
 
 QVariant OneChanelObject::value() {
@@ -69,7 +69,15 @@ void OneChanelObject::setResolution(QVector2D res) {
     m_resolution = res;
 }
 
-OneChanelRenderer::OneChanelRenderer(QVector2D resolution): m_resolution(resolution) {
+GLint OneChanelObject::bpc() {
+    return m_bpc;
+}
+
+void OneChanelObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+}
+
+OneChanelRenderer::OneChanelRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     renderChanel = new QOpenGLShaderProgram();
@@ -117,6 +125,9 @@ OneChanelRenderer::OneChanelRenderer(QVector2D resolution): m_resolution(resolut
 
 OneChanelRenderer::~OneChanelRenderer() {
     delete renderChanel;
+    glDeleteTextures(1, &m_colorTexture);
+    glDeleteFramebuffers(1, &m_colorFBO);
+    glDeleteVertexArrays(1, &VAO);
 }
 
 QOpenGLFramebufferObject *OneChanelRenderer::createFramebufferObject(const QSize &size) {
@@ -131,6 +142,7 @@ void OneChanelRenderer::synchronize(QQuickFramebufferObject *item) {
     renderChanel->bind();
     renderChanel->setUniformValue(renderChanel->uniformLocation("useTex"), oneChanelItem->useTex);
     m_resolution = oneChanelItem->resolution();
+    m_bpc = oneChanelItem->bpc();
     if(oneChanelItem->useTex) {
         texture = oneChanelItem->value().toUInt();
         oneChanelItem->setSourceTexture(texture);
@@ -169,6 +181,7 @@ void OneChanelRenderer::render() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     renderChanel->release();
+    glFlush();
 }
 
 void OneChanelRenderer::createColor() {
@@ -183,6 +196,8 @@ void OneChanelRenderer::createColor() {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderChanel->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void OneChanelRenderer::saveTexture(QString fileName) {
@@ -192,7 +207,12 @@ void OneChanelRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &tex);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -201,26 +221,57 @@ void OneChanelRenderer::saveTexture(QString fileName) {
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
     glDisable(GL_DEPTH_TEST);
-    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     renderChanel->bind();
-    glBindVertexArray(VAO);
+    renderChanel->setUniformValue(renderChanel->uniformLocation("albedoVal"), val);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
+    glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     renderChanel->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGB16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGB16 *bits = (FIRGB16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*3 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*3 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &tex);
+    glDeleteFramebuffers(1, &fbo);
 }

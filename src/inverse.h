@@ -31,7 +31,7 @@ class InverseObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    InverseObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    InverseObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -40,8 +40,11 @@ public:
     void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool inversedTex = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool selectedItem = false;
     bool texSaving = false;
     QString saveName = "";
@@ -50,13 +53,14 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_texture = 0;
     unsigned int m_sourceTexture = 0;
 };
 
 class InverseRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    InverseRenderer(QVector2D res);
+    InverseRenderer(QVector2D res, GLint bpc);
     ~InverseRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -66,6 +70,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int inverseFBO;
     unsigned int m_inversedTexture = 0;
     unsigned int m_sourceTexture = 0;

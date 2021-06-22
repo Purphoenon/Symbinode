@@ -6,12 +6,32 @@ Item {
     property alias startDistance: distanceParam.propertyValue
     property alias startSmooth: smoothParam.propertyValue
     property alias startUseAlpha: useAlphaParam.checked
+    property alias startBits: control.currentIndex
     signal distanceChanged(real dist)
     signal bevelSmoothChanged(real smooth)
     signal useAlphaChanged(bool use)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: control
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamSlider {
         id: distanceParam
+        y: 38
         minimum: -1
         propertyName: "Distance"
         onPropertyValueChanged: {
@@ -23,7 +43,7 @@ Item {
     }
     ParamSlider {
         id: smoothParam
-        y: 33
+        y: 71
         propertyName: "Smooth"
         onPropertyValueChanged: {
             bevelSmoothChanged(propertyValue)
@@ -34,7 +54,7 @@ Item {
     }
     ParamCheckbox {
         id: useAlphaParam
-        y: 81
+        y: 119
         width: 90
         text: qsTr("Use alpha")
         checked: false

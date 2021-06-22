@@ -8,7 +8,7 @@ class BricksNode: public Node
 {
     Q_OBJECT
 public:
-    BricksNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 15, float offset = 0.5f, float width = 0.9f, float height = 0.8f, float smoothX = 0.0f, float smoothY = 0.0f, float mask = 0.0f, int seed = 1);
+    BricksNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int columns = 5, int rows = 15, float offset = 0.5f, float width = 0.9f, float height = 0.8f, float smoothX = 0.0f, float smoothY = 0.0f, float mask = 0.0f, int seed = 1);
     ~BricksNode();
     unsigned int &getPreviewTexture();
     void saveTexture(QString fileName);

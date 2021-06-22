@@ -23,17 +23,17 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-NoiseObject::NoiseObject(QQuickItem *parent, QVector2D resolution, QString type, float noiseScale,
-                         float scaleX, float scaleY, int layers, float persistence, float amplitude,
-                         int seed): QQuickFramebufferObject (parent), m_noiseType(type),
+NoiseObject::NoiseObject(QQuickItem *parent, QVector2D resolution, GLint bpc, QString type,
+                         float noiseScale, float scaleX, float scaleY, int layers, float persistence,
+                         float amplitude, int seed): QQuickFramebufferObject (parent), m_noiseType(type),
     m_noiseScale(noiseScale), m_scaleX(scaleX), m_scaleY(scaleY), m_layers(layers),
-    m_persistence(persistence), m_amplitude(amplitude), m_seed(seed), m_resolution(resolution)
+    m_persistence(persistence), m_amplitude(amplitude), m_seed(seed), m_resolution(resolution), m_bpc(bpc)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *NoiseObject::createRenderer() const{
-    return new NoiseRenderer(m_resolution);
+    return new NoiseRenderer(m_resolution, m_bpc);
 }
 
 unsigned int NoiseObject::maskTexture() {
@@ -142,6 +142,16 @@ void NoiseObject::setResolution(QVector2D res) {
     update();
 }
 
+GLint NoiseObject::bpc() {
+    return m_bpc;
+}
+
+void NoiseObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
 unsigned int &NoiseObject::texture() {
     return m_texture;
 }
@@ -151,7 +161,7 @@ void NoiseObject::setTexture(unsigned int texture) {
     changedTexture();
 }
 
-NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
+NoiseRenderer::NoiseRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     generateNoise = new QOpenGLShaderProgram();
@@ -213,7 +223,12 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindFramebuffer(GL_FRAMEBUFFER, noiseFBO);
     glGenTextures(1, &noiseTexture);
     glBindTexture(GL_TEXTURE_2D, noiseTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -229,6 +244,10 @@ NoiseRenderer::~NoiseRenderer() {
     delete generateNoise;
     delete checkerShader;
     delete renderTexture;
+    glDeleteTextures(1, &noiseTexture);
+    glDeleteFramebuffers(1, &noiseFBO);
+    glDeleteVertexArrays(1, &textureVAO);
+    glDeleteVertexArrays(1, &noiseVAO);
 }
 
 QOpenGLFramebufferObject *NoiseRenderer::createFramebufferObject(const QSize &size) {
@@ -249,6 +268,12 @@ void NoiseRenderer::synchronize(QQuickFramebufferObject *item) {
             noiseItem->setTexture(noiseTexture);
         }
     }
+    if(noiseItem->bpcUpdated) {
+        noiseItem->bpcUpdated = false;
+        m_bpc = noiseItem->bpc();
+        updateTexResolution();
+        createNoise();
+    }
     if(noiseItem->generatedNoise) {
         noiseItem->generatedNoise = false;
         m_noiseType = noiseItem->noiseType();
@@ -268,7 +293,7 @@ void NoiseRenderer::synchronize(QQuickFramebufferObject *item) {
         noiseItem->updatePreview(noiseTexture);
     }
     if(noiseItem->texSaving) {
-        noiseItem->texSaving = true;
+        noiseItem->texSaving = false;
         saveTexture(noiseItem->saveName);
     }
 }
@@ -294,6 +319,8 @@ void NoiseRenderer::render() {
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
+    glFlush();
+
 }
 
 void NoiseRenderer::createNoise() {
@@ -314,11 +341,18 @@ void NoiseRenderer::createNoise() {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);    
     generateNoise->release();
+    glFlush();
+    glFinish();
 }
 
 void NoiseRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, noiseTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -330,7 +364,12 @@ void NoiseRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -352,14 +391,42 @@ void NoiseRenderer::saveTexture(QString fileName) {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

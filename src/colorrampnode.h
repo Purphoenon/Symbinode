@@ -29,7 +29,7 @@ class ColorRampNode: public Node
 {
     Q_OBJECT
 public:
-    ColorRampNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QJsonArray stops = {QJsonArray{1, 1, 1, 1}, QJsonArray{0, 0, 0, 0}});
+    ColorRampNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, QJsonArray stops = {QJsonArray{1, 1, 1, 1}, QJsonArray{0, 0, 0, 0}});
     ~ColorRampNode();
     void operation();
     unsigned int &getPreviewTexture();

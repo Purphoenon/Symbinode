@@ -21,7 +21,6 @@
 
 import QtQuick 2.12
 import QtQuick.Window 2.12
-import QtQuick.Shapes 1.12
 import QtQuick.Controls 2.5
 import QtQuick.Dialogs 1.2
 import QtGraphicalEffects 1.0
@@ -737,9 +736,9 @@ MainWindow {
                 function saveFunction() {
                     var saved = tab.save()
                     if(saved) {
-                        var index = tabsList.tabs.indexOf(tab)
-                        tabsList.tabs.splice(index, 1)
                         mainWindow.closeTab(tab)
+                        var index = tabsList.tabs.indexOf(tab)
+                        tabsList.tabs.splice(index, 1)                        
                     }
                     exitDialogObject.accepted.disconnect(saveFunction)
                     exitDialogObject.destroy()
@@ -747,8 +746,8 @@ MainWindow {
                 exitDialogObject.accepted.connect(saveFunction)
                 exitDialogObject.discard.connect(function() {
                     var index = tabsList.tabs.indexOf(tab)
-                    tabsList.tabs.splice(index, 1)
                     mainWindow.closeTab(tab)
+                    tabsList.tabs.splice(index, 1)                    
                     exitDialogObject.destroy()
 
                 })
@@ -759,9 +758,9 @@ MainWindow {
         }
         else {
             console.log(tabsList)
-            var index = tabsList.tabs.indexOf(tab)
-            tabsList.tabs.splice(index, 1)
             mainWindow.closeTab(tab)
+            var index = tabsList.tabs.indexOf(tab)
+            tabsList.tabs.splice(index, 1)            
         }
     }
 

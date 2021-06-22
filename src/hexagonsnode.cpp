@@ -1,13 +1,14 @@
 #include "hexagonsnode.h"
 
-HexagonsNode::HexagonsNode(QQuickItem *parent, QVector2D resolution, int columns, int rows, float size,
-                           float smooth, float mask, int seed): Node(parent, resolution), m_columns(columns),
-    m_rows(rows), m_size(size), m_smooth(smooth), m_mask(mask), m_seed(seed)
+HexagonsNode::HexagonsNode(QQuickItem *parent, QVector2D resolution, GLint bpc, int columns, int rows,
+                           float size, float smooth, float mask, int seed): Node(parent, resolution, bpc),
+    m_columns(columns), m_rows(rows), m_size(size), m_smooth(smooth), m_mask(mask), m_seed(seed)
 {
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Hexagons");
-    preview = new HexagonsObject(grNode, m_resolution, m_columns, m_rows, m_size, m_smooth, m_mask, m_seed);
+    preview = new HexagonsObject(grNode, m_resolution, m_bpc, m_columns, m_rows, m_size, m_smooth, m_mask,
+                                 m_seed);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -25,6 +26,7 @@ HexagonsNode::HexagonsNode(QQuickItem *parent, QVector2D resolution, int columns
     connect(this, &HexagonsNode::maskChanged, preview, &HexagonsObject::setMask);
     connect(this, &HexagonsNode::seedChanged, preview, &HexagonsObject::setSeed);
     connect(this, &Node::changeResolution, preview, &HexagonsObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &HexagonsObject::setBPC);
     connect(this, &Node::generatePreview, this, &HexagonsNode::previewGenerated);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/HexagonsProperty.qml")));
@@ -35,12 +37,15 @@ HexagonsNode::HexagonsNode(QQuickItem *parent, QVector2D resolution, int columns
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startMask", m_mask);
     propertiesPanel->setProperty("startSeed", m_seed);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(columnsChanged(int)), this, SLOT(updateColumns(int)));
     connect(propertiesPanel, SIGNAL(rowsChanged(int)), this, SLOT(updateRows(int)));
     connect(propertiesPanel, SIGNAL(hexSizeChanged(qreal)), this, SLOT(updateHexSize(qreal)));
     connect(propertiesPanel, SIGNAL(hexSmoothChanged(qreal)), this, SLOT(updateHexSmooth(qreal)));
     connect(propertiesPanel, SIGNAL(maskChanged(qreal)), this, SLOT(updateMask(qreal)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -97,6 +102,8 @@ void HexagonsNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startMask", m_mask);
     propertiesPanel->setProperty("startSeed", m_seed);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 int HexagonsNode::columns() {

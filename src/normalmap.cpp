@@ -23,14 +23,14 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-NormalMapObject::NormalMapObject(QQuickItem *parent, QVector2D resolution, float strenght):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_strenght(strenght)
+NormalMapObject::NormalMapObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float strenght):
+    QQuickFramebufferObject (parent), m_strenght(strenght), m_resolution(resolution), m_bpc(bpc)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *NormalMapObject::createRenderer() const {
-    return new NormalMapRenderer(m_resolution);
+    return new NormalMapRenderer(m_resolution, m_bpc);
 }
 
 unsigned int NormalMapObject::grayscaleTexture() {
@@ -69,6 +69,16 @@ void NormalMapObject::setResolution(QVector2D res) {
     update();
 }
 
+GLint NormalMapObject::bpc() {
+    return m_bpc;
+}
+
+void NormalMapObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
 unsigned int &NormalMapObject::normalTexture() {
     return m_normalTexture;
 }
@@ -78,7 +88,7 @@ void NormalMapObject::setNormalTexture(unsigned int texture) {
     textureChanged();
 }
 
-NormalMapRenderer::NormalMapRenderer(QVector2D resolution): m_resolution(resolution) {
+NormalMapRenderer::NormalMapRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     normalMap = new QOpenGLShaderProgram();
@@ -135,7 +145,12 @@ NormalMapRenderer::NormalMapRenderer(QVector2D resolution): m_resolution(resolut
     glBindFramebuffer(GL_FRAMEBUFFER, normalMapFBO);
     glGenTextures(1, &m_normalTexture);
     glBindTexture(GL_TEXTURE_2D, m_normalTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_SHORT, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -148,6 +163,10 @@ NormalMapRenderer::NormalMapRenderer(QVector2D resolution): m_resolution(resolut
 NormalMapRenderer::~NormalMapRenderer() {
     delete textureShader;
     delete normalMap;
+    glDeleteTextures(1, &m_normalTexture);
+    glDeleteFramebuffers(1, &normalMapFBO);
+    glDeleteVertexArrays(1, &textureVAO);
+    glDeleteVertexArrays(1, &VAO);
 }
 
 QOpenGLFramebufferObject *NormalMapRenderer::createFramebufferObject(const QSize &size) {
@@ -163,7 +182,13 @@ void NormalMapRenderer::synchronize(QQuickFramebufferObject *item) {
         normalItem->resUpdated = false;
         m_resolution = normalItem->resolution();
         updateTexResolution();
-    }    
+    }
+    if(normalItem->bpcUpdated) {
+        normalItem->bpcUpdated = false;
+        m_bpc = normalItem->bpc();
+        updateTexResolution();
+        createNormalMap();
+    }
     if(normalItem->normalGenerated) {
         normalItem->normalGenerated = false;
         m_grayscaleTexture = normalItem->grayscaleTexture();
@@ -195,6 +220,7 @@ void NormalMapRenderer::render() {
         glBindTexture(GL_TEXTURE_2D, 0);
         textureShader->release();
     }
+    glFlush();
 }
 
 void NormalMapRenderer::createNormalMap() {
@@ -215,11 +241,18 @@ void NormalMapRenderer::createNormalMap() {
     glBindTexture(GL_TEXTURE_2D, 0);
     normalMap->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void NormalMapRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_normalTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_SHORT, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -230,7 +263,12 @@ void NormalMapRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -250,14 +288,41 @@ void NormalMapRenderer::saveTexture(QString fileName) {
     glBindTexture(GL_TEXTURE_2D, 0);
     textureShader->release();
 
-    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGB16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGB16 *bits = (FIRGB16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*3 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*3 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

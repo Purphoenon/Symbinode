@@ -9,7 +9,7 @@ class SlopeBlurObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    SlopeBlurObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int mode = 0, float intensity = 0.5f, int samples = 0);
+    SlopeBlurObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int mode = 0, float intensity = 0.5f, int samples = 0);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -28,8 +28,11 @@ public:
     void setSamples(int samples);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool slopedTex = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -37,6 +40,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_texture = 0;
     unsigned int m_sourceTexture = 0;
     unsigned int m_slopeTexture = 0;
@@ -49,7 +53,7 @@ private:
 class SlopeBlurRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core
 {
 public:
-    SlopeBlurRenderer(QVector2D res);
+    SlopeBlurRenderer(QVector2D res, GLint bpc);
     ~SlopeBlurRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -59,6 +63,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_sourceTexture = 0;
     unsigned int m_slopeTexture = 0;
     unsigned int m_slopedTexture = 0;

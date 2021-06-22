@@ -33,6 +33,7 @@ Item {
     property alias startAmplitude: amplitudeParam.propertyValue
     property alias startSeed: seedParam.propertyValue
     property alias type: control.currentIndex
+    property alias startBits: bitsParam.currentIndex
     signal noiseTypeChanged(string type)
     signal noiseScaleChanged(real scale)
     signal scaleXChanged(real scale)
@@ -41,11 +42,29 @@ Item {
     signal persistenceChanged(real persistence)
     signal amplitudeChanged(real aplitude)
     signal seedChanged(int seed)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
-        id: control
+        id: bitsParam
         y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
+    ParamDropDown {
+        id: control
+        y: 53
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 noiseTypeChanged("noisePerlin")
@@ -62,7 +81,7 @@ Item {
     }
     ParamSlider {
         id: scaleParam
-        y: 38
+        y: 76
         propertyName: "Scale"
         maximum: 100
         step: 1
@@ -75,7 +94,7 @@ Item {
     }
     ParamSlider {
         id: scaleXParam
-        y: 71
+        y: 109
         propertyName: "Scale X"
         step: 1
         minimum: 1
@@ -89,7 +108,7 @@ Item {
     }
     ParamSlider {
         id: scaleYParam
-        y: 104
+        y: 142
         propertyName: "Scale Y"
         step: 1
         minimum: 1
@@ -103,7 +122,7 @@ Item {
     }
     ParamSlider {
         id: layersParam
-        y: 137
+        y: 175
         propertyName: "Layers"
         maximum: 16
         step: 1
@@ -116,7 +135,7 @@ Item {
     }
     ParamSlider {
         id: persistenceParam
-        y: 170
+        y: 208
         propertyName: "Persistence"
         onPropertyValueChanged: {
             persistenceChanged(persistenceParam.propertyValue)
@@ -127,7 +146,7 @@ Item {
     }
     ParamSlider {
         id: amplitudeParam
-        y: 203
+        y: 241
         propertyName: "Amplitude"
         onPropertyValueChanged: {
             amplitudeChanged(amplitudeParam.propertyValue)
@@ -138,7 +157,7 @@ Item {
     }
     ParamSlider {
         id: seedParam
-        y: 236
+        y: 274
         minimum: 1
         maximum: 100
         step: 1

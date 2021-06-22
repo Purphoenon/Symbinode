@@ -27,12 +27,30 @@ Item {
     height: childrenRect.height + 30
     width: parent.width
     property alias startDirection: control.currentIndex
+    property alias startBits: bitsParam.currentIndex
     signal directionChanged(int dir)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamDropDown {
         id: control
-        y: 15
+        y: 53
         model: ["Left to right", "Right to left", "Top to bottom", "Bottom to top"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {

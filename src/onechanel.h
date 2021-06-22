@@ -30,7 +30,7 @@ class OneChanelObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    OneChanelObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    OneChanelObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     QVariant value();
     void setValue(QVariant val);
@@ -40,6 +40,8 @@ public:
     void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool useTex = false;
     bool selectedItem = false;
     bool texSaving = false;
@@ -52,12 +54,13 @@ private:
     unsigned int m_colorTexture = 0;
     unsigned int m_sourceTexture = 0;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
 };
 
 class OneChanelRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core
 {
 public:
-    OneChanelRenderer(QVector2D resolution);
+    OneChanelRenderer(QVector2D resolution, GLint bpc);
     ~OneChanelRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -68,6 +71,7 @@ private:
     QOpenGLShaderProgram *renderChanel;
     float val = 0.0f;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_colorFBO = 0;
     unsigned int m_colorTexture = 0;
     unsigned int texture = 0;    

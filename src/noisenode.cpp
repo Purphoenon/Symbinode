@@ -22,10 +22,11 @@
 #include "noisenode.h"
 #include <iostream>
 
-NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perlin, NoiseParams simple, QString noiseType):
-    Node(parent, resolution), m_noiseType(noiseType), perlinNoise(perlin), simpleNoise(simple)
+NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, GLint bpc, NoiseParams perlin,
+                     NoiseParams simple, QString noiseType): Node(parent, resolution, bpc),
+    m_noiseType(noiseType), perlinNoise(perlin), simpleNoise(simple)
 {
-    preview = new NoiseObject(grNode, m_resolution, m_noiseType, noiseScale(), scaleX(), scaleY(), layers(), persistence(), amplitude(), seed());
+    preview = new NoiseObject(grNode, m_resolution, m_bpc, m_noiseType, noiseScale(), scaleX(), scaleY(), layers(), persistence(), amplitude(), seed());
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -46,6 +47,7 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     connect(preview, &NoiseObject::changedTexture, this, &NoiseNode::setOutput);
     connect(this, &Node::changeScaleView, this, &NoiseNode::updateScale);
     connect(this, &Node::changeResolution, preview, &NoiseObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &NoiseObject::setBPC);
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Noise");
@@ -62,6 +64,8 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     propertiesPanel->setProperty("startPersistence", persistence());
     propertiesPanel->setProperty("startAmplitude", amplitude());
     propertiesPanel->setProperty("startSeed", seed());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(noiseScaleChanged(qreal)), this, SLOT(updateNoiseScale(qreal)));
     connect(propertiesPanel, SIGNAL(scaleXChanged(qreal)), this, SLOT(updateScaleX(qreal)));
     connect(propertiesPanel, SIGNAL(scaleYChanged(qreal)), this, SLOT(updateScaleY(qreal)));
@@ -70,6 +74,7 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, NoiseParams perli
     connect(propertiesPanel, SIGNAL(amplitudeChanged(qreal)), this, SLOT(updateAmplitude(qreal)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
     connect(propertiesPanel, SIGNAL(noiseTypeChanged(QString)), this, SLOT(updateNoiseType(QString)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -195,6 +200,10 @@ void NoiseNode::saveTexture(QString fileName) {
 
 void NoiseNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && inputNode->resolution() != m_resolution) return;
+    }
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
 }
 
@@ -286,6 +295,8 @@ void NoiseNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &has
         propertiesPanel->setProperty("startAmplitude", amplitude());
         propertiesPanel->setProperty("startSeed", seed());
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void NoiseNode::updateNoiseType(QString type) {

@@ -42,6 +42,7 @@ Item {
     property alias startKeepProportion: keepProportionParam.checked
     property alias startUseAlpha: useAlphaParam.checked
     property alias startDepthMask: depthMaskParam.checked
+    property alias startBits: bitsParam.currentIndex
     signal offsetXChanged(real offset)
     signal offsetYChanged(real offset)
     signal columnsChanged(int columns)
@@ -59,9 +60,28 @@ Item {
     signal keepProportionChanged(bool keep)
     signal useAlphaChanged(bool use)
     signal depthMaskChanged(bool depth)
+    signal bitsChanged(int bitstType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamSlider {
         id: columnsParam
+        y: 38
         propertyName: "Columns"
         minimum: 1
         maximum: 20
@@ -75,7 +95,7 @@ Item {
     }
     ParamSlider {
         id: rowsParam
-        y: 33
+        y: 71
         propertyName: "Rows"
         minimum: 1
         maximum: 20
@@ -89,7 +109,7 @@ Item {
     }
     ParamSlider {
         id: offsetXParam
-        y: 66
+        y: 104
         propertyName: "Offset X"
         onPropertyValueChanged: {
             offsetXChanged(offsetXParam.propertyValue)
@@ -100,7 +120,7 @@ Item {
     }
     ParamSlider {
         id: offsetYParam
-        y: 99
+        y: 137
         propertyName: "Offset Y"
         onPropertyValueChanged: {
             offsetYChanged(offsetYParam.propertyValue)
@@ -111,7 +131,7 @@ Item {
     }
     ParamSlider {
         id: scaleParam
-        y: 132
+        y: 170
         maximum: 4
         propertyName: "Scale"
         onPropertyValueChanged: {
@@ -123,7 +143,7 @@ Item {
     }
     ParamSlider {
         id: scaleXParam
-        y: 165
+        y: 203
         maximum: 4
         propertyName: "Scale X"
         onPropertyValueChanged: {
@@ -135,7 +155,7 @@ Item {
     }
     ParamSlider {
         id: scaleYParam
-        y: 198
+        y: 236
         maximum: 4
         propertyName: "Scale Y"
         onPropertyValueChanged: {
@@ -147,7 +167,7 @@ Item {
     }
     ParamSlider {
         id: rotationParam
-        y: 231
+        y: 269
         maximum: 360
         step: 1
         propertyName: "Rotation"
@@ -160,7 +180,7 @@ Item {
     }
     ParamSlider {
         id: randPositionParam
-        y: 264
+        y: 302
         propertyName: "Randomizing position"
         onPropertyValueChanged: {
             randPositionChanged(randPositionParam.propertyValue)
@@ -171,7 +191,7 @@ Item {
     }
     ParamSlider {
         id: randRotationParam
-        y: 297
+        y: 335
         propertyName: "Randomizing rotation"
         onPropertyValueChanged: {
             randRotationChanged(randRotationParam.propertyValue)
@@ -182,7 +202,7 @@ Item {
     }
     ParamSlider {
         id: randScaleParam
-        y: 330
+        y: 368
         propertyName: "Randomizing scale"
         onPropertyValueChanged: {
             randScaleChanged(randScaleParam.propertyValue)
@@ -193,7 +213,7 @@ Item {
     }
     ParamSlider {
         id: maskStrengthParam
-        y: 363
+        y: 401
         propertyName: "Mask"
         onPropertyValueChanged: {
             maskChanged(maskStrengthParam.propertyValue)
@@ -204,7 +224,7 @@ Item {
     }
     ParamSlider {
         id: inputsCountParam
-        y: 396
+        y: 434
         minimum: 1
         maximum: 6
         step: 1
@@ -218,7 +238,7 @@ Item {
     }
     ParamSlider {
         id: seedParam
-        y: 429
+        y: 467
         minimum: 1
         maximum: 100
         step: 1
@@ -232,7 +252,7 @@ Item {
     }
     ParamCheckbox{
         id: keepProportionParam
-        y: 477
+        y: 515
         text: qsTr("Keep proportion")
         onCheckedChanged: {
             keepProportionChanged(keepProportionParam.checked)
@@ -244,7 +264,7 @@ Item {
     }
     ParamCheckbox {
         id: depthMaskParam
-        y:502
+        y:540
         text: qsTr("Depth mask")
         checked: true
         onCheckedChanged: {
@@ -257,7 +277,7 @@ Item {
     }
     ParamCheckbox {
         id: useAlphaParam
-        y: 527
+        y: 565
         text: qsTr("Use alpha")
         checked: true
         onCheckedChanged: {

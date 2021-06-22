@@ -8,7 +8,7 @@ class DirectionalBlurNode: public Node
 {
     Q_OBJECT
 public:
-    DirectionalBlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float intensity = 3.75f, int angle = 0);
+    DirectionalBlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, float intensity = 3.75f, int angle = 0);
     ~DirectionalBlurNode();
     void operation();
     unsigned int &getPreviewTexture();

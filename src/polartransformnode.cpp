@@ -1,14 +1,14 @@
 #include "polartransformnode.h"
 
-PolarTransformNode::PolarTransformNode(QQuickItem *parent, QVector2D resolution, float radius,
-                                       bool clamp, int angle): Node (parent, resolution),
+PolarTransformNode::PolarTransformNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float radius,
+                                       bool clamp, int angle): Node (parent, resolution, bpc),
     m_radius(radius), m_clamp(clamp), m_angle(angle)
 {
     createSockets(2, 1);
     setTitle("Polar Transform");
     m_socketsInput[0]->setTip("Texture");
     m_socketsInput[1]->setTip("Mask");
-    preview = new PolarTransformObject(grNode, m_resolution, m_radius, m_clamp, m_angle);
+    preview = new PolarTransformObject(grNode, m_resolution, m_bpc, m_radius, m_clamp, m_angle);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -23,15 +23,19 @@ PolarTransformNode::PolarTransformNode(QQuickItem *parent, QVector2D resolution,
     connect(this, &PolarTransformNode::clampChanged, preview, &PolarTransformObject::setClamp);
     connect(this, &PolarTransformNode::angleChanged, preview, &PolarTransformObject::setAngle);
     connect(this, &Node::changeResolution, preview, &PolarTransformObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &PolarTransformObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/PolarTransformProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startRadius", m_radius);
     propertiesPanel->setProperty("startClamp", m_clamp);
     propertiesPanel->setProperty("startRotation", m_angle);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(radiusChanged(qreal)), this, SLOT(updateRadius(qreal)));
     connect(propertiesPanel, SIGNAL(clampChanged(bool)), this, SLOT(updateClamp(bool)));
     connect(propertiesPanel, SIGNAL(angleChanged(int)), this, SLOT(updateAngle(int)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -40,9 +44,19 @@ PolarTransformNode::~PolarTransformNode() {
 }
 
 void PolarTransformNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->polaredTex = true;
+    preview->update();
 }
 
 unsigned int &PolarTransformNode::getPreviewTexture() {
@@ -75,6 +89,8 @@ void PolarTransformNode::deserialize(const QJsonObject &json, QHash<QUuid, Socke
     propertiesPanel->setProperty("startRadius", m_radius);
     propertiesPanel->setProperty("startClamp", m_clamp);
     propertiesPanel->setProperty("startRotation", m_angle);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 float PolarTransformNode::radius() {

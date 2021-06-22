@@ -1,14 +1,15 @@
 #include "gradientnode.h"
 
-GradientNode::GradientNode(QQuickItem *parent, QVector2D resolution, GradientParams linear,
+GradientNode::GradientNode(QQuickItem *parent, QVector2D resolution, GLint bpc, GradientParams linear,
                            GradientParams reflected, GradientParams angular, GradientParams radial,
-                           QString gradientType): Node(parent, resolution), m_gradientType(gradientType),
-    m_linear(linear), m_reflected(reflected), m_angular(angular), m_radial(radial)
+                           QString gradientType): Node(parent, resolution, bpc),
+    m_gradientType(gradientType), m_linear(linear), m_reflected(reflected), m_angular(angular),
+    m_radial(radial)
 {
     createSockets(1, 1);
     setTitle("Gradient");
     m_socketsInput[0]->setTip("Mask");
-    preview = new GradientObject(grNode, m_resolution, m_gradientType, startX(), startY(), endX(), endY(), centerWidth(), tiling());
+    preview = new GradientObject(grNode, m_resolution, m_bpc, m_gradientType, startX(), startY(), endX(), endY(), centerWidth(), tiling());
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -28,6 +29,7 @@ GradientNode::GradientNode(QQuickItem *parent, QVector2D resolution, GradientPar
     connect(preview, &GradientObject::changedTexture, this, &GradientNode::setOutput);
     connect(preview, &GradientObject::updatePreview, this, &GradientNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &GradientObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &GradientObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/GradientProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -42,6 +44,8 @@ GradientNode::GradientNode(QQuickItem *parent, QVector2D resolution, GradientPar
     propertiesPanel->setProperty("startEndY", endY());
     propertiesPanel->setProperty("startCenterWidth", centerWidth());
     propertiesPanel->setProperty("startTiling", tiling());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(gradientTypeChanged(QString)), this, SLOT(updateGradientType(QString)));
     connect(propertiesPanel, SIGNAL(startXChanged(qreal)), this, SLOT(updateStartX(qreal)));
     connect(propertiesPanel, SIGNAL(startYChanged(qreal)), this, SLOT(updateStartY(qreal)));
@@ -49,6 +53,7 @@ GradientNode::GradientNode(QQuickItem *parent, QVector2D resolution, GradientPar
     connect(propertiesPanel, SIGNAL(endYChanged(qreal)), this, SLOT(updateEndY(qreal)));
     connect(propertiesPanel, SIGNAL(centerWidthChanged(qreal)), this, SLOT(updateCenterWidth(qreal)));
     connect(propertiesPanel, SIGNAL(tilingChanged(bool)), this, SLOT(updateTiling(bool)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -57,6 +62,10 @@ GradientNode::~GradientNode() {
 }
 
 void GradientNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && inputNode->resolution() != m_resolution) return;
+    }
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
 }
 
@@ -179,6 +188,8 @@ void GradientNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &
         propertiesPanel->setProperty("startCenterWidth", centerWidth());
         propertiesPanel->setProperty("startTiling", tiling());
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 unsigned int &GradientNode::getPreviewTexture() {

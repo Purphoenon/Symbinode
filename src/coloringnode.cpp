@@ -21,10 +21,10 @@
 
 #include "coloringnode.h"
 
-ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D color):
-    Node(parent, resolution), m_color(color)
+ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, GLint bpc, QVector3D color):
+    Node(parent, resolution, bpc), m_color(color)
 {
-    preview = new ColoringObject(grNode, m_resolution, m_color);
+    preview = new ColoringObject(grNode, m_resolution, m_bpc, m_color);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -36,13 +36,17 @@ ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D c
     connect(this, &Node::generatePreview, this, &ColoringNode::previewGenerated);
     connect(preview, &ColoringObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &ColoringObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &ColoringObject::setBPC);
     connect(preview, &ColoringObject::textureChanged, this, &ColoringNode::setOutput);
     connect(this, &ColoringNode::colorChanged, preview, &ColoringObject::setColor);
     propView = new QQuickView();
-    propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorProperty.qml")));
+    propView->setSource(QUrl(QStringLiteral("qrc:/qml/AlbedoProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startColor", m_color);
-    connect(propertiesPanel, SIGNAL(colorChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+    connect(propertiesPanel, SIGNAL(albedoChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(1, 1);
     setTitle("Coloring");
@@ -85,6 +89,8 @@ void ColoringNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &
         updateColor(c);
         propertiesPanel->setProperty("startColor", c);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 QVector3D ColoringNode::color() {

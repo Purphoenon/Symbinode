@@ -50,6 +50,7 @@ BackgroundRenderer::BackgroundRenderer()
 
 BackgroundRenderer::~BackgroundRenderer(){
     delete backgroundGrid;
+    glDeleteVertexArrays(1, &VAO);
 }
 
 QOpenGLFramebufferObject *BackgroundRenderer::createFramebufferObject(const QSize &size) {

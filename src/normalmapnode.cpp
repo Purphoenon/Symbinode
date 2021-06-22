@@ -21,12 +21,13 @@
 
 #include "normalmapnode.h"
 
-NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, float strenght): Node(parent, resolution), m_strenght(strenght)
+NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float strenght):
+    Node(parent, resolution, bpc), m_strenght(strenght)
 {
     createSockets(1, 1);
     setTitle("Normal Map");
     m_socketsInput[0]->setTip("Height");
-    preview = new NormalMapObject(grNode, m_resolution, m_strenght);
+    preview = new NormalMapObject(grNode, m_resolution, m_bpc, m_strenght);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -41,11 +42,15 @@ NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, float str
     connect(this, &Node::changeScaleView, this, &NormalMapNode::updateScale);
     connect(preview, &NormalMapObject::updatePreview, this, &NormalMapNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &NormalMapObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &NormalMapObject::setBPC);
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/NormalMapProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     connect(propertiesPanel, SIGNAL(strenghtChanged(qreal)), this, SLOT(updateStrenght(qreal)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
-    propertiesPanel->setProperty("startStrenght", m_strenght/30.0f);
+    propertiesPanel->setProperty("startStrenght", m_strenght/10.0f);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 NormalMapNode::~NormalMapNode() {
@@ -53,9 +58,12 @@ NormalMapNode::~NormalMapNode() {
 }
 
 void NormalMapNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && inputNode->resolution() != m_resolution) return;
+    }
     preview->setGrayscaleTexture(m_socketsInput[0]->value().toUInt());
     preview->selectedItem = selected();
-    preview->update();
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
 
@@ -81,8 +89,10 @@ void NormalMapNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> 
     Node::deserialize(json, hash);
     if(json.contains("strength")) {
         updateStrenght(json["strength"].toVariant().toFloat());
-        propertiesPanel->setProperty("startStrenght", m_strenght/30.0f);
+        propertiesPanel->setProperty("startStrenght", m_strenght/10.0f);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void NormalMapNode::updateStrenght(qreal strenght) {

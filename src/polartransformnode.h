@@ -8,7 +8,7 @@ class PolarTransformNode: public Node
 {
     Q_OBJECT
 public:
-    PolarTransformNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float radius = 2.0f, bool clamp = false, int angle = 0);
+    PolarTransformNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float radius = 2.0f, bool clamp = false, int angle = 0);
     ~PolarTransformNode();
     void operation();
     unsigned int &getPreviewTexture();

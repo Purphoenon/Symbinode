@@ -24,21 +24,21 @@
 #include <iostream>
 #include "FreeImage.h"
 
-TileObject::TileObject(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
-                       int rows, float scale, float scaleX, float scaleY, int rotation, float randPosition,
-                       float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
-                       bool keepProportion, bool useAlpha, bool depthMask): QQuickFramebufferObject (parent),
-    m_resolution(resolution), m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows),
-    m_scaleX(scaleX), m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition),
-    m_randRotation(randRotation), m_randScale(randScale), m_maskStrength(maskStrength),
-    m_inputsCount(inputsCount), m_seed(seed), m_scale(scale), m_keepProportion(keepProportion),
-    m_useAlpha(useAlpha), m_depthMask(depthMask)
+TileObject::TileObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float offsetX, float offsetY,
+                       int columns, int rows, float scale, float scaleX, float scaleY, int rotation,
+                       float randPosition, float randRotation, float randScale, float maskStrength,
+                       int inputsCount, int seed, bool keepProportion, bool useAlpha, bool depthMask):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc), m_offsetX(offsetX),
+    m_offsetY(offsetY), m_columns(columns), m_rows(rows), m_scaleX(scaleX), m_scaleY(scaleY),
+    m_rotationAngle(rotation), m_randPosition(randPosition), m_randRotation(randRotation),
+    m_randScale(randScale), m_maskStrength(maskStrength), m_inputsCount(inputsCount), m_seed(seed),
+    m_scale(scale), m_keepProportion(keepProportion), m_useAlpha(useAlpha), m_depthMask(depthMask)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *TileObject::createRenderer() const {
-    return new TileRenderer(m_resolution);
+    return new TileRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &TileObject::texture() {
@@ -306,7 +306,17 @@ void TileObject::setResolution(QVector2D res) {
     update();
 }
 
-TileRenderer::TileRenderer(QVector2D res): m_resolution(res) {
+GLint TileObject::bpc() {
+    return m_bpc;
+}
+
+void TileObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
+TileRenderer::TileRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     tileShader = new QOpenGLShaderProgram();
@@ -369,7 +379,12 @@ TileRenderer::TileRenderer(QVector2D res): m_resolution(res) {
     glBindFramebuffer(GL_FRAMEBUFFER, tileFBO);
     glGenTextures(1, &m_tiledTexture);
     glBindTexture(GL_TEXTURE_2D, m_tiledTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -396,6 +411,12 @@ TileRenderer::~TileRenderer() {
     delete tileShader;
     delete checkerShader;
     delete textureShader;
+    delete randomShader;
+    glDeleteTextures(1, &m_tiledTexture);
+    glDeleteTextures(1, &m_randomTexture);
+    glDeleteFramebuffers(1, &tileFBO);
+    glDeleteFramebuffers(1, &randomFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *TileRenderer::createFramebufferObject(const QSize &size) {
@@ -411,6 +432,12 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
         tileItem->resUpdated = false;
         m_resolution = tileItem->resolution();
         updateTexResolution();
+    }
+    if(tileItem->bpcUpdated) {
+        tileItem->bpcUpdated = false;
+        m_bpc = tileItem->bpc();
+        updateTexResolution();
+        createTile();
     }
     if(tileItem->tiledTex) {
         tileItem->tiledTex = false;
@@ -486,6 +513,7 @@ void TileRenderer::render() {
         glBindVertexArray(0);
         textureShader->release();
     }
+    glFlush();
 }
 
 void TileRenderer::createTile() {
@@ -517,6 +545,8 @@ void TileRenderer::createTile() {
     tileShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void TileRenderer::createRandom() {
@@ -534,7 +564,12 @@ void TileRenderer::createRandom() {
 
 void TileRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_tiledTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -545,7 +580,12 @@ void TileRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &tex);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -565,14 +605,42 @@ void TileRenderer::saveTexture(QString fileName) {
     glBindVertexArray(0);
     textureShader->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &tex);
+    glDeleteFramebuffers(1, &fbo);
 }

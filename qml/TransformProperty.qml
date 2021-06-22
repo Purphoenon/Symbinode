@@ -31,15 +31,35 @@ Item {
     property alias startScaleY: scaleYParam.propertyValue
     property alias startRotation: rotationParam.propertyValue
     property alias startClamp: clampParam.checked
+    property alias startBits: bitsParam.currentIndex
     signal transXChanged(real x)
     signal transYChanged(real y)
     signal scaleXChanged(real x)
     signal scaleYChanged(real y)
     signal angleChanged(int angle)
     signal clampCoordsChanged(bool clamp)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamSlider {
         id: transXParam
+        y: 38
         propertyName: "Translate X"
         minimum: -1
         onPropertyValueChanged: {
@@ -51,7 +71,7 @@ Item {
     }
     ParamSlider {
         id: transYParam
-        y: 33
+        y: 71
         propertyName: "Translate Y"
         minimum: -1
         onPropertyValueChanged: {
@@ -63,7 +83,7 @@ Item {
     }
     ParamSlider {
         id: scaleXParam
-        y: 66
+        y: 104
         propertyName: "Scale X"
         maximum: 2
         onPropertyValueChanged: {
@@ -75,7 +95,7 @@ Item {
     }
     ParamSlider {
         id: scaleYParam
-        y: 99
+        y: 137
         propertyName: "Scale Y"
         maximum: 2
         onPropertyValueChanged: {
@@ -87,7 +107,7 @@ Item {
     }
     ParamSlider {
         id: rotationParam
-        y: 132
+        y: 170
         propertyName: "Rotation"
         maximum: 360
         step: 1
@@ -100,7 +120,7 @@ Item {
     }
     ParamCheckbox {
         id: clampParam
-        y: 180
+        y: 218
         width: 75
         text: qsTr("Clamp")
         onCheckedChanged: {

@@ -582,6 +582,8 @@ Preview3DRenderer::Preview3DRenderer() {
     brdfShader->release();
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &captureFBO);
+    glDeleteRenderbuffers(1, &captureRBO);
 
     //buffer for rendering the scene and highlights
     glGenFramebuffers(1, &hdrFBO);
@@ -701,6 +703,38 @@ Preview3DRenderer::~Preview3DRenderer() {
     delete prefilteredShader;
     delete textureShader;
     delete brdfShader;
+    delete blurShader;
+    delete bloomShader;
+    delete brightShader;
+    glDeleteTextures(1, &hdrTexture);
+    glDeleteTextures(1, &envCubemap);
+    glDeleteTextures(1, &irradianceMap);
+    glDeleteTextures(1, &prefilterMap);
+    glDeleteTextures(1, &brdfLUTTexture);
+    glDeleteTextures(1, &brightTexture);
+    glDeleteTextures(2, &pingpongBuffer[0]);
+    glDeleteTextures(1, &screenTexture);
+    glDeleteTextures(1, &multisampleTexture);
+    glDeleteTextures(1, &combinedTexture);
+    glDeleteTextures(1, &albedoTexture);
+    glDeleteTextures(1, &metalTexture);
+    glDeleteTextures(1, &roughTexture);
+    glDeleteTextures(1, &normalTexture);
+    glDeleteTextures(1, &heightTexture);
+    glDeleteTextures(1, &emissionTexture);
+    glDeleteVertexArrays(1, &cubeMapVAO);
+    glDeleteVertexArrays(1, &sphereVAO);
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteVertexArrays(1, &planeVAO);
+    glDeleteFramebuffers(1, &hdrFBO);
+    glDeleteFramebuffers(2, &pingpongFBO[0]);
+    glDeleteFramebuffers(1, &screenFBO);
+    glDeleteFramebuffers(1, &multisampleFBO);
+    glDeleteFramebuffers(1, &combinedFBO);
+    glDeleteFramebuffers(1, &outputFBO);
+    glDeleteRenderbuffers(1, &rboDepth);
+
 }
 
 QOpenGLFramebufferObject *Preview3DRenderer::createFramebufferObject(const QSize &size) {
@@ -769,6 +803,7 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
         if(previewItem->changedAlbedo) {
             previewItem->changedAlbedo = false;
             updateOutputsTexture(albedoTexture, previewItem->albedo().toUInt());
+            pbrShader->bind();
         }
     }
     else {
@@ -779,6 +814,7 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
         if(previewItem->changedMetal) {
             previewItem->changedMetal = false;
             updateOutputsTexture(metalTexture, previewItem->metalness().toUInt());
+            pbrShader->bind();
         }
     }
     else {
@@ -789,6 +825,7 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
         if(previewItem->changedRough) {
             previewItem->changedRough = false;
             updateOutputsTexture(roughTexture, previewItem->roughness().toUInt());
+            pbrShader->bind();
         }
     }
     else {
@@ -860,6 +897,8 @@ void Preview3DRenderer::render() {
 
         glDisable(GL_DEPTH_TEST);
     }
+    glFlush();
+    glFinish();
 
     /*glDepthFunc(GL_LEQUAL);
     backgroundShader->bind();
@@ -1141,10 +1180,10 @@ void Preview3DRenderer::renderSphere() {
             unsigned int next = (y + 1)*(X_SEGMENTS + 1);
             for (unsigned int x = 0; x < X_SEGMENTS; ++x) {
                 indices.push_back(start + x);
-                indices.push_back(next + x);
-                indices.push_back(start + x + 1);
                 indices.push_back(start + x + 1);
                 indices.push_back(next + x);
+                indices.push_back(next + x);
+                indices.push_back(start + x + 1);                
                 indices.push_back(next + x + 1);
             }
         }
@@ -1299,10 +1338,14 @@ void Preview3DRenderer::renderScene() {
     glBindTexture(GL_TEXTURE_2D, emissionTexture);
     switch (primitive) {
         case 0: default:
+            glEnable(GL_CULL_FACE);
             renderSphere();
+            glDisable(GL_CULL_FACE);
             break;
         case 1:
+            glEnable(GL_CULL_FACE);
             renderCube();
+            glDisable(GL_CULL_FACE);
             break;
         case 2:
             renderPlane();
@@ -1436,4 +1479,6 @@ void Preview3DRenderer::updateOutputsTexture(unsigned int &dst, const unsigned i
     glBindTexture(GL_TEXTURE_2D, dst);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }

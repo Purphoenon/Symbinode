@@ -67,6 +67,9 @@ Clipboard::~Clipboard() {
     for(auto edge: clipboard_edges) {
         delete edge;
     }
+    for(auto frame: clipboard_frames) {
+        delete frame;
+    }
 }
 
 void Clipboard::cut(Scene *scene) {
@@ -335,46 +338,49 @@ void Clipboard::clear() {
 Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     if(qobject_cast<NoiseNode*>(node)) {
         NoiseNode *baseNode = qobject_cast<NoiseNode*>(node);
-        NoiseNode *noiseNode = new NoiseNode(parent, scene->resolution(), baseNode->perlinParams(),
-                                             baseNode->simpleParams(), baseNode->noiseType());
+        NoiseNode *noiseNode = new NoiseNode(parent, scene->resolution(), baseNode->bpc(),
+                                             baseNode->perlinParams(), baseNode->simpleParams(),
+                                             baseNode->noiseType());
         return noiseNode;
     }
     else if(qobject_cast<MixNode*>(node)) {
         MixNode *baseNode = qobject_cast<MixNode*>(node);
-        MixNode *mixNode = new MixNode(parent, scene->resolution(), baseNode->factor(),
+        MixNode *mixNode = new MixNode(parent, scene->resolution(), baseNode->bpc(), baseNode->factor(),
                                        baseNode->foregroundOpacity(), baseNode->backgroundOpacity(),
                                        baseNode->mode(), baseNode->includingAlpha());
         return mixNode;
     }
     else if(qobject_cast<NormalMapNode*>(node)) {
         NormalMapNode *baseNode = qobject_cast<NormalMapNode*>(node);
-        NormalMapNode *normalMapNode = new NormalMapNode(parent, scene->resolution(), baseNode->strenght());
+        NormalMapNode *normalMapNode = new NormalMapNode(parent, scene->resolution(), baseNode->bpc(),
+                                                         baseNode->strenght());
         return normalMapNode;
     }
     else if(qobject_cast<VoronoiNode*>(node)) {
         VoronoiNode *baseNode = qobject_cast<VoronoiNode*>(node);
-        VoronoiNode *voronoiNode = new VoronoiNode(parent, scene->resolution(), baseNode->crystalsParam(),
-                                                   baseNode->bordersParam(), baseNode->solidParam(),
-                                                   baseNode->worleyParam(), baseNode->voronoiType());
+        VoronoiNode *voronoiNode = new VoronoiNode(parent, scene->resolution(), baseNode->bpc(),
+                                                   baseNode->crystalsParam(), baseNode->bordersParam(),
+                                                   baseNode->solidParam(), baseNode->worleyParam(),
+                                                   baseNode->voronoiType());
         return voronoiNode;
     }
     else if(qobject_cast<PolygonNode*>(node)) {
         PolygonNode *baseNode = qobject_cast<PolygonNode*>(node);
-        PolygonNode *polygonNode = new PolygonNode(parent, scene->resolution(), baseNode->sides(),
-                                                   baseNode->polygonScale(), baseNode->smooth(),
-                                                   baseNode->useAlpha());
+        PolygonNode *polygonNode = new PolygonNode(parent, scene->resolution(), baseNode->bpc(),
+                                                   baseNode->sides(), baseNode->polygonScale(),
+                                                   baseNode->smooth(), baseNode->useAlpha());
         return polygonNode;
     }
     else if(qobject_cast<CircleNode*>(node)) {
         CircleNode *baseNode = qobject_cast<CircleNode*>(node);
-        CircleNode *circleNode = new CircleNode(parent, scene->resolution(), baseNode->interpolation(),
-                                                   baseNode->radius(), baseNode->smooth(),
-                                                baseNode->useAlpha());
+        CircleNode *circleNode = new CircleNode(parent, scene->resolution(), baseNode->bpc(),
+                                                baseNode->interpolation(), baseNode->radius(),
+                                                baseNode->smooth(), baseNode->useAlpha());
         return circleNode;
     }
     else if(qobject_cast<TransformNode*>(node)) {
         TransformNode *baseNode = qobject_cast<TransformNode*>(node);
-        TransformNode *transformNode = new TransformNode(parent, scene->resolution(),
+        TransformNode *transformNode = new TransformNode(parent, scene->resolution(), baseNode->bpc(),
                                                          baseNode->translationX(), baseNode->translationY(),
                                                          baseNode->scaleX(), baseNode->scaleY(),
                                                          baseNode->rotation(), baseNode->clampCoords());
@@ -382,7 +388,7 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     }
     else if(qobject_cast<TileNode*>(node)) {
         TileNode *baseNode = qobject_cast<TileNode*>(node);
-        TileNode *tileNode = new TileNode(parent, scene->resolution(), baseNode->offsetX(),
+        TileNode *tileNode = new TileNode(parent, scene->resolution(), baseNode->bpc(), baseNode->offsetX(),
                                           baseNode->offsetY(), baseNode->columns(), baseNode->rows(),
                                           baseNode->tileScale(), baseNode->scaleX(), baseNode->scaleY(),
                                           baseNode->rotationAngle(), baseNode->randPosition(),
@@ -394,21 +400,22 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     }
     else if(qobject_cast<WarpNode*>(node)) {
         WarpNode *baseNode = qobject_cast<WarpNode*>(node);
-        WarpNode *warpNode = new WarpNode(parent, scene->resolution(), baseNode->intensity());
+        WarpNode *warpNode = new WarpNode(parent, scene->resolution(), baseNode->bpc(), baseNode->intensity());
         return warpNode;
     }
     else if(qobject_cast<BlurNode*>(node)) {
         BlurNode *baseNode = qobject_cast<BlurNode*>(node);
-        BlurNode *blurNode = new BlurNode(parent, scene->resolution(), baseNode->intensity());
+        BlurNode *blurNode = new BlurNode(parent, scene->resolution(), baseNode->bpc(), baseNode->intensity());
         return blurNode;
     }
     else if(qobject_cast<InverseNode*>(node)) {
-        InverseNode *inverseNode = new InverseNode(parent, scene->resolution());
+        InverseNode *inverseNode = new InverseNode(parent, scene->resolution(), node->bpc());
         return inverseNode;
     }
     else if(qobject_cast<ColorRampNode*>(node)) {
         ColorRampNode *baseNode = qobject_cast<ColorRampNode*>(node);
-        ColorRampNode *colorRampNode = new ColorRampNode(parent, scene->resolution(), baseNode->stops());
+        ColorRampNode *colorRampNode = new ColorRampNode(parent, scene->resolution(), baseNode->bpc(),
+                                                         baseNode->stops());
         return colorRampNode;
     }
     else if(qobject_cast<ColorNode*>(node)) {
@@ -418,48 +425,52 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     }
     else if(qobject_cast<ColoringNode*>(node)) {
         ColoringNode *baseNode = qobject_cast<ColoringNode*>(node);
-        ColoringNode *coloringNode = new ColoringNode(parent, scene->resolution(), baseNode->color());
+        ColoringNode *coloringNode = new ColoringNode(parent, scene->resolution(), baseNode->bpc(),
+                                                      baseNode->color());
         return coloringNode;
     }
     else if(qobject_cast<MappingNode*>(node)) {
         MappingNode *baseNode = qobject_cast<MappingNode*>(node);
-        MappingNode *mappingNode = new MappingNode(parent, scene->resolution(),
+        MappingNode *mappingNode = new MappingNode(parent, scene->resolution(), baseNode->bpc(),
                                                     baseNode->inputMin(), baseNode->inputMax(),
                                                     baseNode->outputMin(), baseNode->outputMax());
         return mappingNode;
     }
     else if(qobject_cast<MirrorNode*>(node)) {
         MirrorNode *baseNode = qobject_cast<MirrorNode*>(node);
-        MirrorNode *mirrorNode = new MirrorNode(parent, scene->resolution(),
+        MirrorNode *mirrorNode = new MirrorNode(parent, scene->resolution(), baseNode->bpc(),
                                                     baseNode->direction());
         return mirrorNode;
     }
     else if(qobject_cast<BrightnessContrastNode*>(node)) {
         BrightnessContrastNode *baseNode = qobject_cast<BrightnessContrastNode*>(node);
         BrightnessContrastNode *brightnessContrastNode = new BrightnessContrastNode(parent, scene->resolution(),
-                                                    baseNode->brightness(), baseNode->contrast());
+                                                    baseNode->bpc(), baseNode->brightness(),
+                                                    baseNode->contrast());
         return brightnessContrastNode;
     }
     else if(qobject_cast<ThresholdNode*>(node)) {
         ThresholdNode *baseNode = qobject_cast<ThresholdNode*>(node);
-        ThresholdNode *thresholdNode = new ThresholdNode(parent, scene->resolution(),
+        ThresholdNode *thresholdNode = new ThresholdNode(parent, scene->resolution(), baseNode->bpc(),
                                                     baseNode->threshold());
         return thresholdNode;
     }
     else if (qobject_cast<GrayscaleNode*>(node)) {
-        GrayscaleNode *grayscaleNode = new GrayscaleNode(parent, scene->resolution());
+        GrayscaleNode *grayscaleNode = new GrayscaleNode(parent, scene->resolution(), node->bpc());
         return  grayscaleNode;
     }
     else if (qobject_cast<GradientNode*>(node)) {
         GradientNode *baseNode = qobject_cast<GradientNode*>(node);
-        GradientNode *gradientNode = new GradientNode(parent, scene->resolution(), baseNode->linearParam(),
-                                                      baseNode->reflectedParam(), baseNode->angularParam(),
-                                                      baseNode->radialParam(), baseNode->gradientType());
+        GradientNode *gradientNode = new GradientNode(parent, scene->resolution(), baseNode->bpc(),
+                                                      baseNode->linearParam(), baseNode->reflectedParam(),
+                                                      baseNode->angularParam(), baseNode->radialParam(),
+                                                      baseNode->gradientType());
         return gradientNode;
     }
     else if(qobject_cast<DirectionalWarpNode*>(node)) {
         DirectionalWarpNode *baseNode = qobject_cast<DirectionalWarpNode*>(node);
         DirectionalWarpNode *directionalWarpNode = new DirectionalWarpNode(parent, scene->resolution(),
+                                                                           baseNode->bpc(),
                                                                            baseNode->intensity(),
                                                                            baseNode->angle());
         return directionalWarpNode;
@@ -467,42 +478,46 @@ Node *Clipboard::nodeCopy(Node *node, Scene *scene, QQuickItem *parent) {
     else if (qobject_cast<DirectionalBlurNode*>(node)) {
         DirectionalBlurNode *baseNode = qobject_cast<DirectionalBlurNode*>(node);
         DirectionalBlurNode *directionalBlurNode = new DirectionalBlurNode(parent, scene->resolution(),
+                                                                           baseNode->bpc(),
                                                                            baseNode->intensity(),
                                                                            baseNode->angle());
         return directionalBlurNode;
     }
     else if(qobject_cast<SlopeBlurNode*>(node)) {
         SlopeBlurNode *baseNode = qobject_cast<SlopeBlurNode*>(node);
-        SlopeBlurNode *slopeBlurNode = new SlopeBlurNode(parent, scene->resolution(), baseNode->mode(),
-                                                         baseNode->intensity(), baseNode->samples());
+        SlopeBlurNode *slopeBlurNode = new SlopeBlurNode(parent, scene->resolution(), baseNode->bpc(),
+                                                         baseNode->mode(), baseNode->intensity(),
+                                                         baseNode->samples());
         return slopeBlurNode;
     }
     else if (qobject_cast<BevelNode*>(node)) {
         BevelNode *baseNode = qobject_cast<BevelNode*>(node);
-        BevelNode *bevelNode = new BevelNode(parent, scene->resolution(), baseNode->distance(),
-                                             baseNode->smooth(), baseNode->useAlpha());
+        BevelNode *bevelNode = new BevelNode(parent, scene->resolution(), baseNode->bpc(),
+                                             baseNode->distance(), baseNode->smooth(), baseNode->useAlpha());
         return bevelNode;
     }
     else if(qobject_cast<PolarTransformNode*>(node)) {
         PolarTransformNode *baseNode = qobject_cast<PolarTransformNode*>(node);
-        PolarTransformNode *polarNode = new PolarTransformNode(parent, scene->resolution(), baseNode->radius(),
-                                                               baseNode->clamp(), baseNode->angle());
+        PolarTransformNode *polarNode = new PolarTransformNode(parent, scene->resolution(), baseNode->bpc(),
+                                                               baseNode->radius(), baseNode->clamp(),
+                                                               baseNode->angle());
         return polarNode;
     }
     else if (qobject_cast<BricksNode*>(node)) {
         BricksNode *baseNode = qobject_cast<BricksNode*>(node);
-        BricksNode *bricksNode = new BricksNode(parent, scene->resolution(), baseNode->columns(),
-                                                baseNode->rows(), baseNode->offset(), baseNode->bricksWidth(),
-                                                baseNode->bricksHeight(), baseNode->smoothX(),
-                                                baseNode->smoothY(), baseNode->mask(), baseNode->seed());
+        BricksNode *bricksNode = new BricksNode(parent, scene->resolution(), baseNode->bpc(),
+                                                baseNode->columns(), baseNode->rows(), baseNode->offset(),
+                                                baseNode->bricksWidth(), baseNode->bricksHeight(),
+                                                baseNode->smoothX(), baseNode->smoothY(), baseNode->mask(),
+                                                baseNode->seed());
         return bricksNode;
     }
     else if(qobject_cast<HexagonsNode*>(node)) {
         HexagonsNode *baseNode = qobject_cast<HexagonsNode*>(node);
-        HexagonsNode *hexagonsNode = new HexagonsNode(parent, scene->resolution(), baseNode->columns(),
-                                                      baseNode->rows(), baseNode->hexSize(),
-                                                      baseNode->hexSmooth(), baseNode->mask(),
-                                                      baseNode->seed());
+        HexagonsNode *hexagonsNode = new HexagonsNode(parent, scene->resolution(), baseNode->bpc(),
+                                                      baseNode->columns(), baseNode->rows(),
+                                                      baseNode->hexSize(), baseNode->hexSmooth(),
+                                                      baseNode->mask(), baseNode->seed());
         return hexagonsNode;
     }
     return nullptr;

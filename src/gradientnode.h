@@ -17,7 +17,7 @@ class GradientNode: public Node
 {
     Q_OBJECT
 public:
-    GradientNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GradientParams linear = GradientParams(), GradientParams reflected = GradientParams(), GradientParams angular = GradientParams{0.5f, 0.5f, 1.0f, 0.5f, 0.0f}, GradientParams radial = GradientParams{0.5f, 0.5f, 0.5f, 1.0f, 0.0f}, QString gradientType = "linear");
+    GradientNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, GradientParams linear = GradientParams(), GradientParams reflected = GradientParams(), GradientParams angular = GradientParams{0.5f, 0.5f, 1.0f, 0.5f, 0.0f}, GradientParams radial = GradientParams{0.5f, 0.5f, 0.5f, 1.0f, 0.0f}, QString gradientType = "linear");
     ~GradientNode();
     void operation();
     void serialize(QJsonObject &json) const;

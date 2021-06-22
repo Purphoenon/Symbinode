@@ -29,7 +29,7 @@ class ColoringNode: public Node
 {
     Q_OBJECT
 public:
-    ColoringNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QVector3D color = QVector3D(1, 1, 1));
+    ColoringNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, QVector3D color = QVector3D(1, 1, 1));
     ~ColoringNode();
     void operation();
     unsigned int &getPreviewTexture();

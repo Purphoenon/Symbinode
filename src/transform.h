@@ -30,7 +30,7 @@ class TransformObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    TransformObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float transX = 0.0f, float transY = 0.0f, float scaleX = 1.0f, float scaleY = 1.0f, int angle = 0, bool clamp = false);
+    TransformObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float transX = 0.0f, float transY = 0.0f, float scaleX = 1.0f, float scaleY = 1.0f, int angle = 0, bool clamp = false);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -53,9 +53,12 @@ public:
     void setClampCoords(bool clamp);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool transformedTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -63,6 +66,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_sourceTexture = 0;
     float m_translateX = 0.0f;
     float m_translateY = 0.0f;
@@ -76,7 +80,7 @@ private:
 
 class TransformRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    TransformRenderer(QVector2D resolution);
+    TransformRenderer(QVector2D resolution, GLint bpc);
     ~TransformRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -86,6 +90,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_sourceTexture = 0;
     unsigned int m_transformedTexture = 0;
     unsigned int maskTexture = 0;

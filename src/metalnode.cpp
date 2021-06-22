@@ -21,12 +21,12 @@
 
 #include "metalnode.h"
 
-MetalNode::MetalNode(QQuickItem *parent, QVector2D resolution): Node(parent, resolution)
+MetalNode::MetalNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(parent, resolution, bpc)
 {
     createSockets(1, 0);
     setTitle("Metalness");
     m_socketsInput[0]->setTip("Metalness");
-    preview = new OneChanelObject(grNode, m_resolution);
+    preview = new OneChanelObject(grNode, m_resolution, m_bpc);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -38,10 +38,14 @@ MetalNode::MetalNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     connect(this, &Node::changeScaleView, this, &MetalNode::updateScale);
     connect(preview, &OneChanelObject::updateValue, this, &MetalNode::metalChanged);
     connect(this, &Node::changeResolution, preview, &OneChanelObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &OneChanelObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/MetalProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(metalChanged(qreal)), this, SLOT(updateMetal(qreal)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -81,7 +85,9 @@ void MetalNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash
     if(json.contains("metal")) {
         updateMetal(json["metal"].toVariant().toFloat());
         propertiesPanel->setProperty("startMetal", m_metal);
-    }    
+    }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void MetalNode::updateMetal(qreal metal) {

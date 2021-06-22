@@ -29,7 +29,7 @@ class BlurNode: public Node
 {
     Q_OBJECT
 public:
-    BlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float intensity = 0.5f);
+    BlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float intensity = 0.5f);
     ~BlurNode();
     void operation();
     unsigned int &getPreviewTexture();

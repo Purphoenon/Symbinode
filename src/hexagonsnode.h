@@ -8,7 +8,7 @@ class HexagonsNode: public Node
 {
     Q_OBJECT
 public:
-    HexagonsNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f, float mask = 0.0f, int seed = 1);
+    HexagonsNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f, float mask = 0.0f, int seed = 1);
     ~HexagonsNode();
     unsigned int &getPreviewTexture();
     void saveTexture(QString fileName);

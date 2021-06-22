@@ -253,11 +253,17 @@ PreviewRenderer::PreviewRenderer() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, checkerTexture);
     glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);    
+    glDeleteFramebuffers(1, &checkerFBO);
+    glDeleteVertexArrays(1, &VAO2);
 }
 
 PreviewRenderer::~PreviewRenderer() {
     delete textureShader;
+    delete checkerShader;
+    glDeleteTextures(1, &checkerTexture);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteVertexArrays(1, &checkerVAO);
 }
 
 QOpenGLFramebufferObject *PreviewRenderer::createFramebufferObject(const QSize &size) {

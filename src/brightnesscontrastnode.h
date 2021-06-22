@@ -29,7 +29,7 @@ class BrightnessContrastNode: public Node
 {
     Q_OBJECT
 public:
-    BrightnessContrastNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float brightness = 0.0f, float contrast = 0.0f);
+    BrightnessContrastNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float brightness = 0.0f, float contrast = 0.0f);
     ~BrightnessContrastNode();
     void operation();
     unsigned int &getPreviewTexture();

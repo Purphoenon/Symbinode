@@ -29,7 +29,7 @@ class MetalNode: public Node
 {
     Q_OBJECT
 public:
-    MetalNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    MetalNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     ~MetalNode();
     void operation();
     unsigned int &getPreviewTexture();

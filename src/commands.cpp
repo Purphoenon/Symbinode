@@ -401,7 +401,7 @@ PropertyChangeCommand::PropertyChangeCommand(QQuickItem *item, const char* propN
 
 PropertyChangeCommand::~PropertyChangeCommand() {
     m_item = nullptr;
-    m_propName = nullptr;
+    delete [] m_propName;
 }
 
 void PropertyChangeCommand::undo() {

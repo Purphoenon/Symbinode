@@ -1,16 +1,17 @@
 #include "gradient.h"
 #include <QOpenGLFramebufferObjectFormat>
 
-GradientObject::GradientObject(QQuickItem *parent, QVector2D resolution, QString type, float startX,
-                               float startY, float endX, float endY, float centerWidth, bool tiling):
-    QQuickFramebufferObject (parent), m_gradientType(type), m_startX(startX), m_startY(startY), m_endX(endX),
-    m_endY(endY), m_reflectedWidth(centerWidth), m_tiling(tiling), m_resolution(resolution)
+GradientObject::GradientObject(QQuickItem *parent, QVector2D resolution, GLint bpc, QString type,
+                               float startX, float startY, float endX, float endY, float centerWidth,
+                               bool tiling): QQuickFramebufferObject (parent), m_gradientType(type),
+    m_startX(startX), m_startY(startY), m_endX(endX), m_endY(endY), m_reflectedWidth(centerWidth),
+    m_tiling(tiling), m_resolution(resolution), m_bpc(bpc)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *GradientObject::createRenderer() const {
-    return new GradientRenderer(m_resolution);
+    return new GradientRenderer(m_resolution, m_bpc);
 }
 
 QString GradientObject::gradientType() {
@@ -118,7 +119,17 @@ void GradientObject::setResolution(QVector2D res) {
     update();
 }
 
-GradientRenderer::GradientRenderer(QVector2D res): m_resolution(res){
+GLint GradientObject::bpc() {
+    return m_bpc;
+}
+
+void GradientObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
+GradientRenderer::GradientRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc){
     initializeOpenGLFunctions();
     gradientShader = new QOpenGLShaderProgram();
     gradientShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
@@ -179,7 +190,12 @@ GradientRenderer::GradientRenderer(QVector2D res): m_resolution(res){
     glBindFramebuffer(GL_FRAMEBUFFER, gradientFBO);
     glGenTextures(1, &gradientTexture);
     glBindTexture(GL_TEXTURE_2D, gradientTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -191,7 +207,13 @@ GradientRenderer::GradientRenderer(QVector2D res): m_resolution(res){
 }
 
 GradientRenderer::~GradientRenderer() {
-
+    delete gradientShader;
+    delete checkerShader;
+    delete renderTexture;
+    glDeleteTextures(1, &gradientTexture);
+    glDeleteFramebuffers(1, &gradientFBO);
+    glDeleteVertexArrays(1, &gradientVAO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *GradientRenderer::createFramebufferObject(const QSize &size) {
@@ -213,7 +235,12 @@ void GradientRenderer::synchronize(QQuickFramebufferObject *item) {
             gradientItem->setTexture(gradientTexture);
         }
     }
-
+    if(gradientItem->bpcUpdated) {
+        gradientItem->bpcUpdated = false;
+        m_bpc = gradientItem->bpc();
+        updateTexResolution();
+        createGradient();
+    }
     if(gradientItem->generatedGradient) {
         gradientItem->generatedGradient = false;
         m_maskTexture = gradientItem->maskTexture();
@@ -257,6 +284,7 @@ void GradientRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
     glBindVertexArray(0);
+    glFlush();
 }
 
 void GradientRenderer::createGradient() {
@@ -277,11 +305,18 @@ void GradientRenderer::createGradient() {
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void GradientRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, gradientTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -293,7 +328,12 @@ void GradientRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -315,16 +355,42 @@ void GradientRenderer::saveTexture(QString fileName) {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    FIBITMAP *result = FreeImage_ConvertToRGBA16(image);
-    if (FreeImage_Save(FIF_PNG, result, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(result);
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

@@ -14,7 +14,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 RC_ICONS = icons/symbinode.ico
 
 INCLUDEPATH += libs/FreeImage
+INCLUDEPATH += "C:/Program Files (x86)/Visual Leak Detector/include"
 LIBS += -L$$_PRO_FILE_PWD_/libs/FreeImage -lFreeImage
+LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win64" -lvld
 
 # You can also make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -264,4 +266,5 @@ DISTFILES += \
     shaders/bricks.frag \
     qml/BricksProperty.qml \
     shaders/hexagons.frag \
-    qml/HexagonsProperty.qml
+    qml/HexagonsProperty.qml \
+    qml/BitsProperty.qml

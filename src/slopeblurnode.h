@@ -8,7 +8,7 @@ class SlopeBlurNode: public Node
 {
     Q_OBJECT
 public:
-    SlopeBlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int mode = 0, float intensity = 0.5f, int samples = 1);
+    SlopeBlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int mode = 0, float intensity = 0.5f, int samples = 1);
     ~SlopeBlurNode();
     void operation();
     unsigned int &getPreviewTexture();

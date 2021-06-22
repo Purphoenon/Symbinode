@@ -31,10 +31,12 @@ class NormalObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    NormalObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    NormalObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     unsigned int &normalTexture();
     void setNormalTexture(unsigned int texture);
     void saveTexture(QString fileName);
@@ -46,12 +48,13 @@ signals:
     void updateNormal(unsigned int normalMap);
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_normalMap = 0;
 };
 
 class NormalRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    NormalRenderer(QVector2D resolution);
+    NormalRenderer(QVector2D resolution, GLint bpc);
     ~NormalRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -60,6 +63,7 @@ private:
     void saveTexture(QString name);
     QOpenGLShaderProgram *renderNormal;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int VAO = 0;
     unsigned int m_normalTexture = 0;
 };

@@ -21,11 +21,11 @@
 
 #include "circlenode.h"
 
-CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolation, float radius,
-                       float smooth, bool useAlpha): Node(parent, resolution),
+CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, GLint bpc, int interpolation, float radius,
+                       float smooth, bool useAlpha): Node(parent, resolution, bpc),
     m_interpolation(interpolation), m_radius(radius), m_smooth(smooth), m_useAlpha(useAlpha)
 {
-    preview = new CircleObject(grNode, m_resolution, m_interpolation, m_radius, m_smooth, m_useAlpha);
+    preview = new CircleObject(grNode, m_resolution, m_bpc, m_interpolation, m_radius, m_smooth, m_useAlpha);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -38,6 +38,7 @@ CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolati
     connect(preview, &CircleObject::changedTexture, this, &CircleNode::setOutput);
     connect(preview, &CircleObject::updatePreview, this, &CircleNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &CircleObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &CircleObject::setBPC);
     connect(this, &CircleNode::interpolationChanged, preview, &CircleObject::setInterpolation);
     connect(this, &CircleNode::radiusChanged, preview, &CircleObject::setRadius);
     connect(this, &CircleNode::smoothChanged, preview, &CircleObject::setSmooth);
@@ -52,10 +53,13 @@ CircleNode::CircleNode(QQuickItem *parent, QVector2D resolution, int interpolati
     propertiesPanel->setProperty("startRadius", m_radius);
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(interpolationChanged(int)), this, SLOT(updateInterpolation(int)));
     connect(propertiesPanel, SIGNAL(radiusChanged(qreal)), this, SLOT(updateRadius(qreal)));
     connect(propertiesPanel, SIGNAL(smoothValueChanged(qreal)), this, SLOT(updateSmooth(qreal)));
     connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -104,6 +108,8 @@ void CircleNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &ha
     propertiesPanel->setProperty("startRadius", m_radius);
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 int CircleNode::interpolation() {

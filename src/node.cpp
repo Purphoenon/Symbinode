@@ -24,7 +24,7 @@
 #include <iostream>
 #include <QQmlProperty>
 
-Node::Node(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
+Node::Node(QQuickItem *parent, QVector2D resolution, GLint bpc): QQuickItem (parent), m_resolution(resolution), m_bpc(bpc)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
@@ -135,9 +135,22 @@ void Node::setPan(QVector2D pan) {
     emit changePan(pan);
 }
 
+QVector2D Node::resolution() {
+    return m_resolution;
+}
+
 void Node::setResolution(QVector2D res) {
     m_resolution = res;
     emit changeResolution(res);
+}
+
+GLint Node::bpc() {
+    return m_bpc;
+}
+
+void Node::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    emit changeBPC(bpc);
 }
 
 float Node::scaleView(){
@@ -349,6 +362,7 @@ void Node::serialize(QJsonObject &json) const {
     json["name"] = objectName();
     json["baseX"] = m_baseX;
     json["baseY"] = m_baseY;
+    json["bpc"] = m_bpc;
     QJsonArray inputs;
     for(Socket *s: m_socketsInput) {
         QJsonObject socketObject;
@@ -378,6 +392,9 @@ void Node::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
     }
     if(json.contains("baseY")) {
         setBaseY(json["baseY"].toVariant().toFloat());
+    }
+    if(json.contains("bpc")) {
+        setBPC(json["bpc"].toInt());
     }
     if(json.contains("inputs")) {
         QJsonArray inputs = json["inputs"].toArray();
@@ -519,4 +536,16 @@ void Node::scaleUpdate(float scale) {
     }
     m_scale = scale;
     changeScaleView(scale);
+}
+
+void Node::bpcUpdate(int bpcType) {
+    switch (bpcType) {
+        case 0:
+        default:
+            setBPC(GL_RGBA8);
+            break;
+        case 1:
+            setBPC(GL_RGBA16);
+            break;
+    }
 }

@@ -9,7 +9,7 @@ class BricksObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    BricksObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 15, float offset = 0.5f, float width = 0.9f, float height = 0.8f, float smoothX = 0.0f, float smoothY = 0.0f, float mask = 0.0f, int seed = 1);
+    BricksObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int columns = 5, int rows = 15, float offset = 0.5f, float width = 0.9f, float height = 0.8f, float smoothX = 0.0f, float smoothY = 0.0f, float mask = 0.0f, int seed = 1);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -36,8 +36,11 @@ public:
     void setSeed(int seed);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool generatedTex = true;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -45,6 +48,7 @@ signals:
     void changedTexture();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_texture = 0;
     unsigned int m_maskTexture = 0;
     int m_columns = 5;
@@ -60,7 +64,7 @@ private:
 
 class BricksRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    BricksRenderer(QVector2D res);
+    BricksRenderer(QVector2D res, GLint bpc);
     ~BricksRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -70,6 +74,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int bricksFBO;
     unsigned int m_bricksTexture = 0;
     unsigned int m_maskTexture = 0;

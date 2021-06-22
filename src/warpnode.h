@@ -29,7 +29,7 @@ class WarpNode: public Node
 {
     Q_OBJECT
 public:
-    WarpNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float intensity = 0.1f);
+    WarpNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float intensity = 0.1f);
     ~WarpNode();
     void operation();
     unsigned int &getPreviewTexture();

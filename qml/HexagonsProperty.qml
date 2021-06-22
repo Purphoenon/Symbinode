@@ -9,15 +9,35 @@ Item {
     property alias startSmooth: smoothParam.propertyValue
     property alias startMask: maskParam.propertyValue
     property alias startSeed: seedParam.propertyValue
+    property alias startBits: bitsParam.currentIndex
     signal columnsChanged(int columns)
     signal rowsChanged(int rows)
     signal hexSizeChanged(real size)
     signal hexSmoothChanged(real smooth)
     signal maskChanged(real mask)
     signal seedChanged(int seed);
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamSlider {
         id: columnsParam
+        y: 38
         step: 1
         minimum: 1
         maximum: 20
@@ -31,7 +51,7 @@ Item {
     }
     ParamSlider {
         id: rowsParam
-        y: 33
+        y: 71
         minimum: 1
         maximum: 20
         step: 1
@@ -45,7 +65,7 @@ Item {
     }
     ParamSlider {
         id: sizeParam
-        y: 66
+        y: 104
         propertyName: "Size"
         onPropertyValueChanged: {
             hexSizeChanged(propertyValue)
@@ -56,7 +76,7 @@ Item {
     }
     ParamSlider {
         id: smoothParam
-        y: 99
+        y: 137
         propertyName: "Smooth"
         onPropertyValueChanged: {
             hexSmoothChanged(propertyValue)
@@ -67,7 +87,7 @@ Item {
     }
     ParamSlider {
         id: maskParam
-        y: 132
+        y: 170
         propertyName: "Mask"
         onPropertyValueChanged: {
             maskChanged(propertyValue)
@@ -78,7 +98,7 @@ Item {
     }
     ParamSlider {
         id: seedParam
-        y: 165
+        y: 203
         propertyName: "Seed"
         minimum: 1
         maximum: 100

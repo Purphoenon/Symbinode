@@ -22,11 +22,11 @@
 #include "polygonnode.h"
 #include <iostream>
 
-PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, float polygonScale,
-                         float smooth, bool useAlpha): Node(parent, resolution), m_sides(sides),
+PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, GLint bpc, int sides, float polygonScale,
+                         float smooth, bool useAlpha): Node(parent, resolution, bpc), m_sides(sides),
     m_polygonScale(polygonScale), m_smooth(smooth), m_useAlpha(useAlpha)
 {
-    preview = new PolygonObject(grNode, m_resolution, m_sides, m_polygonScale, m_smooth, m_useAlpha);
+    preview = new PolygonObject(grNode, m_resolution, m_bpc, m_sides, m_polygonScale, m_smooth, m_useAlpha);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -39,6 +39,7 @@ PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, fl
     connect(preview, &PolygonObject::changedTexture, this, &PolygonNode::setOutput);
     connect(preview, &PolygonObject::updatePreview, this, &PolygonNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &PolygonObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &PolygonObject::setBPC);
     connect(this, &PolygonNode::sidesChanged, preview, &PolygonObject::setSides);
     connect(this, &PolygonNode::polygonScaleChanged, preview, &PolygonObject::setPolygonScale);
     connect(this, &PolygonNode::smoothChanged, preview, &PolygonObject::setSmooth);
@@ -53,10 +54,14 @@ PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, int sides, fl
     propertiesPanel->setProperty("startScale", m_polygonScale);
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
+    propertiesPanel->setProperty("startBits", m_useAlpha);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(sidesChanged(int)), this, SLOT(updateSides(int)));
     connect(propertiesPanel, SIGNAL(polygonScaleChanged(qreal)), this, SLOT(updatePolygonScale(qreal)));
     connect(propertiesPanel, SIGNAL(polygonSmoothChanged(qreal)), this, SLOT(updateSmooth(qreal)));
     connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -66,7 +71,14 @@ PolygonNode::~PolygonNode() {
 
 void PolygonNode::operation() {
     preview->selectedItem = selected();
-    preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && (inputNode->resolution() == m_resolution)) {
+            preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+        }
+    }
+
 }
 
 unsigned int &PolygonNode::getPreviewTexture() {
@@ -104,6 +116,8 @@ void PolygonNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &h
     propertiesPanel->setProperty("startScale", m_polygonScale);
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 int PolygonNode::sides() {

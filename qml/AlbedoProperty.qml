@@ -28,11 +28,31 @@ Item {
     height: parent.parent.height
     width: parent.width
     property vector3d startColor: Qt.vector3d(1.0, 1.0, 1.0)
+    property alias startBits: control.currentIndex
     signal albedoChanged(vector3d albedo)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: control
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ColorPicker {
         id: color
-        height: parent.parent.height - 15
+        y: 48
+        height: parent.parent.height - 48
         width: parent.width
         startingColor: Qt.rgba(startColor.x, startColor.y, startColor.z, 1.0)
         onColorValueChanged: {

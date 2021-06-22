@@ -29,15 +29,34 @@ Item {
     property alias startRadius: radiusParam.propertyValue
     property alias startSmooth: smoothParam.propertyValue
     property alias startUseAlpha: useAlphaParam.checked
+    property alias startBits: bitsParam.currentIndex
     signal interpolationChanged(int interpolation)
     signal radiusChanged(real radius)
     signal smoothValueChanged(real smooth)
     signal useAlphaChanged(bool use)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
-        id: control
+        id: bitsParam
         y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
+    ParamDropDown {
+        id: control
+        y: 53
         model: ["Linear", "Hermite"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
@@ -54,7 +73,7 @@ Item {
     }
     ParamSlider {
         id: radiusParam
-        y: 38
+        y: 76
         propertyName: "Radius"
         onPropertyValueChanged: {
             radiusChanged(radiusParam.propertyValue)
@@ -65,7 +84,7 @@ Item {
     }
     ParamSlider {
         id: smoothParam
-        y: 71
+        y: 109
         propertyName: "Smooth"
         onPropertyValueChanged: {
             smoothValueChanged(smoothParam.propertyValue)
@@ -76,7 +95,7 @@ Item {
     }
     ParamCheckbox {
         id: useAlphaParam
-        y: 119
+        y: 157
         width: 90
         text: qsTr("Use alpha")
         checked: true

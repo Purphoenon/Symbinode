@@ -22,12 +22,13 @@
 #include "mixnode.h"
 #include <iostream>
 
-MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int foregroundOpacity,
-                 int backgroundOpacity, int mode, bool includingAlpha): Node(parent, resolution),
+MixNode::MixNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float factor, int foregroundOpacity,
+                 int backgroundOpacity, int mode, bool includingAlpha): Node(parent, resolution, bpc),
     m_factor(factor), m_fOpacity(foregroundOpacity), m_bOpacity(backgroundOpacity), m_mode(mode),
     m_includingAlpha(includingAlpha)
 {
-    preview = new MixObject(grNode, m_resolution, m_factor, m_fOpacity, m_bOpacity, m_mode, m_includingAlpha);
+    preview = new MixObject(grNode, m_resolution, m_bpc, m_factor, m_fOpacity, m_bOpacity, m_mode,
+                            m_includingAlpha);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -46,6 +47,7 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int for
     connect(this, &MixNode::generatePreview, this, &MixNode::previewGenerated);
     connect(preview, &MixObject::updatePreview, this, &MixNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &MixObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &MixObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/MixProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -54,12 +56,15 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, float factor, int for
     connect(propertiesPanel, SIGNAL(includingAlphaChanged(bool)), this, SLOT(updateIncludingAlpha(bool)));
     connect(propertiesPanel, SIGNAL(foregroundOpacityChanged(int)), this, SLOT(updateForegroundOpacity(int)));
     connect(propertiesPanel, SIGNAL(backgroundOpacityChanged(int)), this, SLOT(updateBackgroundOpacity(int)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     propertiesPanel->setProperty("startFactor", m_factor);
     propertiesPanel->setProperty("startMode", m_mode);
     propertiesPanel->setProperty("startIncludingAlpha", m_includingAlpha);
     propertiesPanel->setProperty("startForegroundOpacity", m_fOpacity);
     propertiesPanel->setProperty("startBackgroundOpacity", m_bOpacity);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 MixNode::~MixNode() {
@@ -67,6 +72,23 @@ MixNode::~MixNode() {
 }
 
 void MixNode::operation() {
+
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[2]->getEdges().isEmpty()) {
+        Node *inputNode2 = static_cast<Node*>(m_socketsInput[2]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode2 && inputNode2->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[3]->getEdges().isEmpty()) {
+        Node *inputNode3 = static_cast<Node*>(m_socketsInput[3]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode3 && inputNode3->resolution() != m_resolution) return;
+    }
 
     preview->setFirstTexture((m_socketsInput[0]->value().toUInt()));
     preview->setSecondTexture((m_socketsInput[1]->value().toUInt()));
@@ -180,6 +202,8 @@ void MixNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash)
         setBackgroundOpacity(json["backgroundOpacity"].toInt());
         propertiesPanel->setProperty("startBackgroundOpacity", m_bOpacity);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void MixNode::updateFactor(qreal f) {

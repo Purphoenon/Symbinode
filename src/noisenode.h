@@ -38,7 +38,7 @@ class NoiseNode: public Node
 {
     Q_OBJECT
 public:
-    NoiseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), NoiseParams perlin = NoiseParams(), NoiseParams simple = NoiseParams{0.5f, 1.0f, 1, 1, 20, 8, 1}, QString noiseType = "noisePerlin");
+    NoiseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, NoiseParams perlin = NoiseParams(), NoiseParams simple = NoiseParams{0.5f, 1.0f, 1, 1, 20, 8, 1}, QString noiseType = "noisePerlin");
     ~NoiseNode();
     QString noiseType();    
     void setNoiseType(QString type);

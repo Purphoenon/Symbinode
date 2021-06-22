@@ -27,8 +27,8 @@ bool gradientSort(QVector4D f, QVector4D s) {
     return f.w() < s.w();
 }
 
-ColorRampObject::ColorRampObject(QQuickItem *parent, QVector2D resolution, QJsonArray stops):
-    QQuickFramebufferObject (parent), m_resolution(resolution)
+ColorRampObject::ColorRampObject(QQuickItem *parent, QVector2D resolution, GLint bpc, QJsonArray stops):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc)
 {
     m_stops.clear();
     for(auto s: stops) {
@@ -39,7 +39,7 @@ ColorRampObject::ColorRampObject(QQuickItem *parent, QVector2D resolution, QJson
 }
 
 QQuickFramebufferObject::Renderer *ColorRampObject::createRenderer() const {
-    return new ColorRampRenderer(m_resolution);
+    return new ColorRampRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &ColorRampObject::texture() {
@@ -101,6 +101,16 @@ void ColorRampObject::setResolution(QVector2D res) {
     update();
 }
 
+GLint ColorRampObject::bpc() {
+    return m_bpc;
+}
+
+void ColorRampObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
 void ColorRampObject::gradientAdd(QVector3D color, qreal pos, int index) {
     rampedTex = true;
     QVector4D grad = QVector4D(color, pos);
@@ -128,7 +138,7 @@ void ColorRampObject::gradientDelete(int index) {
     update();
 }
 
-ColorRampRenderer::ColorRampRenderer(QVector2D res): m_resolution(res) {
+ColorRampRenderer::ColorRampRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     colorRampShader = new QOpenGLShaderProgram();
     colorRampShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -169,9 +179,16 @@ ColorRampRenderer::ColorRampRenderer(QVector2D res): m_resolution(res) {
     glGenTextures(1, &m_colorTexture);
     glBindFramebuffer(GL_FRAMEBUFFER, colorFBO);
     glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -189,6 +206,10 @@ ColorRampRenderer::~ColorRampRenderer() {
     delete colorRampShader;
     delete checkerShader;
     delete textureShader;
+    glDeleteTextures(1, &m_colorTexture);
+    glDeleteFramebuffers(1, &colorFBO);
+    glDeleteVertexArrays(1, &textureVAO);
+    glDeleteBuffers(1, &gradientsSSBO);
 }
 
 QOpenGLFramebufferObject *ColorRampRenderer::createFramebufferObject(const QSize &size) {
@@ -204,6 +225,12 @@ void ColorRampRenderer::synchronize(QQuickFramebufferObject *item) {
         colorRampItem->resUpdated = false;
         m_resolution = colorRampItem->resolution();
         updateTexResolution();
+    }
+    if(colorRampItem->bpcUpdated) {
+        colorRampItem->bpcUpdated = false;
+        m_bpc = colorRampItem->bpc();
+        updateTexResolution();
+        colorRamp(colorRampItem->stops());
     }
     if(colorRampItem->rampedTex) {
         colorRampItem->rampedTex = false;
@@ -245,6 +272,7 @@ void ColorRampRenderer::render() {
         textureShader->release();
         glBindVertexArray(0);
     }
+    glFlush();
 }
 
 void ColorRampRenderer::colorRamp(const std::vector<QVector4D> &stops) {
@@ -273,13 +301,22 @@ void ColorRampRenderer::colorRamp(const std::vector<QVector4D> &stops) {
     glBindVertexArray(0);
     colorRampShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void ColorRampRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA8, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -291,7 +328,12 @@ void ColorRampRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -313,15 +355,43 @@ void ColorRampRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }
 

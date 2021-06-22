@@ -25,11 +25,13 @@ Item {
     property var activeItem
     property var operation
     property var gradientStops: gradientsData()
+    property alias startBits: control.currentIndex
     signal gradientStopAdded(vector3d color, real pos, int index)
     signal positionChanged(real pos, int index)
     signal colorChanged(vector3d color, int index)
     signal gradientStopDeleted(int index)
     signal gradientsStopsChanged(var gradients)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
     height: childrenRect.height + 30
     width: parent.width
@@ -43,6 +45,24 @@ Item {
         }
         onExited: {
             parent.focus = false
+        }
+    }
+
+    ParamDropDown {
+        id: control
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
 
@@ -210,7 +230,7 @@ Item {
         property var pointers: []
         id: gradientContainer
         x: 10
-        y: 15
+        y: 53
         width: parent.width - 20
         height: 25
         MouseArea {

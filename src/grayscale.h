@@ -10,7 +10,7 @@ class GrayscaleObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    GrayscaleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    GrayscaleObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -19,8 +19,11 @@ public:
     void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool grayscaledTex = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -28,6 +31,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_texture = 0;
     unsigned int m_sourceTexture = 0;
 };
@@ -35,7 +39,7 @@ private:
 class GrayscaleRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core
 {
 public:
-    GrayscaleRenderer(QVector2D res);
+    GrayscaleRenderer(QVector2D res, GLint bpc);
     ~GrayscaleRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -45,6 +49,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_grayscaleFBO;
     unsigned int m_grayscaleTexture = 0;
     unsigned int m_sourceTexture = 0;

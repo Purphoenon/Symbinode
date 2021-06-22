@@ -295,7 +295,7 @@ void Scene::addNode(Node *node) {
         m_emissionConnected = true;
     }
     connect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
-    connect(this, &Scene::resolutionUpdate, node, &Node::setResolution);
+    //connect(this, &Scene::resolutionUpdate, node, &Node::setResolution);
     connect(m_background, &BackgroundObject::scaleChanged, node, &Node::scaleUpdate);
     connect(m_background, &BackgroundObject::panChanged, node, &Node::setPan);
     node->scaleUpdate(m_background->viewScale());
@@ -895,4 +895,7 @@ QVector2D Scene::resolution() {
 void Scene::setResolution(QVector2D res) {
     m_resolution = res;
     emit resolutionUpdate(res);
+    for(auto n: m_nodes) {
+        n->setResolution(res);
+    }
 }

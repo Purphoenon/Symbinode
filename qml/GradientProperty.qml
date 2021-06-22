@@ -10,6 +10,7 @@ Item {
     property alias startCenterWidth: whiteWidthParam.propertyValue
     property alias startTiling: tilingParam.checked
     property alias type: control.currentIndex
+    property alias startBits: bitsParam.currentIndex
     signal gradientTypeChanged(string type)
     signal startXChanged(real x)
     signal startYChanged(real y)
@@ -17,10 +18,28 @@ Item {
     signal endYChanged(real y)
     signal centerWidthChanged(real width)
     signal tilingChanged(bool tiling)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamDropDown{
         id: control
-        y: 15
+        y: 53
         model: ["Linear", "Reflected", "Angular", "Radial"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
@@ -45,7 +64,7 @@ Item {
 
     ParamSlider {
         id: startXParam
-        y: 38
+        y: 76
         propertyName: "Start X"
         onPropertyValueChanged: {
             startXChanged(propertyValue)
@@ -57,7 +76,7 @@ Item {
 
     ParamSlider {
         id: startYParam
-        y: 71
+        y: 109
         propertyName: "Start Y"
         onPropertyValueChanged: {
             startYChanged(propertyValue)
@@ -69,7 +88,7 @@ Item {
 
     ParamSlider {
         id: endXParam
-        y: 104
+        y: 142
         propertyName: "End X"
         onPropertyValueChanged: {
             endXChanged(propertyValue)
@@ -81,7 +100,7 @@ Item {
 
     ParamSlider {
         id: endYParam
-        y: 137
+        y: 175
         propertyName: "End Y"
         onPropertyValueChanged: {
             endYChanged(propertyValue)
@@ -94,7 +113,7 @@ Item {
     ParamSlider {
         id: whiteWidthParam
         visible: control.currentIndex == 1
-        y: 170
+        y: 208
         propertyName: "Center width"
         onPropertyValueChanged: {
             centerWidthChanged(propertyValue)
@@ -107,7 +126,7 @@ Item {
     ParamCheckbox{
         id: tilingParam
         visible: control.currentIndex == 0 || control.currentIndex == 1
-        y: control.currentIndex == 1 ? 218 : 185
+        y: control.currentIndex == 1 ? 256 : 223
         width: 70
         text: qsTr("Tiling")
         onCheckedChanged: {

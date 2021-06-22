@@ -131,6 +131,10 @@ ColorRenderer::ColorRenderer(QVector2D res): m_resolution(res){
 ColorRenderer::~ColorRenderer() {
     delete colorShader;
     delete textureShader;
+    glDeleteTextures(1, &m_colorTexture);
+    glDeleteFramebuffers(1, &colorFBO);
+    glDeleteVertexArrays(1, &colorVAO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *ColorRenderer::createFramebufferObject(const QSize &size) {
@@ -177,6 +181,7 @@ void ColorRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, 0);
     textureShader->release();
     glBindVertexArray(0);
+    glFlush();
 }
 
 void ColorRenderer::createColor() {
@@ -190,6 +195,8 @@ void ColorRenderer::createColor() {
     glBindVertexArray(0);
     colorShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void ColorRenderer::updateTexResolution() {
@@ -238,5 +245,8 @@ void ColorRenderer::saveTexture(QString fileName) {
     else
         printf("Failed saving!\n");
     FreeImage_Unload(image);
+    delete [] pixels;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

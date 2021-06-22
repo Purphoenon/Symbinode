@@ -22,9 +22,9 @@
 #include "albedonode.h"
 #include <iostream>
 
-AlbedoNode::AlbedoNode(QQuickItem *parent, QVector2D resolution): Node(parent, resolution)
+AlbedoNode::AlbedoNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(parent, resolution, bpc)
 {
-    preview = new AlbedoObject(grNode, m_resolution);
+    preview = new AlbedoObject(grNode, m_resolution, m_bpc);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -36,13 +36,17 @@ AlbedoNode::AlbedoNode(QQuickItem *parent, QVector2D resolution): Node(parent, r
     connect(this, &Node::changeScaleView, this, &AlbedoNode::updateScale);
     connect(preview, &AlbedoObject::updateAlbedo, this, &AlbedoNode::albedoChanged);
     connect(this, &Node::changeResolution, preview, &AlbedoObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &AlbedoObject::setBPC);
     createSockets(1, 0);
     setTitle("Albedo");
     m_socketsInput[0]->setTip("Albedo");
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/AlbedoProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(albedoChanged(QVector3D)), this, SLOT(updateAlbedo(QVector3D)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -90,6 +94,8 @@ void AlbedoNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &ha
         updateAlbedo(color);
         propertiesPanel->setProperty("startColor", color);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void AlbedoNode::updateAlbedo(QVector3D color) {

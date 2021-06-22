@@ -3,15 +3,15 @@
 #include "FreeImage.h"
 #include <iostream>
 
-BevelObject::BevelObject(QQuickItem *parent, QVector2D resolution, float distance, float smooth, bool useAlpha):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_dist(distance), m_smooth(smooth),
-    m_alpha(useAlpha)
+BevelObject::BevelObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float distance, float smooth,
+                         bool useAlpha): QQuickFramebufferObject (parent), m_resolution(resolution),
+    m_bpc(bpc), m_dist(distance), m_smooth(smooth), m_alpha(useAlpha)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *BevelObject::createRenderer() const {
-    return new BevelRenderer(m_resolution);
+    return new BevelRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &BevelObject::texture() {
@@ -89,7 +89,17 @@ void BevelObject::setResolution(QVector2D res) {
     update();
 }
 
-BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
+GLint BevelObject::bpc() {
+    return m_bpc;
+}
+
+void BevelObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
+BevelRenderer::BevelRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc)
 {
     initializeOpenGLFunctions();
     checkerShader = new QOpenGLShaderProgram();
@@ -153,7 +163,12 @@ BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glGenTextures(1, &m_initTexture);
     glBindTexture(GL_TEXTURE_2D, m_initTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -166,7 +181,12 @@ BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
     glBindFramebuffer(GL_FRAMEBUFFER, bevelFBO);
     glGenTextures(1, &m_bevelTexture);
     glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -181,9 +201,12 @@ BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, jfaFBO[i]);
         glBindTexture(GL_TEXTURE_2D, m_jfaTexture[i]);
-        glTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
-        );
+        if(m_bpc == GL_RGBA16) {
+            glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        }
+        else if(m_bpc == GL_RGBA8) {
+            glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -201,9 +224,12 @@ BevelRenderer::BevelRenderer(QVector2D res): m_resolution(res)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[i]);
         glBindTexture(GL_TEXTURE_2D, m_blurTexture[i]);
-        glTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
-        );
+        if(m_bpc == GL_RGBA16) {
+            glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        }
+        else if(m_bpc == GL_RGBA8) {
+            glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -224,6 +250,15 @@ BevelRenderer::~BevelRenderer()
     delete bevelShader;
     delete preparationShader;
     delete jfaShader;
+    glDeleteTextures(1, &m_bevelTexture);
+    glDeleteTextures(1, &m_initTexture);
+    glDeleteTextures(2, &m_jfaTexture[0]);
+    glDeleteTextures(2, &m_blurTexture[0]);
+    glDeleteFramebuffers(1, &bevelFBO);
+    glDeleteFramebuffers(1, &FBO);
+    glDeleteFramebuffers(2, &jfaFBO[0]);
+    glDeleteFramebuffers(2, &blurFBO[0]);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *BevelRenderer::createFramebufferObject(const QSize &size) {
@@ -235,7 +270,17 @@ QOpenGLFramebufferObject *BevelRenderer::createFramebufferObject(const QSize &si
 
 void BevelRenderer::synchronize(QQuickFramebufferObject *item) {
     BevelObject *bevelItem = static_cast<BevelObject*>(item);
-
+    if(bevelItem->resUpdated) {
+        bevelItem->resUpdated = false;
+        m_resolution = bevelItem->resolution();
+        updateTexResolution();
+    }
+    if(bevelItem->bpcUpdated) {
+        bevelItem->bpcUpdated = false;
+        m_bpc = bevelItem->bpc();
+        updateTexResolution();
+        jumpFlooding();
+    }
     if(bevelItem->beveledTex) {
         bevelItem->beveledTex = false;
         m_sourceTexture = bevelItem->sourceTexture();
@@ -256,12 +301,6 @@ void BevelRenderer::synchronize(QQuickFramebufferObject *item) {
             bevelItem->setTexture(m_bevelTexture);
             bevelItem->updatePreview(m_bevelTexture);
         }
-    }
-
-    if(bevelItem->resUpdated) {
-        bevelItem->resUpdated = false;
-        m_resolution = bevelItem->resolution();
-        updateTexResolution();
     }
 
     if(bevelItem->texSaving) {
@@ -294,6 +333,7 @@ void BevelRenderer::render() {
         glBindTexture(GL_TEXTURE_2D, 0);
         textureShader->release();
     }
+    glFlush();
 }
 
 void BevelRenderer::jumpFlooding() {
@@ -317,7 +357,7 @@ void BevelRenderer::jumpFlooding() {
     //jfa
     bool first_iteration = true;
     int step = m_resolution.x();
-    int stepsCount = ceil(log2(step));
+    //int stepsCount = ceil(log2(step));
     for(int i = 0; i < 10; ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, jfaFBO[i%2]);
         glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -348,7 +388,7 @@ void BevelRenderer::jumpFlooding() {
     bevelShader->setUniformValue(bevelShader->uniformLocation("useMask"), maskTexture);
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_jfaTexture[1 - stepsCount%2]);
+    glBindTexture(GL_TEXTURE_2D, m_jfaTexture[1]);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -356,7 +396,7 @@ void BevelRenderer::jumpFlooding() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     bevelShader->release();
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);   
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     //blur
     first_iteration = true;
@@ -397,22 +437,41 @@ void BevelRenderer::jumpFlooding() {
     glBindTexture(GL_TEXTURE_2D, 0);
     textureShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void BevelRenderer::updateTexResolution() {
-    glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glBindTexture(GL_TEXTURE_2D, m_initTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glBindTexture(GL_TEXTURE_2D, m_jfaTexture[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glBindTexture(GL_TEXTURE_2D, m_jfaTexture[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glBindTexture(GL_TEXTURE_2D, m_blurTexture[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glBindTexture(GL_TEXTURE_2D, m_blurTexture[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    if(m_bpc == GL_RGBA16) {
+        glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_initTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_jfaTexture[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_jfaTexture[1]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_blurTexture[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_blurTexture[1]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_initTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_jfaTexture[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_jfaTexture[1]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_blurTexture[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, m_blurTexture[1]);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }
 
 void BevelRenderer::saveTexture(QString fileName) {
@@ -422,7 +481,12 @@ void BevelRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -444,16 +508,43 @@ void BevelRenderer::saveTexture(QString fileName) {
     glBindTexture(GL_TEXTURE_2D, 0);
     textureShader->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    FIBITMAP *result = FreeImage_ConvertToRGBA16(image);
-    if (FreeImage_Save(FIF_PNG, result, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(result);
-    FreeImage_Unload(image);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        std::cout << "bevel save" << std::endl;
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);    
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

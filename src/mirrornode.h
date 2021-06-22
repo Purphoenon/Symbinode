@@ -28,7 +28,7 @@ class MirrorNode: public Node
 {
     Q_OBJECT
 public:
-    MirrorNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int dir = 0);
+    MirrorNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, int dir = 0);
     ~MirrorNode();
     void operation();
     unsigned int &getPreviewTexture();

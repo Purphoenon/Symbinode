@@ -31,7 +31,7 @@ class MappingObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    MappingObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float inputMin = 0.0f, float inputMax = 1.0f, float outputMin = 0.0f, float outputMax = 1.0f);
+    MappingObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float inputMin = 0.0f, float inputMax = 1.0f, float outputMin = 0.0f, float outputMax = 1.0f);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -50,9 +50,12 @@ public:
     void setOutputMax(float value);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool mappedTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -60,6 +63,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_sourceTexture = 0;
     unsigned int m_texture = 0;
     unsigned int m_maskTexture = 0;
@@ -71,7 +75,7 @@ private:
 
 class MappingRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    MappingRenderer(QVector2D res);
+    MappingRenderer(QVector2D res, GLint bpc);
     ~MappingRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -81,6 +85,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int mappingFBO;
     unsigned int m_mappingTexture = 0;
     unsigned int m_sourceTexture = 0;

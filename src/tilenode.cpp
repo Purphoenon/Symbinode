@@ -23,16 +23,20 @@
 #include "frame.h"
 #include <iostream>
 
-TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, float offsetY, int columns,
-                   int rows, float scale, float scaleX, float scaleY, int rotation, float randPosition,
-                   float randRotation, float randScale, float maskStrength, int inputsCount, int seed,
-                   bool keepProportion, bool useAlpha, bool depthMask): Node(parent, resolution),
-    m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows), m_scaleX(scaleX),
-    m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition), m_randRotation(randRotation),
-    m_randScale(randScale), m_maskStrength(maskStrength), m_inputsCount(inputsCount), m_seed(seed),
-    m_scale(scale), m_keepProportion(keepProportion), m_useAlpha(useAlpha), m_depthMask(depthMask)
+TileNode::TileNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float offsetX, float offsetY,
+                   int columns, int rows, float scale, float scaleX, float scaleY, int rotation,
+                   float randPosition, float randRotation, float randScale, float maskStrength,
+                   int inputsCount, int seed, bool keepProportion, bool useAlpha, bool depthMask):
+    Node(parent, resolution, bpc), m_offsetX(offsetX), m_offsetY(offsetY), m_columns(columns), m_rows(rows),
+    m_scaleX(scaleX), m_scaleY(scaleY), m_rotationAngle(rotation), m_randPosition(randPosition),
+    m_randRotation(randRotation), m_randScale(randScale), m_maskStrength(maskStrength),
+    m_inputsCount(inputsCount), m_seed(seed), m_scale(scale), m_keepProportion(keepProportion),
+    m_useAlpha(useAlpha), m_depthMask(depthMask)
 {
-    preview = new TileObject(grNode, m_resolution, m_offsetX, m_offsetY, m_columns, m_rows, m_scale, m_scaleX, m_scaleY, m_rotationAngle, m_randPosition, m_randRotation, m_randScale, m_maskStrength, m_inputsCount, m_seed, m_keepProportion, m_useAlpha);
+    preview = new TileObject(grNode, m_resolution, m_bpc, m_offsetX, m_offsetY, m_columns, m_rows, m_scale,
+                             m_scaleX, m_scaleY, m_rotationAngle, m_randPosition, m_randRotation,
+                             m_randScale, m_maskStrength, m_inputsCount, m_seed, m_keepProportion,
+                             m_useAlpha);
     float s = scaleView();
     setHeight((207 + 28*(m_inputsCount - 1))*s);
     preview->setTransformOrigin(TopLeft);
@@ -46,6 +50,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(preview, &TileObject::changedTexture, this, &TileNode::setOutput);
     connect(preview, &TileObject::updatePreview, this, &TileNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TileObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &TileObject::setBPC);
     connect(this, &TileNode::offsetXChanged, preview, &TileObject::setOffsetX);
     connect(this, &TileNode::offsetYChanged, preview, &TileObject::setOffsetY);
     connect(this, &TileNode::columnsChanged, preview, &TileObject::setColumns);
@@ -83,6 +88,8 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     propertiesPanel->setProperty("startKeepProportion", m_keepProportion);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
     propertiesPanel->setProperty("startUseAlpha", m_depthMask);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(offsetXChanged(qreal)), this, SLOT(updateOffsetX(qreal)));
     connect(propertiesPanel, SIGNAL(offsetYChanged(qreal)), this, SLOT(updateOffsetY(qreal)));
     connect(propertiesPanel, SIGNAL(columnsChanged(int)), this, SLOT(updateColums(int)));
@@ -100,6 +107,7 @@ TileNode::TileNode(QQuickItem *parent, QVector2D resolution, float offsetX, floa
     connect(propertiesPanel, SIGNAL(keepProportionChanged(bool)), this, SLOT(updateKeepProportion(bool)));
     connect(propertiesPanel, SIGNAL(useAlphaChanged(bool)), this, SLOT(updateUseAlpha(bool)));
     connect(propertiesPanel, SIGNAL(depthMaskChanged(bool)), this, SLOT(updateDepthMask(bool)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     createAdditionalInputs(5);
@@ -128,6 +136,34 @@ TileNode::~TileNode() {
 
 void TileNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *nodeInput0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(nodeInput0 && nodeInput0->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *nodeInput1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(nodeInput1 && nodeInput1->resolution() != m_resolution) return;
+    }
+    if(!m_additionalInputs[0]->getEdges().isEmpty()) {
+        Node *nodeInput2 = static_cast<Node*>(m_additionalInputs[0]->getEdges()[0]->startSocket()->parentItem());
+        if(nodeInput2 && nodeInput2->resolution() != m_resolution) return;
+    }
+    if(!m_additionalInputs[1]->getEdges().isEmpty()) {
+        Node *nodeInput3 = static_cast<Node*>(m_additionalInputs[1]->getEdges()[0]->startSocket()->parentItem());
+        if(nodeInput3 && nodeInput3->resolution() != m_resolution) return;
+    }
+    if(!m_additionalInputs[2]->getEdges().isEmpty()) {
+        Node *nodeInput4 = static_cast<Node*>(m_additionalInputs[2]->getEdges()[0]->startSocket()->parentItem());
+        if(nodeInput4 && nodeInput4->resolution() != m_resolution) return;
+    }
+    if(!m_additionalInputs[3]->getEdges().isEmpty()) {
+        Node *nodeInput5 = static_cast<Node*>(m_additionalInputs[3]->getEdges()[0]->startSocket()->parentItem());
+        if(nodeInput5 && nodeInput5->resolution() != m_resolution) return;
+    }
+    if(!m_additionalInputs[4]->getEdges().isEmpty()) {
+        Node *nodeInput6 = static_cast<Node*>(m_additionalInputs[4]->getEdges()[0]->startSocket()->parentItem());
+        if(nodeInput6 && nodeInput6->resolution() != m_resolution) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     preview->setTile1(m_additionalInputs[0]->value().toUInt());
@@ -246,6 +282,8 @@ void TileNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash
     propertiesPanel->setProperty("startKeepProportion", m_keepProportion);
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
     propertiesPanel->setProperty("startDepthMask", m_depthMask);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 float TileNode::offsetX() {

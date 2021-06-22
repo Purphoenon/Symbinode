@@ -21,9 +21,9 @@
 
 #include "inversenode.h"
 
-InverseNode::InverseNode(QQuickItem *parent, QVector2D resolution): Node(parent, resolution)
+InverseNode::InverseNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(parent, resolution, bpc)
 {
-    preview = new InverseObject(grNode, m_resolution);
+    preview = new InverseObject(grNode, m_resolution, m_bpc);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -34,11 +34,19 @@ InverseNode::InverseNode(QQuickItem *parent, QVector2D resolution): Node(parent,
     connect(this, &Node::changeScaleView, this, &InverseNode::updateScale);
     connect(this, &Node::generatePreview, this, &InverseNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &InverseObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &InverseObject::setBPC);
     connect(preview, &InverseObject::textureChanged, this, &InverseNode::setOutput);
     connect(preview, &InverseObject::updatePreview, this, &InverseNode::updatePreview);
     createSockets(1, 1);
     setTitle("Inverse");
     m_socketsInput[0]->setTip("Color");
+    propView = new QQuickView();
+    propView->setSource(QUrl(QStringLiteral("qrc:/qml/BitsProperty.qml")));
+    propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 InverseNode::~InverseNode() {
@@ -62,6 +70,12 @@ void InverseNode::saveTexture(QString fileName) {
 void InverseNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 20;
+}
+
+void InverseNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void InverseNode::updateScale(float scale) {

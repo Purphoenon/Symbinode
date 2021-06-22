@@ -21,11 +21,11 @@
 
 #include "brightnesscontrastnode.h"
 
-BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D resolution, float brightness,
-                                               float contrast): Node(parent, resolution),
-    m_brightness(brightness), m_contrast(contrast)
+BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D resolution, GLint bpc,
+                                               float brightness, float contrast):
+    Node(parent, resolution, bpc), m_brightness(brightness), m_contrast(contrast)
 {
-    preview = new BrightnessContrastObject(grNode, m_resolution, m_brightness, m_contrast);
+    preview = new BrightnessContrastObject(grNode, m_resolution, m_bpc, m_brightness, m_contrast);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -38,6 +38,7 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     connect(preview, &BrightnessContrastObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &BrightnessContrastObject::textureChanged, this, &BrightnessContrastNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BrightnessContrastObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &BrightnessContrastObject::setBPC);
     connect(this, &BrightnessContrastNode::brightnessChanged, preview, &BrightnessContrastObject::setBrightness);
     connect(this, &BrightnessContrastNode::contrastChanged, preview, &BrightnessContrastObject::setContrast);
     propView = new QQuickView();
@@ -45,8 +46,11 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startBrightness", m_brightness);
     propertiesPanel->setProperty("startContrast", m_contrast);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(brightnessChanged(qreal)), this, SLOT(updateBrightness(qreal)));
     connect(propertiesPanel, SIGNAL(contrastChanged(qreal)), this, SLOT(updateContrast(qreal)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(1, 1);
     setTitle("Brightness-Contrast");
@@ -58,6 +62,10 @@ BrightnessContrastNode::~BrightnessContrastNode() {
 }
 
 void BrightnessContrastNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && inputNode->resolution() != m_resolution) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
@@ -87,6 +95,8 @@ void BrightnessContrastNode::deserialize(const QJsonObject &json, QHash<QUuid, S
         updateContrast(json["contrast"].toVariant().toReal());
         propertiesPanel->setProperty("startContrast", m_contrast);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 float BrightnessContrastNode::brightness() {

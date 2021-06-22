@@ -21,12 +21,12 @@
 
 #include "roughnode.h"
 
-RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution): Node(parent, resolution)
+RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(parent, resolution, bpc)
 {
     createSockets(1, 0);
     setTitle("Roughness");
     m_socketsInput[0]->setTip("Roughness");
-    preview = new OneChanelObject(grNode, m_resolution);
+    preview = new OneChanelObject(grNode, m_resolution, m_bpc);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -39,10 +39,14 @@ RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution): Node(parent, res
     connect(preview, &OneChanelObject::updatePreview, this, &RoughNode::updatePreview);
     connect(preview, &OneChanelObject::updateValue, this, &RoughNode::roughChanged);
     connect(this, &Node::changeResolution, preview, &OneChanelObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &OneChanelObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/RoughProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(roughChanged(qreal)), this, SLOT(updateRough(qreal)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -83,6 +87,8 @@ void RoughNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash
         updateRough(json["rough"].toVariant().toFloat());
         propertiesPanel->setProperty("startRough", m_rough);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void RoughNode::updateRough(qreal rough) {

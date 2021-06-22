@@ -10,7 +10,7 @@ class GradientObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    GradientObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString type = "linear", float startX = 0.0f, float startY = 0.0f, float endX = 0.0f, float endY = 1.0f, float centerWidth = 0.0f, bool tiling = false);
+    GradientObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, QString type = "linear", float startX = 0.0f, float startY = 0.0f, float endX = 0.0f, float endY = 1.0f, float centerWidth = 0.0f, bool tiling = false);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     QString gradientType();
     void setGradientType(QString type);
@@ -33,8 +33,11 @@ public:
     void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool generatedGradient = true;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -51,12 +54,13 @@ private:
     unsigned int m_gradientTexture = 0;
     unsigned int m_maskTexture = 0;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
 };
 
 class GradientRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core
 {
 public:
-    GradientRenderer(QVector2D res);
+    GradientRenderer(QVector2D res, GLint bpc);
     ~GradientRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -69,6 +73,7 @@ private:
     QOpenGLShaderProgram *checkerShader;
     QOpenGLShaderProgram *renderTexture;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int gradientFBO;
     unsigned int gradientVAO, textureVAO;
     unsigned int gradientTexture = 0;

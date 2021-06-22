@@ -39,13 +39,13 @@ class Preview3DObject: public QQuickFramebufferObject
     Q_PROPERTY(bool bloom READ bloom)
 public:
     Preview3DObject(QQuickItem *parent = nullptr);
-    QQuickFramebufferObject::Renderer *createRenderer() const;
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void wheelEvent(QWheelEvent *event);
-    void keyPressEvent(QKeyEvent *event);
-    void hoverEnterEvent(QHoverEvent *event);
-    void hoverLeaveEvent(QHoverEvent *event);
+    QQuickFramebufferObject::Renderer *createRenderer() const override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void hoverEnterEvent(QHoverEvent *event) override;
+    void hoverLeaveEvent(QHoverEvent *event) override;
     QVector3D posCam();
     float zoomCam();
     QQuaternion rotQuat();
@@ -124,12 +124,12 @@ class Preview3DRenderer: public QQuickFramebufferObject::Renderer, public QOpenG
 public:
     Preview3DRenderer();
     ~Preview3DRenderer();
-    QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
-    void synchronize(QQuickFramebufferObject *item);
-    void render();
+    QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) override;
+    void synchronize(QQuickFramebufferObject *item) override;
+    void render() override;
 private:
     QOpenGLShaderProgram *pbrShader;
-    QOpenGLShaderProgram *pbrTessShader;
+    //QOpenGLShaderProgram *pbrTessShader;
     QOpenGLShaderProgram *equirectangularShader;
     QOpenGLShaderProgram *irradianceShader;
     QOpenGLShaderProgram *prefilteredShader;

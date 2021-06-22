@@ -31,7 +31,7 @@ class NormalMapObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    NormalMapObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float strenght = 6.0f);
+    NormalMapObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float strenght = 6.0f);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int grayscaleTexture();
     void setGrayscaleTexture(unsigned int texture);
@@ -40,11 +40,14 @@ public:
     void setStrenght(float strenght);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     unsigned int &normalTexture();
     void setNormalTexture(unsigned int texture);
     bool selectedItem = false;
     bool normalGenerated = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -54,12 +57,13 @@ private:
     unsigned int m_grayscaleTexture = 0;
     float m_strenght = 6.0f;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_normalTexture = 0;
 };
 
 class NormalMapRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    NormalMapRenderer(QVector2D resolution);
+    NormalMapRenderer(QVector2D resolution, GLint bpc);
     ~NormalMapRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -69,6 +73,7 @@ private:
     unsigned int m_normalTexture = 0;
     float strenght = 3.0f;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int VAO = 0;
     unsigned int textureVAO = 0;
     unsigned int normalMapFBO = 0;

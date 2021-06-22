@@ -1,14 +1,15 @@
 #include "bricksnode.h"
 
-BricksNode::BricksNode(QQuickItem *parent, QVector2D resolution, int columns, int rows, float offset,
-                       float width, float height, float smoothX, float smoothY, float mask, int seed):
-    Node (parent, resolution), m_columns(columns), m_rows(rows), m_offset(offset), m_width(width),
-    m_height(height), m_mask(mask), m_smoothX(smoothX), m_smoothY(smoothY), m_seed(seed)
+BricksNode::BricksNode(QQuickItem *parent, QVector2D resolution, GLint bpc, int columns, int rows,
+                       float offset, float width, float height, float smoothX, float smoothY, float mask,
+                       int seed): Node (parent, resolution, bpc), m_columns(columns), m_rows(rows),
+    m_offset(offset), m_width(width), m_height(height), m_mask(mask), m_smoothX(smoothX), m_smoothY(smoothY),
+    m_seed(seed)
 {
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Bricks");
-    preview = new BricksObject(grNode, m_resolution, m_columns, m_rows, m_offset, m_width, m_height,
+    preview = new BricksObject(grNode, m_resolution, m_bpc, m_columns, m_rows, m_offset, m_width, m_height,
                                m_smoothX, m_smoothY, m_mask, m_seed);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
@@ -30,6 +31,7 @@ BricksNode::BricksNode(QQuickItem *parent, QVector2D resolution, int columns, in
     connect(this, &BricksNode::seedChanged, preview, &BricksObject::setSeed);
     connect(preview, &BricksObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &BricksObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &BricksObject::setBPC);
     connect(this, &Node::generatePreview, this, &BricksNode::previewGenerated);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/BricksProperty.qml")));
@@ -43,6 +45,8 @@ BricksNode::BricksNode(QQuickItem *parent, QVector2D resolution, int columns, in
     propertiesPanel->setProperty("startSmothY", m_smoothY);
     propertiesPanel->setProperty("startMask", m_mask);
     propertiesPanel->setProperty("startSeed", m_seed);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(columnsChanged(int)), this, SLOT(updateColumns(int)));
     connect(propertiesPanel, SIGNAL(rowsChanged(int)), this, SLOT(updateRows(int)));
     connect(propertiesPanel, SIGNAL(offsetChanged(qreal)), this, SLOT(updateOffset(qreal)));
@@ -52,6 +56,7 @@ BricksNode::BricksNode(QQuickItem *parent, QVector2D resolution, int columns, in
     connect(propertiesPanel, SIGNAL(smoothXChanged(qreal)), this, SLOT(updateSmoothX(qreal)));
     connect(propertiesPanel, SIGNAL(smoothYChanged(qreal)), this, SLOT(updateSmoothY(qreal)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -123,6 +128,8 @@ void BricksNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &ha
     propertiesPanel->setProperty("startSmothY", m_smoothY);
     propertiesPanel->setProperty("startMask", m_mask);
     propertiesPanel->setProperty("startSeed", m_seed);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 int BricksNode::columns() {

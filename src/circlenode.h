@@ -29,7 +29,7 @@ class CircleNode: public Node
 {
     Q_OBJECT
 public:
-    CircleNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
+    CircleNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
     ~CircleNode();
     void operation();
     unsigned int &getPreviewTexture();

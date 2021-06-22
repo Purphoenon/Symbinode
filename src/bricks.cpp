@@ -3,17 +3,17 @@
 #include "FreeImage.h"
 #include <iostream>
 
-BricksObject::BricksObject(QQuickItem *parent, QVector2D resolution, int columns, int rows, float offset,
-                           float width, float height, float smoothX, float smoothY, float mask, int seed):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_columns(columns), m_rows(rows),
-    m_offset(offset), m_width(width), m_height(height), m_mask(mask), m_smoothX(smoothX), m_smoothY(smoothY),
-    m_seed(seed)
+BricksObject::BricksObject(QQuickItem *parent, QVector2D resolution, GLint bpc, int columns, int rows,
+                           float offset, float width, float height, float smoothX, float smoothY,
+                           float mask, int seed): QQuickFramebufferObject (parent), m_resolution(resolution),
+    m_bpc(bpc), m_columns(columns), m_rows(rows), m_offset(offset), m_width(width), m_height(height),
+    m_mask(mask), m_smoothX(smoothX), m_smoothY(smoothY), m_seed(seed)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *BricksObject::createRenderer() const {
-    return new BricksRenderer(m_resolution);
+    return new BricksRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &BricksObject::texture() {
@@ -140,8 +140,17 @@ void BricksObject::setResolution(QVector2D res) {
     resUpdated = true;
     update();
 }
+GLint BricksObject::bpc() {
+    return m_bpc;
+}
 
-BricksRenderer::BricksRenderer(QVector2D res): m_resolution(res) {
+void BricksObject::setBPC(GLint bpc) {
+    m_bpc = bpc;
+    bpcUpdated = true;
+    update();
+}
+
+BricksRenderer::BricksRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     bricksShader = new QOpenGLShaderProgram();
     bricksShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -182,9 +191,16 @@ BricksRenderer::BricksRenderer(QVector2D res): m_resolution(res) {
     glGenTextures(1, &m_bricksTexture);
     glBindFramebuffer(GL_FRAMEBUFFER, bricksFBO);
     glBindTexture(GL_TEXTURE_2D, m_bricksTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
-    );
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -200,6 +216,9 @@ BricksRenderer::~BricksRenderer() {
     delete bricksShader;
     delete textureShader;
     delete checkerShader;
+    glDeleteTextures(1, &m_bricksTexture);
+    glDeleteFramebuffers(1, &bricksFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *BricksRenderer::createFramebufferObject(const QSize &size) {
@@ -238,6 +257,12 @@ void BricksRenderer::synchronize(QQuickFramebufferObject *item) {
             bricksItem->setTexture(m_bricksTexture);
         }
     }
+    if(bricksItem->bpcUpdated) {
+        bricksItem->bpcUpdated = false;
+        m_bpc = bricksItem->bpc();
+        updateTexResolution();
+        createBricks();
+    }
     if(bricksItem->texSaving) {
         bricksItem->texSaving = false;
         saveTexture(bricksItem->saveName);
@@ -265,6 +290,7 @@ void BricksRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, 0);
     textureShader->release();
     glBindVertexArray(0);
+    glFlush();
 }
 
 void BricksRenderer::createBricks() {
@@ -284,13 +310,22 @@ void BricksRenderer::createBricks() {
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void BricksRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_bricksTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
-    );
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -301,7 +336,12 @@ void BricksRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -323,14 +363,42 @@ void BricksRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

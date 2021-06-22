@@ -30,16 +30,34 @@ Item {
     property real startFactor
     property int startForegroundOpacity
     property int startBackgroundOpacity
+    property alias startBits: bitsParam.currentIndex
     signal modeChanged(int mode)
     signal factorChanged(real f)
     signal includingAlphaChanged(bool including)
     signal foregroundOpacityChanged(int opacity);
     signal backgroundOpacityChanged(int opacity);
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamDropDown {
         id: control
-        y: 15
+        y: 53
         model: ["Normal", "Mix", "Overlay", "Screen", "Soft-light", "Hard-light", "Lighten", "Color-dodge", "Color-burn",
                 "Darken", "Add", "Subtract", "Multiply", "Divide", "Difference", "Exclusion"]
         onCurrentIndexChanged: {
@@ -100,7 +118,7 @@ Item {
 
     ParamSlider {
         id: factorParam
-        y: 38
+        y: 76
         propertyName: "Factor"
         propertyValue: startFactor
         onPropertyValueChanged: {
@@ -113,7 +131,7 @@ Item {
 
     ParamSlider {
         id: foregroundOpacityParam
-        y: 104
+        y: 109
         visible: control.currentIndex != 1
         propertyName: "Foreground opacity"
         propertyValue: startForegroundOpacity
@@ -129,7 +147,7 @@ Item {
 
     ParamSlider {
         id: backgroundOpacityParam
-        y: 71
+        y: 142
         visible: control.currentIndex != 1
         propertyName: "Background opacity"
         propertyValue: startBackgroundOpacity
@@ -144,7 +162,7 @@ Item {
     }
     ParamCheckbox {
         id: useAlphaParam
-        y: control.currentIndex != 1 ? 152 : 86
+        y: control.currentIndex != 1 ? 190 : 126
         width: 90
         text: qsTr("Use alpha")
         checked: true

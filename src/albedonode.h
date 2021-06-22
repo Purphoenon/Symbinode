@@ -28,7 +28,7 @@ class AlbedoNode: public Node
 {
     Q_OBJECT
 public:
-    AlbedoNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    AlbedoNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     ~AlbedoNode();
     void operation();
     unsigned int &getPreviewTexture();

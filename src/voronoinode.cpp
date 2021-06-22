@@ -22,11 +22,14 @@
 #include "voronoinode.h"
 #include <iostream>
 
-VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams crystals, VoronoiParams borders, VoronoiParams solid, VoronoiParams worley, QString voronoiType): Node(parent, resolution),
-      m_voronoiType(voronoiType), m_crystals(crystals), m_borders(borders), m_solid(solid), m_worley(worley)
+VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, GLint bpc, VoronoiParams crystals,
+                         VoronoiParams borders, VoronoiParams solid, VoronoiParams worley,
+                         QString voronoiType): Node(parent, resolution, bpc), m_voronoiType(voronoiType),
+    m_crystals(crystals), m_borders(borders), m_solid(solid), m_worley(worley)
 {
     std::cout << "voronoi create" << std::endl;
-    preview = new VoronoiObject(grNode, m_resolution, m_voronoiType, voronoiScale(), scaleX(), scaleY(), jitter(), inverse(), intensity(), bordersSize());
+    preview = new VoronoiObject(grNode, m_resolution, m_bpc, m_voronoiType, voronoiScale(), scaleX(),
+                                scaleY(), jitter(), inverse(), intensity(), bordersSize());
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174*s);
@@ -39,6 +42,7 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     connect(preview, &VoronoiObject::changedTexture, this, &VoronoiNode::setOutput);
     connect(preview, &VoronoiObject::updatePreview, this, &VoronoiNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &VoronoiObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &VoronoiObject::setBPC);
     connect(this, &VoronoiNode::voronoiTypeChanged, preview, &VoronoiObject::setVoronoiType);
     connect(this, &VoronoiNode::voronoiScaleChanged, preview, &VoronoiObject::setVoronoiScale);
     connect(this, &VoronoiNode::scaleXChanged, preview, &VoronoiObject::setScaleX);
@@ -67,6 +71,8 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     propertiesPanel->setProperty("startInverse", inverse());
     propertiesPanel->setProperty("startBorders", bordersSize());
     propertiesPanel->setProperty("startSeed", seed());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(voronoiTypeChanged(QString)), this, SLOT(updateVoronoiType(QString)));
     connect(propertiesPanel, SIGNAL(voronoiScaleChanged(int)), this, SLOT(updateVoronoiScale(int)));
     connect(propertiesPanel, SIGNAL(scaleXChanged(int)), this, SLOT(updateScaleX(int)));
@@ -76,6 +82,7 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     connect(propertiesPanel, SIGNAL(intensityChanged(qreal)), this, SLOT(updateIntensity(qreal)));
     connect(propertiesPanel, SIGNAL(bordersChanged(qreal)), this, SLOT(updateBordersSize(qreal)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -257,6 +264,8 @@ void VoronoiNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &h
         propertiesPanel->setProperty("startBorders", bordersSize());
         propertiesPanel->setProperty("startSeed", seed());
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 VoronoiParams VoronoiNode::crystalsParam() {

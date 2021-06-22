@@ -34,6 +34,7 @@ Item {
     property alias startBorders: bordersParam.propertyValue
     property alias startInverse: inverseParam.checked
     property alias type: control.currentIndex
+    property alias startBits: bitsParam.currentIndex
     signal voronoiTypeChanged(string type)
     signal voronoiScaleChanged(int scale)
     signal scaleXChanged(int scale)
@@ -43,11 +44,29 @@ Item {
     signal intensityChanged(real intensity)
     signal bordersChanged(real size)
     signal seedChanged(int seed)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
 
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamDropDown{
         id: control
-        y: 15
+        y: 53
         model: ["Crystals", "Borders", "Solid", "Worley"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
@@ -72,7 +91,7 @@ Item {
 
     ParamSlider {
         id: scaleParam
-        y: 38
+        y: 76
         propertyName: "Scale"
         maximum: 100
         step: 1
@@ -85,7 +104,7 @@ Item {
     }
     ParamSlider {
         id: scaleXParam
-        y: 71
+        y: 109
         propertyName: "Scale X"
         maximum: 20
         minimum: 1
@@ -99,7 +118,7 @@ Item {
     }
     ParamSlider {
         id: scaleYParam
-        y: 104
+        y: 142
         propertyName: "Scale Y"
         maximum: 20
         minimum: 1
@@ -113,7 +132,7 @@ Item {
     }
     ParamSlider {
         id: jitterParam
-        y: 137
+        y: 175
         propertyName: "Jitter"
         onPropertyValueChanged: {
             jitterChanged(propertyValue)
@@ -124,7 +143,7 @@ Item {
     }
     ParamCheckbox{
         id: inverseParam
-        y: control.currentIndex == 1 ? 284 : 251
+        y: control.currentIndex == 1 ? 322 : 289
         width: 80
         text: qsTr("Inverse")
         onCheckedChanged: {
@@ -137,7 +156,7 @@ Item {
     }
     ParamSlider {
         id: intensityParam
-        y: 170
+        y: 208
         maximum: 2
         propertyName: "Intensity"
         onPropertyValueChanged: {
@@ -150,7 +169,7 @@ Item {
 
     ParamSlider {
         id: seedParam
-        y: 203
+        y: 241
         minimum: 1
         maximum: 100
         step: 1
@@ -165,7 +184,7 @@ Item {
 
     ParamSlider {
         id: bordersParam
-        y: 236
+        y: 274
         visible: control.currentIndex == 1
         propertyName: "Width"
         onPropertyValueChanged: {

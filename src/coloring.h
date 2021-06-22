@@ -31,7 +31,7 @@ class ColoringObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    ColoringObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QVector3D color = QVector3D(1, 1, 1));
+    ColoringObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, QVector3D color = QVector3D(1, 1, 1));
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -42,9 +42,12 @@ public:
     void setColor(QVector3D color);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool colorizedTex = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -52,6 +55,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_sourceTexture = 0;
     unsigned int m_texture = 0;
     QVector3D m_color = QVector3D(1, 1, 1);
@@ -59,7 +63,7 @@ private:
 
 class ColoringRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    ColoringRenderer(QVector2D res);
+    ColoringRenderer(QVector2D res, GLint bpc);
     ~ColoringRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -69,6 +73,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int colorFBO;
     unsigned int m_colorTexture = 0;
     unsigned int m_sourceTexture = 0;

@@ -29,7 +29,7 @@ class PolygonNode: public Node
 {
     Q_OBJECT
 public:
-    PolygonNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int sides = 3, float polygonScale = 0.4f, float smooth = 0.0f, bool useAlpha = true);
+    PolygonNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int sides = 3, float polygonScale = 0.4f, float smooth = 0.0f, bool useAlpha = true);
     ~PolygonNode();
     void operation();
     unsigned int &getPreviewTexture();

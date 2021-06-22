@@ -29,7 +29,7 @@ class MappingNode: public Node
 {
     Q_OBJECT
 public:
-    MappingNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float inputMin = 0.0f, float inputMax = 1.0f, float outputMin = 0.0f, float outputMax = 1.0f);
+    MappingNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float inputMin = 0.0f, float inputMax = 1.0f, float outputMin = 0.0f, float outputMax = 1.0f);
     ~MappingNode();
     void operation();
     unsigned int &getPreviewTexture();

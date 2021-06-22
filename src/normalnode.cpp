@@ -22,12 +22,12 @@
 #include "normalnode.h"
 #include <iostream>
 
-NormalNode::NormalNode(QQuickItem *parent, QVector2D resolution): Node(parent, resolution)
+NormalNode::NormalNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(parent, resolution, bpc)
 {
     createSockets(1, 0);
     setTitle("Normal");
     m_socketsInput[0]->setTip("Normal");
-    preview = new NormalObject(grNode, m_resolution);
+    preview = new NormalObject(grNode, m_resolution, m_bpc);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -39,6 +39,14 @@ NormalNode::NormalNode(QQuickItem *parent, QVector2D resolution): Node(parent, r
     connect(this, &Node::changeScaleView, this, &NormalNode::updateScale);
     connect(preview, &NormalObject::updateNormal, this, &NormalNode::normalChanged);
     connect(this, &Node::changeResolution, preview, &NormalObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &NormalObject::setBPC);
+    propView = new QQuickView();
+    propView->setSource(QUrl(QStringLiteral("qrc:/qml/BitsProperty.qml")));
+    propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
+    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 NormalNode::~NormalNode() {
@@ -62,6 +70,12 @@ void NormalNode::saveTexture(QString fileName) {
 void NormalNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 12;
+}
+
+void NormalNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    Node::deserialize(json, hash);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void NormalNode::updateScale(float scale) {

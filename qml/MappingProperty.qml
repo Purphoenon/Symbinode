@@ -30,13 +30,33 @@ Item {
     property alias startInputMax: inputMaxParam.propertyValue
     property alias startOutputMin: outputMinParam.propertyValue
     property alias startOutputMax: outputMaxParam.propertyValue
+    property alias startBits: bitsParam.currentIndex
     signal inputMinChanged(real value)
     signal inputMaxChanged(real value)
     signal outputMinChanged(real value)
     signal outputMaxChanged(real value)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits per channel", "16 bits per channel"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
     ParamSlider {
         id: inputMinParam
+        y: 38
         propertyName: "Input Min"
         onPropertyValueChanged: {
             inputMinChanged(inputMinParam.propertyValue)
@@ -47,7 +67,7 @@ Item {
     }
     ParamSlider {
         id: inputMaxParam
-        y: 33
+        y: 71
         propertyName: "Input Max"
         onPropertyValueChanged: {
             inputMaxChanged(inputMaxParam.propertyValue)
@@ -58,7 +78,7 @@ Item {
     }
     ParamSlider {
         id: outputMinParam
-        y: 66
+        y: 104
         propertyName: "Output Min"
         onPropertyValueChanged: {
             outputMinChanged(outputMinParam.propertyValue)
@@ -69,7 +89,7 @@ Item {
     }
     ParamSlider {
         id: outputMaxParam
-        y: 99
+        y: 137
         propertyName: "Output Max"
         onPropertyValueChanged: {
             outputMaxChanged(outputMaxParam.propertyValue)

@@ -29,7 +29,7 @@ class RoughNode: public Node
 {
     Q_OBJECT
 public:
-    RoughNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    RoughNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     ~RoughNode();
     void operation();
     unsigned int &getPreviewTexture();

@@ -21,11 +21,13 @@
 
 #include "transformnode.h"
 
-TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float transX, float transY, float scaleX,
-                             float scaleY, int angle, bool clamp): Node(parent, resolution), m_transX(transX),
-    m_transY(transY), m_scaleX(scaleX), m_scaleY(scaleY), m_angle(angle), m_clamp(clamp)
+TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float transX,
+                             float transY, float scaleX, float scaleY, int angle, bool clamp):
+    Node(parent, resolution, bpc), m_transX(transX), m_transY(transY), m_scaleX(scaleX), m_scaleY(scaleY),
+    m_angle(angle), m_clamp(clamp)
 {
-    preview = new TransformObject(grNode, m_resolution, m_transX, m_transY, m_scaleX, m_scaleY, m_angle, m_clamp);
+    preview = new TransformObject(grNode, m_resolution, m_bpc, m_transX, m_transY, m_scaleX, m_scaleY,
+                                  m_angle, m_clamp);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -38,6 +40,7 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float tra
     connect(preview, &TransformObject::textureChanged, this, &TransformNode::setOutput);
     connect(preview, &TransformObject::updatePreview, this, &TransformNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TransformObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &TransformObject::setBPC);
     connect(this, &TransformNode::translationXChanged, preview, &TransformObject::setTranslateX);
     connect(this, &TransformNode::translationYChanged, preview, &TransformObject::setTranslateY);
     connect(this, &TransformNode::scaleXChanged, preview, &TransformObject::setScaleX);
@@ -53,12 +56,15 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, float tra
     propertiesPanel->setProperty("startScaleY", m_scaleY);
     propertiesPanel->setProperty("startRotation", m_angle);
     propertiesPanel->setProperty("startClamp", m_clamp);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(transXChanged(qreal)), this, SLOT(updateTranslationX(qreal)));
     connect(propertiesPanel, SIGNAL(transYChanged(qreal)), this, SLOT(updateTranslationY(qreal)));
     connect(propertiesPanel, SIGNAL(scaleXChanged(qreal)), this, SLOT(updateScaleX(qreal)));
     connect(propertiesPanel, SIGNAL(scaleYChanged(qreal)), this, SLOT(updateScaleY(qreal)));
     connect(propertiesPanel, SIGNAL(angleChanged(int)), this, SLOT(updateRotation(int)));
     connect(propertiesPanel, SIGNAL(clampCoordsChanged(bool)), this, SLOT(updateClampCoords(bool)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Transform");
@@ -72,6 +78,14 @@ TransformNode::~TransformNode() {
 
 void TransformNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode2 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode2 && inputNode2->resolution() != m_resolution) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
@@ -122,6 +136,8 @@ void TransformNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> 
     propertiesPanel->setProperty("startScaleY", m_scaleY);
     propertiesPanel->setProperty("startRotation", m_angle);
     propertiesPanel->setProperty("startClamp", m_clamp);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 float TransformNode::translationX() {
