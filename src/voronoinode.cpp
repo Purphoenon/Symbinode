@@ -103,6 +103,11 @@ void VoronoiNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+VoronoiNode *VoronoiNode::clone() {
+    return new VoronoiNode(parentItem(), m_resolution, m_bpc, m_crystals, m_borders, m_solid, m_worley,
+                           m_voronoiType);
+}
+
 void VoronoiNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 13;

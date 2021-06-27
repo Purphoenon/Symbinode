@@ -91,6 +91,11 @@ void MappingNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+MappingNode *MappingNode::clone() {
+    return new MappingNode(parentItem(), m_resolution, m_bpc, m_inputMin, m_inputMax, m_outputMin,
+                           m_outputMax);
+}
+
 void MappingNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 3;

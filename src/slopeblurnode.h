@@ -10,11 +10,12 @@ class SlopeBlurNode: public Node
 public:
     SlopeBlurNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int mode = 0, float intensity = 0.5f, int samples = 1);
     ~SlopeBlurNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    SlopeBlurNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     int mode();
     void setMode(int mode);
     float intensity();

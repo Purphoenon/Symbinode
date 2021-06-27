@@ -45,11 +45,12 @@ public:
                 VoronoiParams borders = VoronoiParams(), VoronoiParams solid = VoronoiParams(),
                 VoronoiParams worley = VoronoiParams(), QString voronoiType = "crystals");
     ~VoronoiNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    VoronoiNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     VoronoiParams crystalsParam();
     VoronoiParams bordersParam();
     VoronoiParams solidParam();

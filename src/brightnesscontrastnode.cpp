@@ -78,6 +78,10 @@ void BrightnessContrastNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+BrightnessContrastNode *BrightnessContrastNode::clone() {
+    return new BrightnessContrastNode(parentItem(), m_resolution, m_bpc, m_brightness, m_contrast);
+}
+
 void BrightnessContrastNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 21;

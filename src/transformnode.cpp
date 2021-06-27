@@ -99,6 +99,11 @@ void TransformNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+TransformNode *TransformNode::clone() {
+    return new TransformNode(parentItem(), m_resolution, m_bpc, m_transX, m_transY, m_scaleX, m_scaleY,
+                             m_angle, m_clamp);
+}
+
 void TransformNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 16;

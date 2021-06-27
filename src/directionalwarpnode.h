@@ -10,11 +10,12 @@ class DirectionalWarpNode: public Node
 public:
     DirectionalWarpNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float intensity = 0.1f, int angle = 0);
     ~DirectionalWarpNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    DirectionalWarpNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     float intensity();
     void setIntnsity(float intensity);
     int angle();

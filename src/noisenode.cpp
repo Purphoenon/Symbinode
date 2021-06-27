@@ -207,6 +207,10 @@ void NoiseNode::operation() {
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
 }
 
+NoiseNode *NoiseNode::clone() {
+    return new NoiseNode(parentItem(), m_resolution, m_bpc, perlinNoise, simpleNoise, m_noiseType);
+}
+
 void NoiseNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 6;

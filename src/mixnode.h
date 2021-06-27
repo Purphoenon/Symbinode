@@ -30,9 +30,9 @@ class MixNode: public Node
 public:
     MixNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float factor = 1.0f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
     ~MixNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
     float factor();
     void setFactor(float f);
     int mode();
@@ -44,8 +44,9 @@ public:
     int backgroundOpacity();
     void setBackgroundOpacity(int opacity);
     void setOutput();
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    MixNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
 signals:
     void factorChanged(float f);
     void modeChanged(int mode);

@@ -82,6 +82,10 @@ void BlurNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+BlurNode *BlurNode::clone() {
+    return new BlurNode(parentItem(), m_resolution, m_bpc, m_intensity);
+}
+
 void BlurNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 19;

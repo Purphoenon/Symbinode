@@ -67,6 +67,10 @@ void PolarTransformNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+PolarTransformNode *PolarTransformNode::clone() {
+    return new PolarTransformNode(parentItem(), m_resolution, m_bpc, m_radius, m_clamp, m_angle);
+}
+
 void PolarTransformNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 30;

@@ -19,11 +19,12 @@ class GradientNode: public Node
 public:
     GradientNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, GradientParams linear = GradientParams(), GradientParams reflected = GradientParams(), GradientParams angular = GradientParams{0.5f, 0.5f, 1.0f, 0.5f, 0.0f}, GradientParams radial = GradientParams{0.5f, 0.5f, 0.5f, 1.0f, 0.0f}, QString gradientType = "linear");
     ~GradientNode();
-    void operation();
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
+    void operation() override;
+    GradientNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
     GradientParams linearParam();
     GradientParams reflectedParam();
     GradientParams angularParam();

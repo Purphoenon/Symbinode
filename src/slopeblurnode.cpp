@@ -72,6 +72,10 @@ void SlopeBlurNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+SlopeBlurNode *SlopeBlurNode::clone() {
+    return new SlopeBlurNode(parentItem(), m_resolution, m_bpc, m_mode, m_intensity, m_samples);
+}
+
 void SlopeBlurNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 28;

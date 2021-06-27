@@ -64,6 +64,10 @@ void DirectionalBlurNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+DirectionalBlurNode *DirectionalBlurNode::clone() {
+    return new DirectionalBlurNode(parentItem(), m_resolution, m_bpc, m_intensity, m_angle);
+}
+
 void DirectionalBlurNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 27;

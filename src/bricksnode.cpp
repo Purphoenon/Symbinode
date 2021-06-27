@@ -76,6 +76,11 @@ void BricksNode::operation() {
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
 }
 
+BricksNode *BricksNode::clone() {
+    return new BricksNode(parentItem(), m_resolution, m_bpc, m_columns, m_rows, m_offset, m_width, m_height,
+                          m_smoothX, m_smoothY, m_mask, m_seed);
+}
+
 void BricksNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 31;

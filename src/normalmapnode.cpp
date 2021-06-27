@@ -79,6 +79,10 @@ float NormalMapNode::strenght() {
     return m_strenght;
 }
 
+NormalMapNode *NormalMapNode::clone() {
+    return new NormalMapNode(parentItem(), m_resolution, m_bpc, m_strenght);
+}
+
 void NormalMapNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 11;

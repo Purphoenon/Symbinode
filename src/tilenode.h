@@ -31,11 +31,12 @@ class TileNode: public Node
 public:
     TileNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scale = 1.0f, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true, bool depthMask = true);
     ~TileNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    TileNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     float offsetX();
     void setOffsetX(float offset);
     float offsetY();

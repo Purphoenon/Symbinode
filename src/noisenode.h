@@ -58,11 +58,12 @@ public:
     void setAmplitude(float value);
     int seed();
     void setSeed(int seed);
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void operation();
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    void operation() override;
+    NoiseNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
 signals:
     void noiseTypeChanged(QString type);
     void noiseScaleChanged(float scale);

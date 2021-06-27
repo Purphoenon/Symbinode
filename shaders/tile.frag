@@ -99,7 +99,7 @@ void main()
             coords *= rotate2d(rotationAngle*PI/180.0 + PI*random.z*randRotation);
             coords /= (vec2(scaleX, scaleY) - vec2(random.w*randScale));
             coords /= scale;
-            coords += 0.5;           
+            coords += 0.5;
             if((coords.x < 0.0 || coords.y < 0.0 || coords.x > 1.0 || coords.y > 1.0)) continue;
             int textureNumber = int(floor((random.z + random.w)*0.5*(inputCount - 0.1)));
             if(textureNumber == 0) {

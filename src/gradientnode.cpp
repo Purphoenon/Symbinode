@@ -69,6 +69,11 @@ void GradientNode::operation() {
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
 }
 
+GradientNode *GradientNode::clone() {
+    return new GradientNode(parentItem(), m_resolution, m_bpc, m_linear, m_reflected, m_angular, m_radial,
+                            m_gradientType);
+}
+
 void GradientNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 25;

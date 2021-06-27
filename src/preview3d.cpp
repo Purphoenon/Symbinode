@@ -802,6 +802,7 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
     if(previewItem->useAlbedoTex) {
         if(previewItem->changedAlbedo) {
             previewItem->changedAlbedo = false;
+            //albedoTexture = previewItem->albedo().toUInt();
             updateOutputsTexture(albedoTexture, previewItem->albedo().toUInt());
             pbrShader->bind();
         }
@@ -1169,7 +1170,7 @@ void Preview3DRenderer::renderSphere() {
                 float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
 
                 positions.push_back(QVector3D(xPos, yPos, zPos));
-                uv.push_back(QVector2D(2*xSegment, ySegment));
+                uv.push_back(QVector2D((2.0*xSegment), ySegment));
                 normals.push_back(QVector3D(xPos, yPos, zPos));
             }
         }
@@ -1463,6 +1464,10 @@ void Preview3DRenderer::updateOutputsTexture(unsigned int &dst, const unsigned i
     glBindFramebuffer(GL_FRAMEBUFFER, outputFBO);
     glBindTexture(GL_TEXTURE_2D, dst);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst, 0);
     glDisable(GL_DEPTH_TEST);
     glViewport(0, 0, m_texResolution.x(), m_texResolution.y());
@@ -1476,6 +1481,34 @@ void Preview3DRenderer::updateOutputsTexture(unsigned int &dst, const unsigned i
     textureShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    /*glBindTexture(GL_TEXTURE_2D, dst);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texResolution.x(), m_texResolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 4);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LOD, 4);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindFramebuffer(GL_FRAMEBUFFER, outputFBO);
+    glDisable(GL_DEPTH_TEST);
+    unsigned int maxMipLevels = 5;
+    for(unsigned int mip = 0; mip < maxMipLevels; ++mip) {
+        unsigned int mipWidth = (m_texResolution.x()) * std::pow(0.5, mip);
+        unsigned int mipHeight = (m_texResolution.y()) * std::pow(0.5, mip);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst, mip);
+        glViewport(0, 0, mipWidth, mipHeight);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        textureShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, src);
+        renderQuad();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->release();
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);*/
     glBindTexture(GL_TEXTURE_2D, dst);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);

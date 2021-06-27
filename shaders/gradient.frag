@@ -24,7 +24,7 @@ float linear(vec2 st) {
     float color = mix(1.0, 0.0, f);
     if(tiling) {
         //antialiasing
-        float numPixels = 8.0;
+        float numPixels = 4.0;
         float aa = (1.0/res.x)*numPixels;
         float lerpLimit = max(1.0 - aa / length(b), 0.0);
         float invDiff = lerpLimit / (1.0-lerpLimit);
@@ -64,7 +64,7 @@ float angular(vec2 st) {
     float angleA = atan(a.y, a.x);
     float color = mod(angleA - angleB, TWO_PI)/TWO_PI;
     //antialiasing
-    float numPixels = 8.0;
+    float numPixels = 4.0;
     float aa = (1.0/res.x)*numPixels;
     float lerpLimit = max(1.0 - aa / (TWO_PI*length(a)), 0.0);
     float invDiff = lerpLimit / (1.0-lerpLimit);

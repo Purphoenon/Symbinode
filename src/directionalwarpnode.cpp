@@ -68,6 +68,10 @@ void DirectionalWarpNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+DirectionalWarpNode *DirectionalWarpNode::clone() {
+    return new DirectionalWarpNode(parentItem(), m_resolution, m_bpc, m_intensity, m_angle);
+}
+
 void DirectionalWarpNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 26;

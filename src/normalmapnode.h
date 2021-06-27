@@ -29,13 +29,14 @@ class NormalMapNode: public Node
 {
     Q_OBJECT
 public:
-    NormalMapNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float strenght = 6.0f);
+    NormalMapNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float strenght = 2.0f);
     ~NormalMapNode();
     void operation();
     unsigned int &getPreviewTexture();
     void saveTexture(QString fileName);
     float strenght();
     void setOutput();
+    NormalMapNode *clone();
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:

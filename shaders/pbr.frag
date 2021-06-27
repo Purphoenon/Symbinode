@@ -163,7 +163,7 @@ void main()
 {
     vec3 V = normalize(camPos - WorldPos);
 
-    vec2 coords = useHeightMap ? ParallaxMapping(TexCoords*tilesSize, normalize(tangentView - tangentFragPos)) : TexCoords*tilesSize;
+    vec2 coords = useHeightMap ? ParallaxMapping(TexCoords*tilesSize, normalize(tangentView - tangentFragPos)) : (TexCoords*tilesSize);
 
     vec4 texAlbedo = vec4(albedoVal, 1.0);
     vec4 texColor = texture(albedoMap, coords);

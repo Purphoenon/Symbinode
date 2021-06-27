@@ -46,6 +46,10 @@ void GrayscaleNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+GrayscaleNode *GrayscaleNode::clone() {
+    return new GrayscaleNode(parentItem(), m_resolution, m_bpc);
+}
+
 void GrayscaleNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 24;

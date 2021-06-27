@@ -31,11 +31,12 @@ class TransformNode: public Node
 public:
     TransformNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float transX = 0.0f, float transY = 0.0f, float scaleX = 1.0f, float scaleY = 1.0f, int angle = 0, bool clamp = false);
     ~TransformNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture()override;
+    void saveTexture(QString fileName) override;
+    TransformNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     float translationX();
     void setTranslationX(float x);
     float translationY();

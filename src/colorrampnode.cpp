@@ -86,6 +86,10 @@ void ColorRampNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+ColorRampNode *ColorRampNode::clone() {
+    return new ColorRampNode(parentItem(), m_resolution, m_bpc, stops());
+}
+
 void ColorRampNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 0;

@@ -176,8 +176,8 @@ CircleRenderer::CircleRenderer(QVector2D resolution, GLint bpc): m_resolution(re
     glBindFramebuffer(GL_FRAMEBUFFER, circleFBO);
     glGenTextures(1, &circleTexture);
     glBindTexture(GL_TEXTURE_2D, circleTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     if(m_bpc == GL_RGBA16) {
@@ -225,6 +225,7 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
         m_bpc = circleItem->bpc();
         updateTexResolution();
         createCircle();
+        circleItem->setTexture(circleTexture);
     }
     if(circleItem->generatedCircle) {
         circleItem->generatedCircle = false;
@@ -316,8 +317,8 @@ void CircleRenderer::saveTexture(QString fileName) {
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());

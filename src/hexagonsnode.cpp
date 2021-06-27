@@ -65,6 +65,11 @@ void HexagonsNode::operation() {
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
 }
 
+HexagonsNode *HexagonsNode::clone() {
+    return new HexagonsNode(parentItem(), m_resolution, m_bpc, m_columns, m_rows, m_size, m_smooth, m_mask,
+                            m_seed);
+}
+
 void HexagonsNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 32;

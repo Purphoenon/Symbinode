@@ -65,6 +65,10 @@ void BevelNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+BevelNode *BevelNode::clone() {
+    return new BevelNode(parentItem(), m_resolution, m_bpc, m_dist, m_smooth, m_alpha);
+}
+
 void BevelNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 29;

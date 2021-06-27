@@ -229,8 +229,8 @@ VoronoiRenderer::VoronoiRenderer(QVector2D res, GLint bpc): m_resolution(res), m
     glBindFramebuffer(GL_FRAMEBUFFER, voronoiFBO);
     glGenTextures(1, &voronoiTexture);
     glBindTexture(GL_TEXTURE_2D, voronoiTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     if(m_bpc == GL_RGBA16) {
@@ -278,6 +278,7 @@ void VoronoiRenderer::synchronize(QQuickFramebufferObject *item) {
         m_bpc = voronoiItem->bpc();
         updateTexResolution();
         createVoronoi();
+        voronoiItem->setTexture(voronoiTexture);
     }
     if(voronoiItem->generatedVoronoi) {
         voronoiItem->generatedVoronoi = false;
@@ -376,8 +377,8 @@ void VoronoiRenderer::saveTexture(QString fileName) {
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());

@@ -80,6 +80,11 @@ void CircleNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+CircleNode *CircleNode::clone() {
+    return new CircleNode(parentItem(), m_resolution, m_bpc, m_interpolation, m_radius, m_smooth,
+                          m_useAlpha);
+}
+
 void CircleNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 15;

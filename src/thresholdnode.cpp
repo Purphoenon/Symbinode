@@ -81,6 +81,10 @@ void ThresholdNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+ThresholdNode *ThresholdNode::clone() {
+    return new ThresholdNode(parentItem(), m_resolution, m_bpc, m_threshold);
+}
+
 void ThresholdNode::serialize(QJsonObject &json) const{
     Node::serialize(json);
     json["type"] = 22;

@@ -67,6 +67,10 @@ void InverseNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+InverseNode *InverseNode::clone() {
+    return new InverseNode(parentItem(), m_resolution, m_bpc);
+}
+
 void InverseNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 20;

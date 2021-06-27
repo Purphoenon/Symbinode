@@ -63,6 +63,7 @@ public:
     void mouseReleaseEvent(QMouseEvent *event);
     void hoverMoveEvent(QHoverEvent *event);
     void hoverLeaveEvent(QHoverEvent *event);
+    virtual Node* clone();
     virtual void serialize(QJsonObject &json) const;
     virtual void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     void setPropertyOnPanel(const char* name, QVariant value);

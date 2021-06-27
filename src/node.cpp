@@ -358,6 +358,10 @@ void Node::hoverLeaveEvent(QHoverEvent *event) {
     }
 }
 
+Node *Node::clone() {
+    return new Node(parentItem(), m_resolution, m_bpc);
+}
+
 void Node::serialize(QJsonObject &json) const {
     json["name"] = objectName();
     json["baseX"] = m_baseX;

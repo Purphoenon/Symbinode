@@ -745,8 +745,8 @@ MainWindow {
                 }
                 exitDialogObject.accepted.connect(saveFunction)
                 exitDialogObject.discard.connect(function() {
-                    var index = tabsList.tabs.indexOf(tab)
                     mainWindow.closeTab(tab)
+                    var index = tabsList.tabs.indexOf(tab)                    
                     tabsList.tabs.splice(index, 1)                    
                     exitDialogObject.destroy()
 

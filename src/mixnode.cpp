@@ -170,6 +170,11 @@ void MixNode::setOutput() {
     m_socketOutput[0]->setValue(preview->texture());
 }
 
+MixNode *MixNode::clone() {
+    return new MixNode(parentItem(), m_resolution, m_bpc, m_factor, m_fOpacity, m_bOpacity, m_mode,
+                       m_includingAlpha);
+}
+
 void MixNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 7;

@@ -64,6 +64,10 @@ void ColorNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+ColorNode *ColorNode::clone() {
+    return new ColorNode(parentItem(), m_resolution, m_color);
+}
+
 void ColorNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 1;

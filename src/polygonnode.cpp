@@ -89,6 +89,10 @@ void PolygonNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+PolygonNode *PolygonNode::clone() {
+    return new PolygonNode(parentItem(), m_resolution, m_bpc, m_sides, m_polygonScale, m_smooth, m_useAlpha);
+}
+
 void PolygonNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 14;

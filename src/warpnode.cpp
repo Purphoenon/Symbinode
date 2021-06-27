@@ -87,6 +87,10 @@ void WarpNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+WarpNode *WarpNode::clone() {
+    return new WarpNode(parentItem(), m_resolution, m_bpc, m_intensity);
+}
+
 void WarpNode::serialize(QJsonObject &json) const{
     Node::serialize(json);
     json["type"] = 18;

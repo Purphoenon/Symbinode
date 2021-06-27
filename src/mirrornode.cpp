@@ -82,6 +82,10 @@ void MirrorNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+MirrorNode *MirrorNode::clone() {
+    return new MirrorNode(parentItem(), m_resolution, m_bpc, m_direction);
+}
+
 void MirrorNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 5;

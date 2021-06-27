@@ -181,6 +181,12 @@ void TileNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
 }
 
+TileNode *TileNode::clone() {
+    return new TileNode(parentItem(), m_resolution, m_bpc, m_offsetX, m_offsetY, m_columns, m_rows, m_scale,
+                        m_scaleX, m_scaleY, m_rotationAngle, m_randPosition, m_randRotation, m_randScale,
+                        m_maskStrength, m_inputsCount, m_seed, m_keepProportion, m_useAlpha, m_depthMask);
+}
+
 void TileNode::serialize(QJsonObject &json) const {
     Node::serialize(json);
     json["type"] = 17;

@@ -177,8 +177,8 @@ PolygonRenderer::PolygonRenderer(QVector2D resolution, GLint bpc): m_resolution(
     glBindFramebuffer(GL_FRAMEBUFFER, polygonFBO);
     glGenTextures(1, &polygonTexture);
     glBindTexture(GL_TEXTURE_2D, polygonTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     if(m_bpc == GL_RGBA16) {
@@ -226,6 +226,7 @@ void PolygonRenderer::synchronize(QQuickFramebufferObject *item) {
         m_bpc = polygonItem->bpc();
         updateTexResolution();
         createPolygon();
+        polygonItem->setTexture(polygonTexture);
     }
     if(polygonItem->generatedPolygon) {
         polygonItem->generatedPolygon = false;
@@ -316,8 +317,8 @@ void PolygonRenderer::saveTexture(QString fileName) {
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
