@@ -81,6 +81,10 @@ void Socket::setGlobalPos(QVector2D pos) {
     emit globalPosChanged(m_globalPos);
 }
 
+bool Socket::inCircle(QVector2D center, float radius) {
+    return (m_globalPos - center).length() <= radius;
+}
+
 void Socket::hoverEnterEvent(QHoverEvent *event) {
     grSocket->setProperty("showTip", true);
 }
@@ -118,11 +122,29 @@ void Socket::mouseMoveEvent(QMouseEvent *event) {
     Scene *scene = reinterpret_cast<Scene*>(parentItem()->parentItem());
     if(event->buttons() == Qt::LeftButton && scene->isEdgeDrag) {
         QPointF globalPos = mapToItem(scene, QPointF(event->pos().x(), event->pos().y()));
+        Node *nearestNode = nullptr;
+        float minDist = std::numeric_limits<float>::max();
+        for(auto node: scene->nodes()) {
+            bool inRadius = node->isPointInRadius(QVector2D(globalPos.x(), globalPos.y()));
+            if(inRadius) {
+                float dist = QVector2D(node->x() - globalPos.x(), node->y() - globalPos.y()).length();
+                if(dist < minDist){
+                    minDist = dist;
+                    nearestNode = node;
+                }
+            }
+        }
         if(scene->startSocket->type() == OUTPUTS || scene->startSocket->edges.count() > 0) {
-            scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
+            Socket *nearestSocket = nullptr;
+            if(nearestNode) nearestSocket = nearestNode->getNearestInputSocket(QVector2D(globalPos.x(), globalPos.y()), 20.0f);
+            if(nearestSocket) scene->dragEdge->setEndPosition(nearestSocket->globalPos());
+            else scene->dragEdge->setEndPosition(QVector2D(globalPos.x(), globalPos.y()));
         }
         else {
-            scene->dragEdge->setStartPosition(QVector2D(globalPos.x(), globalPos.y()));
+            Socket *nearestSocket = nullptr;
+            if(nearestNode) nearestSocket = nearestNode->getNearestOutputSocket(QVector2D(globalPos.x(), globalPos.y()), 20.0f);
+            if(nearestSocket) scene->dragEdge->setStartPosition(nearestSocket->globalPos());
+            else scene->dragEdge->setStartPosition(QVector2D(globalPos.x(), globalPos.y()));
         }
     }
 }
@@ -132,10 +154,16 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
     if(event->button() == Qt::LeftButton && scene->isEdgeDrag) {
         bool dragAccepted = false;
         bool connectedNodes = false;
-        QPointF childPos = mapToItem(scene, QPointF(event->pos().x(), event->pos().y()));
+        QPointF childPos;
+        if(scene->startSocket->type() == OUTPUTS || scene->startSocket->edges.count() > 0) {
+            childPos = QPointF(scene->dragEdge->endPosition().x(), scene->dragEdge->endPosition().y());
+        }
+        else {
+            childPos = QPointF(scene->dragEdge->startPosition().x(), scene->dragEdge->startPosition().y());
+        }
         Node *n = scene->nodeAt(childPos.x(), childPos.y());
         if(n) {
-            QPointF nodePos = mapToItem(n, QPointF(event->pos().x(), event->pos().y()));
+            QPointF nodePos = scene->mapToItem(n, childPos);
             QQuickItem *child = n->childAt(nodePos.x(), nodePos.y());
             Node *parentNode = qobject_cast<Node*>(parentItem());
             connectedNodes = parentNode->checkConnected(n, m_type);

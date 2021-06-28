@@ -218,6 +218,52 @@ bool Node::checkConnected(Node *node, socketType type) {
     }
 }
 
+bool Node::isPointInRadius(QVector2D point) {
+    return (x() - 30 < point.x() && x() + width() + 30 > point.x() && y() - 30 < point.y() && y() + height() + 30 > point.y());
+}
+
+Socket *Node::getNearestOutputSocket(QVector2D center, float radius) {
+    Socket *nearestSocket = nullptr;
+    float minDist = std::numeric_limits<float>::max();
+    for(auto socket: m_socketOutput) {
+        bool inRadius = socket->inCircle(center, radius);
+        if(inRadius) {
+            float dist = (socket->globalPos() - center).length();
+            if(dist < minDist) {
+                minDist = dist;
+                nearestSocket = socket;
+            }
+        }
+    }
+    return nearestSocket;
+}
+
+Socket *Node::getNearestInputSocket(QVector2D center, float radius) {
+    Socket *nearestSocket = nullptr;
+    float minDist = std::numeric_limits<float>::max();
+    for(auto socket: m_socketsInput) {
+        bool inRadius = socket->inCircle(center, radius);
+        if(inRadius) {
+            float dist = (socket->globalPos() - center).length();
+            if(dist < minDist) {
+                minDist = dist;
+                nearestSocket = socket;
+            }
+        }
+    }
+    for(auto socket: m_additionalInputs) {
+        bool inRadius = socket->inCircle(center, radius);
+        if(inRadius) {
+            float dist = (socket->globalPos() - center).length();
+            if(dist < minDist) {
+                minDist = dist;
+                nearestSocket = socket;
+            }
+        }
+    }
+    return nearestSocket;
+}
+
 QList<Edge*> Node::getEdges() const {
     QList<Edge*> edges;
     for(auto s: m_socketsInput) {

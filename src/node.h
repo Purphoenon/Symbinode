@@ -54,6 +54,9 @@ public:
     bool selected();
     void setSelected(bool select);
     bool checkConnected(Node* node, socketType type);
+    bool isPointInRadius(QVector2D point);
+    Socket *getNearestOutputSocket(QVector2D center, float radius);
+    Socket *getNearestInputSocket(QVector2D center, float radius);
     QList<Edge*> getEdges() const;
     QQuickItem *getPropertyPanel();
     Frame *attachedFrame();

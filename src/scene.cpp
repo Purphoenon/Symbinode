@@ -796,7 +796,6 @@ void Scene::addToFrame() {
 }
 
 void Scene::focusNode() {
-    //m_background->setViewScale(1.0f);
     if(m_nodes.size() > 0) {
         float maxX = m_nodes[0]->x() + m_nodes[0]->width();
         float maxY = m_nodes[0]->y() + m_nodes[0]->height();
