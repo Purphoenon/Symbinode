@@ -40,6 +40,7 @@ public:
     Edge(const Edge &edge);
     ~Edge();
     bool intersectWith(QPointF p1, QPointF p2);
+    bool intersectWith(qreal x, qreal y, qreal width, qreal height);
     QVector2D startPosition();
     void setStartPosition(QVector2D pos);
     QVector2D endPosition();

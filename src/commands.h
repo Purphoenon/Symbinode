@@ -33,7 +33,7 @@ class Socket;
 
 class MoveCommand: public QUndoCommand {
 public:
-    MoveCommand(QList<QQuickItem*> nodes, QVector2D movVector, Frame *frame = nullptr, QUndoCommand *parent = nullptr);
+    MoveCommand(QList<QQuickItem*> nodes, QVector2D movVector, Frame *frame = nullptr, Edge *edge = nullptr, QUndoCommand *parent = nullptr);
     ~MoveCommand();
     void undo();
     void redo();
@@ -46,6 +46,8 @@ private:
     float m_oldFrameY;
     float m_oldFrameWidth;
     float m_oldFrameHeight;
+    Edge *m_intersectingEdge;
+    Socket *m_oldEndSocket;
 };
 
 class AddNode: public QUndoCommand {

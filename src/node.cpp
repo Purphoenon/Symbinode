@@ -264,6 +264,19 @@ Socket *Node::getNearestInputSocket(QVector2D center, float radius) {
     return nearestSocket;
 }
 
+Socket *Node::getInputSocket(int index) const {
+    if(index < m_socketsInput.count() + m_additionalInputs.count()) {
+        if(index < m_socketsInput.count()) return m_socketsInput[index];
+        else return m_additionalInputs[index - m_socketsInput.count()];
+    }
+    return nullptr;
+}
+
+Socket *Node::getOutputSocket(int index) const {
+    if(index < m_socketOutput.count()) return m_socketOutput[index];
+    return nullptr;
+}
+
 QList<Edge*> Node::getEdges() const {
     QList<Edge*> edges;
     for(auto s: m_socketsInput) {
@@ -373,11 +386,22 @@ void Node::mouseReleaseEvent(QMouseEvent *event) {
             }
         }
         else {
-
             QPointF scenePoint = mapToItem(scene, QPointF(width()*0.5f, height()*0.16f));
             Frame *frame = scene->frameAt(scenePoint.x(), scenePoint.y());
-            if(!attachedFrame()) scene->movedNodes(scene->selectedList(), offset, frame);
-            else scene->movedNodes(scene->selectedList(), offset, nullptr);
+            Edge *edge = nullptr;
+            if(scene->countSelected() == 1 && getEdges().count() == 0) {
+                for(auto e: scene->edges()) {
+                    bool intersecting = e->intersectWith(x(), y(), width(), height());
+                    if(intersecting) {
+                        edge = e;
+                        break;
+                    }
+                }
+            }
+            frame = attachedFrame() ? nullptr : frame;
+            scene->movedNodes(scene->selectedList(), offset, frame, edge);
+            /*if(!attachedFrame()) scene->movedNodes(scene->selectedList(), offset, frame, edge);
+            else scene->movedNodes(scene->selectedList(), offset, nullptr);*/
         }
     }
 }

@@ -815,8 +815,8 @@ void Scene::focusNode() {
 
 }
 
-void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame) {
-    m_undoStack->push(new MoveCommand(nodes, vec, frame));
+void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame, Edge *edge) {
+    m_undoStack->push(new MoveCommand(nodes, vec, frame, edge));
     if(!m_modified) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);

@@ -50,14 +50,18 @@ Edge::~Edge() {
 bool Edge::intersectWith(QPointF p1, QPointF p2) {
     QPainterPath cutLine(p1);
     cutLine.lineTo(p2);
-    QPointF startPoint = grEdge->p1();
-    QPointF c1 = grEdge->p2();
-    QPointF c2 = grEdge->p3();
-    QPointF endPoint = grEdge->p4();
     QPainterPath edgeLine(QPointF(m_startPos.x(), m_startPos.y()));
     edgeLine.cubicTo(QPointF(m_startPos.x() + 0.5*grEdge->width(), m_startPos.y()), QPointF(m_endPos.x() -
                      0.5*grEdge->width(), m_endPos.y()), QPointF(m_endPos.x(), m_endPos.y()));
     return cutLine.intersects(edgeLine);
+}
+
+bool Edge::intersectWith(qreal x, qreal y, qreal width, qreal height) {
+    QRectF nodeRect(x, y, width, height);
+    QPainterPath edgeLine(QPointF(m_startPos.x(), m_startPos.y()));
+    edgeLine.cubicTo(QPointF(m_startPos.x() + 0.5*grEdge->width(), m_startPos.y()), QPointF(m_endPos.x() -
+                     0.5*grEdge->width(), m_endPos.y()), QPointF(m_endPos.x(), m_endPos.y()));
+    return edgeLine.intersects(nodeRect);
 }
 
 QVector2D Edge::startPosition() {

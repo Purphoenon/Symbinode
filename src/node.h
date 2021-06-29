@@ -57,6 +57,8 @@ public:
     bool isPointInRadius(QVector2D point);
     Socket *getNearestOutputSocket(QVector2D center, float radius);
     Socket *getNearestInputSocket(QVector2D center, float radius);
+    Socket *getInputSocket(int index) const;
+    Socket *getOutputSocket(int index) const;
     QList<Edge*> getEdges() const;
     QQuickItem *getPropertyPanel();
     Frame *attachedFrame();

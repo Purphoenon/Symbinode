@@ -25,8 +25,8 @@
 #include "scene.h"
 #include <iostream>
 
-MoveCommand::MoveCommand(QList<QQuickItem *> nodes, QVector2D movVector, Frame *frame, QUndoCommand *parent):
-QUndoCommand(parent), m_nodes(nodes), m_movVector(movVector), m_frame(frame)
+MoveCommand::MoveCommand(QList<QQuickItem *> nodes, QVector2D movVector, Frame *frame, Edge *edge, QUndoCommand *parent):
+QUndoCommand(parent), m_nodes(nodes), m_movVector(movVector), m_frame(frame), m_intersectingEdge(edge)
 {    
     for(auto item: m_nodes) {
         if(qobject_cast<Node*>(item)) {
@@ -43,6 +43,9 @@ QUndoCommand(parent), m_nodes(nodes), m_movVector(movVector), m_frame(frame)
         m_oldFrameY = m_frame->baseY();
         m_oldFrameWidth = m_frame->baseWidth();
         m_oldFrameHeight = m_frame->baseHeight();
+    }
+    if(m_intersectingEdge) {
+        m_oldEndSocket = m_intersectingEdge->endSocket();
     }
 }
 
@@ -70,6 +73,18 @@ void MoveCommand::undo() {
         m_frame->setBaseWidth(m_oldFrameWidth);
         m_frame->setBaseHeight(m_oldFrameHeight);
     }
+    if(m_intersectingEdge) {
+        Edge *edge = m_oldEndSocket->getEdges()[0];
+        m_oldEndSocket->deleteEdge(edge);
+        Node *node = qobject_cast<Node*>(m_nodes[0]);
+        edge->startSocket()->deleteEdge(edge);
+        qobject_cast<Scene*>(node->parentItem())->deleteEdge(edge);
+        edge->deleteLater();
+        m_intersectingEdge->endSocket()->deleteEdge(m_intersectingEdge);
+        m_intersectingEdge->setEndSocket(m_oldEndSocket);
+        m_oldEndSocket->addEdge(m_intersectingEdge);
+        m_intersectingEdge->setEndPosition(m_oldEndSocket->globalPos());
+    }
 }
 
 void MoveCommand::redo() {
@@ -89,8 +104,24 @@ void MoveCommand::redo() {
         }
     }
     if(m_frame) {
-        std::cout << "move to frame" << std::endl;
         m_frame->addNodes(nodesToFrame);
+    }
+    if(m_intersectingEdge) {
+        m_oldEndSocket->deleteEdge(m_intersectingEdge);
+        Node *node = qobject_cast<Node*>(m_nodes[0]);
+        Socket *newEndSocket = node->getInputSocket(0);
+        m_intersectingEdge->setEndSocket(newEndSocket);
+        if(newEndSocket) newEndSocket->addEdge(m_intersectingEdge);
+        m_intersectingEdge->setEndPosition(newEndSocket->globalPos());
+        Edge *newEdge = new Edge(node->parentItem());
+        Socket *startSocket = node->getOutputSocket(0);
+        newEdge->setStartSocket(startSocket);
+        if(startSocket) startSocket->addEdge(newEdge);
+        newEdge->setEndSocket(m_oldEndSocket);
+        m_oldEndSocket->addEdge(newEdge);
+        newEdge->setStartPosition(startSocket->globalPos());
+        newEdge->setEndPosition(m_oldEndSocket->globalPos());
+        qobject_cast<Scene*>(node->parentItem())->addEdge(newEdge);
     }
 }
 

@@ -85,7 +85,7 @@ public:
     void removeFromFrame();
     void addToFrame();
     void focusNode();
-    void movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame = nullptr);
+    void movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame = nullptr, Edge *edge = nullptr);
     void addedEdge(Edge *edge);
     void addedNode(Node *node);
     void addedFrame(Frame *frame);
