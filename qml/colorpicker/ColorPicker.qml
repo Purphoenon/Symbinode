@@ -35,7 +35,7 @@ Item {
         var r = ColorUtils.getChannelStr(startingColor, 0)
         var g = ColorUtils.getChannelStr(startingColor, 1)
         var b = ColorUtils.getChannelStr(startingColor, 2)
-        console.log("rgb " + r + " " + g + " " + b)
+        //console.log("rgb " + r + " " + g + " " + b)
 
         hueSlider.value = ColorUtils.getHsbComponent(r, g, b, 0)/360
         hueSlider.proportionX = (1 - hueSlider.value)
@@ -53,7 +53,7 @@ Item {
         height: parent.height - 65
         hueColor: {
             var v = 1.0-hueSlider.value
-            console.debug("v:"+v)
+            //console.debug("v:"+v)
 
             if(0.0 <= v && v < 0.16) {
                 return Qt.rgba(1.0, 0.0, v/0.16, 1.0)

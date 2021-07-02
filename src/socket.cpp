@@ -184,7 +184,7 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                             if(s->edges.count() > 0) {
                                 QList<QQuickItem*> deletedEdge;
                                 deletedEdge.append(s->edges[0]);
-                                scene->deletedItems(deletedEdge);
+                                scene->deletedItems(deletedEdge, false);
                             }
                             scene->movedEdge(scene->dragEdge, scene->startSocket, s);
                         }
@@ -199,7 +199,7 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                             if(s->edges.count() > 0) {
                                 QList<QQuickItem*> deletedEdge;
                                 deletedEdge.append(s->edges[0]);
-                                scene->deletedItems(deletedEdge);
+                                scene->deletedItems(deletedEdge, false);
                             }
                             scene->startSocket->edges.push_back(scene->dragEdge);
                             s->edges.push_back(scene->dragEdge);
@@ -234,7 +234,7 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
             if(scene->dragEdge->startSocket() && scene->dragEdge->endSocket()) {
                 QList<QQuickItem*> deletedEdge;
                 deletedEdge.append(scene->dragEdge);
-                scene->deletedItems(deletedEdge);
+                scene->deletedItems(deletedEdge, false);
             }
             else {
                 scene->dragEdge->destroyed();

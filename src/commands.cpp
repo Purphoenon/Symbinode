@@ -74,12 +74,11 @@ void MoveCommand::undo() {
         m_frame->setBaseHeight(m_oldFrameHeight);
     }
     if(m_intersectingEdge) {
-        Edge *edge = m_oldEndSocket->getEdges()[0];
-        m_oldEndSocket->deleteEdge(edge);
         Node *node = qobject_cast<Node*>(m_nodes[0]);
-        edge->startSocket()->deleteEdge(edge);
-        qobject_cast<Scene*>(node->parentItem())->deleteEdge(edge);
-        edge->deleteLater();
+        qobject_cast<Scene*>(node->parentItem())->deleteEdge(m_newEdge);
+        m_newEdge->endSocket()->deleteEdge(m_newEdge);
+        m_newEdge->startSocket()->deleteEdge(m_newEdge);
+        m_newEdge->setParentItem(nullptr);
         m_intersectingEdge->endSocket()->deleteEdge(m_intersectingEdge);
         m_intersectingEdge->setEndSocket(m_oldEndSocket);
         m_oldEndSocket->addEdge(m_intersectingEdge);
@@ -113,15 +112,26 @@ void MoveCommand::redo() {
         m_intersectingEdge->setEndSocket(newEndSocket);
         if(newEndSocket) newEndSocket->addEdge(m_intersectingEdge);
         m_intersectingEdge->setEndPosition(newEndSocket->globalPos());
-        Edge *newEdge = new Edge(node->parentItem());
-        Socket *startSocket = node->getOutputSocket(0);
-        newEdge->setStartSocket(startSocket);
-        if(startSocket) startSocket->addEdge(newEdge);
-        newEdge->setEndSocket(m_oldEndSocket);
-        m_oldEndSocket->addEdge(newEdge);
-        newEdge->setStartPosition(startSocket->globalPos());
-        newEdge->setEndPosition(m_oldEndSocket->globalPos());
-        qobject_cast<Scene*>(node->parentItem())->addEdge(newEdge);
+        Scene *scene = qobject_cast<Scene*>(node->parentItem());
+        if(!m_newEdge) {
+            m_newEdge = new Edge(scene);
+            Socket *startSocket = node->getOutputSocket(0);
+            m_newEdge->setStartSocket(startSocket);
+            if(startSocket) startSocket->addEdge(m_newEdge);
+            m_newEdge->setEndSocket(m_oldEndSocket);
+            m_oldEndSocket->addEdge(m_newEdge);
+            m_newEdge->setStartPosition(startSocket->globalPos());
+            m_newEdge->setEndPosition(m_oldEndSocket->globalPos());
+        }
+        else {
+            m_newEdge->startSocket()->addEdge(m_newEdge);
+            m_newEdge->endSocket()->addEdge(m_newEdge);
+            m_newEdge->setStartPosition(m_newEdge->startSocket()->globalPos());
+            m_newEdge->setEndPosition(m_newEdge->endSocket()->globalPos());
+            m_newEdge->endSocket()->setValue(m_newEdge->startSocket()->value());
+            m_newEdge->setParentItem(scene);
+        }
+        scene->addEdge(m_newEdge);
     }
 }
 
@@ -206,8 +216,9 @@ void AddFrame::redo() {
     if(addedNodes.size() > 0) m_frame->addNodes(addedNodes);
 }
 
-DeleteCommand::DeleteCommand(QList<QQuickItem*> items, Scene *scene, QUndoCommand *parent): QUndoCommand (parent),
-    m_scene(scene), m_items(items){
+DeleteCommand::DeleteCommand(QList<QQuickItem*> items, Scene *scene, bool saveConnection,
+                             QUndoCommand *parent): QUndoCommand (parent), m_scene(scene), m_items(items),
+    m_saveConnection(saveConnection){
 }
 
 DeleteCommand::~DeleteCommand() {
@@ -216,42 +227,15 @@ DeleteCommand::~DeleteCommand() {
 }
 
 void DeleteCommand::undo() {
-    m_scene->clearSelected();
-    for(auto item: m_items) {
-        if(qobject_cast<Node*>(item)) {
-            Node *node = qobject_cast<Node*>(item);
-            m_scene->addNode(node);
-            if(node->attachedFrame()) node->attachedFrame()->addNodes(QList<QQuickItem*>({node}));
-            node->setParentItem(m_scene);
-            m_scene->addSelected(node);
-            node->generatePreview();
-        }
-        else if(qobject_cast<Edge*>(item)) {
-            Edge *edge = qobject_cast<Edge*>(item);
-            m_scene->addEdge(edge);
-            edge->startSocket()->addEdge(edge);
-            edge->endSocket()->addEdge(edge);
-            edge->setStartPosition(edge->startSocket()->globalPos());
-            edge->setEndPosition(edge->endSocket()->globalPos());
-            edge->setParentItem(m_scene);
-            edge->endSocket()->setValue(edge->startSocket()->value());
-        }
-        else if(qobject_cast<Frame*>(item)) {
-            Frame *frame = qobject_cast<Frame*>(item);
-            m_scene->addFrame(frame);
-            frame->setParentItem(m_scene);
-            m_scene->addSelected(frame);
-            for(auto item: frame->contentList()) {
-                if(qobject_cast<Node*>(item)) {
-                    Node *node = qobject_cast<Node*>(item);
-                    node->setAttachedFrame(frame);
-                }
-            }
-        }
-    }
+    cancelDelete();
 }
 
 void DeleteCommand::redo() {
+    if(m_saveConnection) deleteWithSaveConnection();
+    else deleteBase();
+}
+
+void DeleteCommand::deleteBase() {
     for(auto item: m_items) {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
@@ -281,6 +265,91 @@ void DeleteCommand::redo() {
     }
 }
 
+void DeleteCommand::deleteWithSaveConnection() {
+    if(m_newEdges.empty()) {
+        for(auto item: m_items) {
+            if(qobject_cast<Node*>(item)) {
+                Node *node = qobject_cast<Node*>(item);
+                Socket *outputSocket = node->getOutputSocket(0);
+                if(outputSocket) {
+                    //find chains of selected nodes
+                    for(auto edge: outputSocket->getEdges()) {
+                        Node *outNode = qobject_cast<Node*>(edge->endSocket()->parentItem());
+                        if(outNode && outNode->selected()) continue;
+                        Socket *inputSocket = node->getInputSocket(0);
+                        Node *inNode = nullptr;
+                        if(inputSocket && inputSocket->countEdge() > 0) inNode = qobject_cast<Node*>(inputSocket->getEdges()[0]->startSocket()->parentItem());
+                        while(inNode && inNode->selected()) {
+                            inputSocket = inNode->getInputSocket(0);
+                            if(inputSocket && inputSocket->countEdge() > 0) inNode = qobject_cast<Node*>(inputSocket->getEdges()[0]->startSocket()->parentItem());
+                        }
+                        if(outNode && inNode) {
+                            Edge *newEdge = new Edge(m_scene);
+                            newEdge->setEndSocket(edge->endSocket());
+                            newEdge->setStartSocket(inNode->getOutputSocket(0));
+                            m_newEdges.push_back(newEdge);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    deleteBase();
+    for(auto edge: m_newEdges) {
+        edge->setEndPosition(edge->endSocket()->globalPos());
+        edge->setStartPosition(edge->startSocket()->globalPos());
+        edge->endSocket()->addEdge(edge);
+        edge->startSocket()->addEdge(edge);
+        m_scene->addEdge(edge);
+        edge->setParentItem(m_scene);
+        edge->endSocket()->setValue(edge->startSocket()->value());
+    }
+}
+
+void DeleteCommand::cancelDelete() {
+    m_scene->clearSelected();
+    for(auto item: m_items) {
+        if(qobject_cast<Node*>(item)) {
+            Node *node = qobject_cast<Node*>(item);
+            m_scene->addNode(node);
+            if(node->attachedFrame()) node->attachedFrame()->addNodes(QList<QQuickItem*>({node}));
+            node->setParentItem(m_scene);
+            m_scene->addSelected(node);
+            node->generatePreview();
+        }
+        else if(qobject_cast<Edge*>(item)) {
+            Edge *edge = qobject_cast<Edge*>(item);
+            if(m_saveConnection) {
+                for(auto edge: m_newEdges) {
+                    edge->endSocket()->deleteEdge(edge);
+                    edge->startSocket()->deleteEdge(edge);
+                    m_scene->deleteEdge(edge);
+                    edge->setParentItem(nullptr);
+                }
+            }
+            m_scene->addEdge(edge);
+            edge->startSocket()->addEdge(edge);
+            edge->endSocket()->addEdge(edge);
+            edge->setStartPosition(edge->startSocket()->globalPos());
+            edge->setEndPosition(edge->endSocket()->globalPos());
+            edge->setParentItem(m_scene);
+            edge->endSocket()->setValue(edge->startSocket()->value());
+        }
+        else if(qobject_cast<Frame*>(item)) {
+            Frame *frame = qobject_cast<Frame*>(item);
+            m_scene->addFrame(frame);
+            frame->setParentItem(m_scene);
+            m_scene->addSelected(frame);
+            for(auto item: frame->contentList()) {
+                if(qobject_cast<Node*>(item)) {
+                    Node *node = qobject_cast<Node*>(item);
+                    node->setAttachedFrame(frame);
+                }
+            }
+        }
+    }
+}
+
 SelectCommand::SelectCommand(QList<QQuickItem*> items, QList<QQuickItem*> oldSelected, Scene *scene, QUndoCommand *parent): QUndoCommand (parent),
     m_scene(scene), m_items(items), m_oldSelected(oldSelected){
 }
@@ -289,7 +358,6 @@ SelectCommand::~SelectCommand() {
     m_items.clear();
     m_oldSelected.clear();
     m_scene = nullptr;
-    std::cout << "select command delete" << std::endl;
 }
 
 void SelectCommand::undo() {

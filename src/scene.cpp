@@ -498,7 +498,7 @@ void Scene::mouseReleaseEvent(QMouseEvent *event) {
                 }
             }
         }
-        if(intersectedEdges.size() > 0) deletedItems(intersectedEdges);
+        if(intersectedEdges.size() > 0) deletedItems(intersectedEdges, false);
         delete cutLine;
         cutLine = nullptr;
     }
@@ -689,17 +689,17 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
     return node;
 }
 
-void Scene::deleteItems() {
+void Scene::deleteItems(bool saveConnection) {
     for(auto item: m_selectedItem) {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
             QList<Edge*> edges = node->getEdges();
             for(auto edge: edges) {
-                m_selectedItem.append(edge);
+                if(!m_selectedItem.contains(edge)) m_selectedItem.append(edge);
             }
         }
     }
-    deletedItems(m_selectedItem);
+    deletedItems(m_selectedItem, saveConnection);
     m_selectedItem.clear();
 }
 
@@ -766,7 +766,7 @@ void Scene::cut() {
             }
         }
     }
-    deletedItems(m_selectedItem);
+    deletedItems(m_selectedItem, false);
     clearSelected();
 }
 
@@ -835,8 +835,8 @@ void Scene::addedEdge(Edge *edge) {
     m_undoStack->push(new AddEdge(edge, this));
 }
 
-void Scene::deletedItems(QList<QQuickItem *> items) {
-    m_undoStack->push(new DeleteCommand(items, this));
+void Scene::deletedItems(QList<QQuickItem *> items, bool saveConnection) {
+    m_undoStack->push(new DeleteCommand(items, this, saveConnection));
 }
 
 void Scene::selectedItems(QList<QQuickItem *> items) {

@@ -74,7 +74,7 @@ public:
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     Node *deserializeNode(const QJsonObject &json);
-    void deleteItems();
+    void deleteItems(bool saveConnection);
     bool saveScene(QString fileName);
     bool loadScene(QString fileName);
     QString fileName();
@@ -89,7 +89,7 @@ public:
     void addedEdge(Edge *edge);
     void addedNode(Node *node);
     void addedFrame(Frame *frame);
-    void deletedItems(QList<QQuickItem*> items);
+    void deletedItems(QList<QQuickItem*> items, bool saveConnection);
     void selectedItems(QList<QQuickItem*> items);
     void pastedItems(QList<QQuickItem*> items);
     void movedEdge(Edge *edge, Socket *oldEndSocket, Socket *newEndSocket);
