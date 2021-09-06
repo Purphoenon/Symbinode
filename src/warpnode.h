@@ -29,19 +29,19 @@ class WarpNode: public Node
 {
     Q_OBJECT
 public:
-    WarpNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float intensity = 0.1f);
+    WarpNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float intensity = 0.1f);
     ~WarpNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    WarpNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     float intensity();
     void setIntensity(float intensity);
 signals:
     void intensityChanged(float intensity);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
     void updateIntensity(qreal intensity);

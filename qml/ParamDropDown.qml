@@ -48,7 +48,7 @@ ComboBox {
         }
         highlighted: control.highlightedIndex === index
         background: Rectangle {
-            color: parent.highlighted ? "#404347" : "transparent"
+            color: parent.highlighted ? "#404347" : popupColor
         }
     }
 

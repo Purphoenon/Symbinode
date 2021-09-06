@@ -30,7 +30,7 @@ class VoronoiObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    VoronoiObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString voronoiType = "crystals", int scale = 5, int scaleX = 1, int scaleY = 1, float jitter = 1.0f, bool inverse = false, float intensity = 1.0f, float bordersSize = 0.0f, int seed = 1);
+    VoronoiObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, QString voronoiType = "crystals", int scale = 5, int scaleX = 1, int scaleY = 1, float jitter = 1.0f, bool inverse = false, float intensity = 1.0f, float bordersSize = 0.0f, int seed = 1);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
     void setMaskTexture(unsigned int texture);
@@ -57,9 +57,12 @@ public:
     void setSeed(int seed);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool generatedVoronoi = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -67,6 +70,7 @@ signals:
     void changedTexture();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_texture = 0;
     unsigned int m_maskTexture = 0;
     QString m_voronoiType = "crystals";
@@ -83,7 +87,7 @@ private:
 class VoronoiRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core
 {
 public:
-    VoronoiRenderer(QVector2D resolution);
+    VoronoiRenderer(QVector2D resolution, GLint bpc);
     ~VoronoiRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -100,6 +104,7 @@ private:
     unsigned int voronoiTexture;
     unsigned int maskTexture = 0;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     QString m_voronoiType;
 };
 

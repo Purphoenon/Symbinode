@@ -8,13 +8,14 @@ class BricksNode: public Node
 {
     Q_OBJECT
 public:
-    BricksNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 15, float offset = 0.5f, float width = 0.9f, float height = 0.8f, float smoothX = 0.0f, float smoothY = 0.0f, float mask = 0.0f, int seed = 1);
+    BricksNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int columns = 5, int rows = 15, float offset = 0.5f, float width = 0.9f, float height = 0.8f, float smoothX = 0.0f, float smoothY = 0.0f, float mask = 0.0f, int seed = 1);
     ~BricksNode();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void operation();
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    void operation() override;
+    BricksNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     int columns();
     void setColumns(int columns);
     int rows();
@@ -44,7 +45,6 @@ signals:
     void smoothYChanged(float smooth);
     void seedChanged(int seed);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void updateColumns(int columns);
     void updateRows(int rows);

@@ -22,32 +22,25 @@
 #include "voronoinode.h"
 #include <iostream>
 
-VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams crystals, VoronoiParams borders, VoronoiParams solid, VoronoiParams worley, QString voronoiType): Node(parent, resolution),
-      m_voronoiType(voronoiType), m_crystals(crystals), m_borders(borders), m_solid(solid), m_worley(worley)
+VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, GLint bpc, VoronoiParams crystals,
+                         VoronoiParams borders, VoronoiParams solid, VoronoiParams worley,
+                         QString voronoiType): Node(parent, resolution, bpc), m_voronoiType(voronoiType),
+    m_crystals(crystals), m_borders(borders), m_solid(solid), m_worley(worley)
 {
-    std::cout << "voronoi create" << std::endl;
-    preview = new VoronoiObject(grNode, m_resolution, m_voronoiType, voronoiScale(), scaleX(), scaleY(), jitter(), inverse(), intensity(), bordersSize());
+    preview = new VoronoiObject(grNode, m_resolution, m_bpc, m_voronoiType, voronoiScale(), scaleX(),
+                                scaleY(), jitter(), inverse(), intensity(), bordersSize());
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174*s);
     preview->setHeight(174*s);
     preview->setX(3*s);
     preview->setY(30*s);
-    //preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &VoronoiNode::updateScale);
     connect(this, &VoronoiNode::generatePreview, this, &VoronoiNode::previewGenerated);
     connect(preview, &VoronoiObject::changedTexture, this, &VoronoiNode::setOutput);
     connect(preview, &VoronoiObject::updatePreview, this, &VoronoiNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &VoronoiObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &VoronoiObject::setBPC);
     connect(this, &VoronoiNode::voronoiTypeChanged, preview, &VoronoiObject::setVoronoiType);
-    connect(this, &VoronoiNode::voronoiScaleChanged, preview, &VoronoiObject::setVoronoiScale);
-    connect(this, &VoronoiNode::scaleXChanged, preview, &VoronoiObject::setScaleX);
-    connect(this, &VoronoiNode::scaleYChanged, preview, &VoronoiObject::setScaleY);
-    connect(this, &VoronoiNode::jitterChanged, preview, &VoronoiObject::setJitter);
-    connect(this, &VoronoiNode::inverseChanged, preview, &VoronoiObject::setInverse);
-    connect(this, &VoronoiNode::intensityChanged, preview, &VoronoiObject::setIntensity);
-    connect(this, &VoronoiNode::bordersSizeChanged, preview, &VoronoiObject::setBordersSize);
-    connect(this, &VoronoiNode::seedChanged, preview, &VoronoiObject::setSeed);
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Voronoi");
@@ -67,6 +60,8 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     propertiesPanel->setProperty("startInverse", inverse());
     propertiesPanel->setProperty("startBorders", bordersSize());
     propertiesPanel->setProperty("startSeed", seed());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(voronoiTypeChanged(QString)), this, SLOT(updateVoronoiType(QString)));
     connect(propertiesPanel, SIGNAL(voronoiScaleChanged(int)), this, SLOT(updateVoronoiScale(int)));
     connect(propertiesPanel, SIGNAL(scaleXChanged(int)), this, SLOT(updateScaleX(int)));
@@ -76,6 +71,7 @@ VoronoiNode::VoronoiNode(QQuickItem *parent, QVector2D resolution, VoronoiParams
     connect(propertiesPanel, SIGNAL(intensityChanged(qreal)), this, SLOT(updateIntensity(qreal)));
     connect(propertiesPanel, SIGNAL(bordersChanged(qreal)), this, SLOT(updateBordersSize(qreal)));
     connect(propertiesPanel, SIGNAL(seedChanged(int)), this, SLOT(updateSeed(int)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -85,7 +81,13 @@ VoronoiNode::~VoronoiNode() {
 
 void VoronoiNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && inputNode->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value().toUInt() == 0 && deserializing) return;
+    }
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &VoronoiNode::getPreviewTexture() {
@@ -94,6 +96,11 @@ unsigned int &VoronoiNode::getPreviewTexture() {
 
 void VoronoiNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
+}
+
+VoronoiNode *VoronoiNode::clone() {
+    return new VoronoiNode(parentItem(), m_resolution, m_bpc, m_crystals, m_borders, m_solid, m_worley,
+                           m_voronoiType);
 }
 
 void VoronoiNode::serialize(QJsonObject &json) const {
@@ -256,7 +263,19 @@ void VoronoiNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &h
         propertiesPanel->setProperty("startIntensity", intensity());
         propertiesPanel->setProperty("startBorders", bordersSize());
         propertiesPanel->setProperty("startSeed", seed());
+
+        preview->setVoronoiScale(voronoiScale());
+        preview->setScaleX(scaleX());
+        preview->setScaleY(scaleY());
+        preview->setJitter(jitter());
+        preview->setInverse(inverse());
+        preview->setBordersSize(bordersSize());
+        preview->setSeed(seed());
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 VoronoiParams VoronoiNode::crystalsParam() {
@@ -280,6 +299,7 @@ QString VoronoiNode::voronoiType() {
 }
 
 void VoronoiNode::setVoronoiType(QString type) {
+    if(m_voronoiType == type) return;
     m_voronoiType = type;
     voronoiTypeChanged(type);
     propertiesPanel->setProperty("startScale", voronoiScale());
@@ -290,6 +310,15 @@ void VoronoiNode::setVoronoiType(QString type) {
     propertiesPanel->setProperty("startInverse", inverse());
     propertiesPanel->setProperty("startBorders", bordersSize());
     propertiesPanel->setProperty("startSeed", seed());
+
+    preview->setVoronoiScale(voronoiScale());
+    preview->setScaleX(scaleX());
+    preview->setScaleY(scaleY());
+    preview->setJitter(jitter());
+    preview->setInverse(inverse());
+    preview->setBordersSize(bordersSize());
+    preview->setSeed(seed());
+    preview->update();
 }
 
 int VoronoiNode::voronoiScale() {
@@ -301,11 +330,25 @@ int VoronoiNode::voronoiScale() {
 }
 
 void VoronoiNode::setVoronoiScale(int scale) {
-    if(m_voronoiType == "crystals") m_crystals.scale = scale;
-    else if(m_voronoiType == "borders") m_borders.scale = scale;
-    else if(m_voronoiType == "solid") m_solid.scale = scale;
-    else if(m_voronoiType == "worley") m_worley.scale = scale;
+    if(m_voronoiType == "crystals") {
+        if(m_crystals.scale == scale) return;
+        m_crystals.scale = scale;
+    }
+    else if(m_voronoiType == "borders") {
+        if(m_borders.scale == scale) return;
+        m_borders.scale = scale;
+    }
+    else if(m_voronoiType == "solid") {
+        if(m_solid.scale == scale) return;
+        m_solid.scale = scale;
+    }
+    else if(m_voronoiType == "worley") {
+        if(m_worley.scale == scale) return;
+        m_worley.scale = scale;
+    }
     voronoiScaleChanged(scale);
+    preview->setVoronoiScale(scale);
+    preview->update();
 }
 
 int VoronoiNode::scaleX() {
@@ -317,11 +360,25 @@ int VoronoiNode::scaleX() {
 }
 
 void VoronoiNode::setScaleX(int scale) {
-    if(m_voronoiType == "crystals") m_crystals.scaleX = scale;
-    else if(m_voronoiType == "borders") m_borders.scaleX = scale;
-    else if(m_voronoiType == "solid") m_solid.scaleX = scale;
-    else if(m_voronoiType == "worley") m_worley.scaleX = scale;
+    if(m_voronoiType == "crystals") {
+        if(m_crystals.scaleX == scale) return;
+        m_crystals.scaleX = scale;
+    }
+    else if(m_voronoiType == "borders") {
+        if(m_borders.scaleX == scale) return;
+        m_borders.scaleX = scale;
+    }
+    else if(m_voronoiType == "solid") {
+        if(m_solid.scaleX == scale) return;
+        m_solid.scaleX = scale;
+    }
+    else if(m_voronoiType == "worley")  {
+        if(m_worley.scaleX == scale) return;
+        m_worley.scaleX = scale;
+    }
     scaleXChanged(scale);
+    preview->setScaleX(scale);
+    preview->update();
 }
 
 int VoronoiNode::scaleY() {
@@ -333,11 +390,25 @@ int VoronoiNode::scaleY() {
 }
 
 void VoronoiNode::setScaleY(int scale) {
-    if(m_voronoiType == "crystals") m_crystals.scaleY = scale;
-    else if(m_voronoiType == "borders") m_borders.scaleY = scale;
-    else if(m_voronoiType == "solid") m_solid.scaleY = scale;
-    else if(m_voronoiType == "worley") m_worley.scaleY = scale;
+    if(m_voronoiType == "crystals") {
+        if(m_crystals.scaleY == scale) return;
+        m_crystals.scaleY = scale;
+    }
+    else if(m_voronoiType == "borders") {
+        if(m_borders.scaleY == scale) return;
+        m_borders.scaleY = scale;
+    }
+    else if(m_voronoiType == "solid") {
+        if(m_solid.scaleY == scale) return;
+        m_solid.scaleY = scale;
+    }
+    else if(m_voronoiType == "worley") {
+        if(m_worley.scaleY == scale) return;
+        m_worley.scaleY = scale;
+    }
     scaleYChanged(scale);
+    preview->setScaleY(scale);
+    preview->update();
 }
 
 float VoronoiNode::jitter() {
@@ -349,11 +420,25 @@ float VoronoiNode::jitter() {
 }
 
 void VoronoiNode::setJitter(float jitter) {
-    if(m_voronoiType == "crystals") m_crystals.jitter = jitter;
-    else if(m_voronoiType == "borders") m_borders.jitter = jitter;
-    else if(m_voronoiType == "solid") m_solid.jitter = jitter;
-    else if(m_voronoiType == "worley") m_worley.jitter = jitter;
+    if(m_voronoiType == "crystals") {
+        if(m_crystals.jitter == jitter) return;
+        m_crystals.jitter = jitter;
+    }
+    else if(m_voronoiType == "borders") {
+        if(m_borders.jitter == jitter) return;
+        m_borders.jitter = jitter;
+    }
+    else if(m_voronoiType == "solid") {
+        if(m_solid.jitter == jitter) return;
+        m_solid.jitter = jitter;
+    }
+    else if(m_voronoiType == "worley") {
+        if(m_worley.jitter == jitter) return;
+        m_worley.jitter = jitter;
+    }
     jitterChanged(jitter);
+    preview->setJitter(jitter);
+    preview->update();
 }
 
 bool VoronoiNode::inverse() {
@@ -365,11 +450,25 @@ bool VoronoiNode::inverse() {
 }
 
 void VoronoiNode::setInverse(bool inverse) {
-    if(m_voronoiType == "crystals") m_crystals.inverse = inverse;
-    else if(m_voronoiType == "borders") m_borders.inverse = inverse;
-    else if(m_voronoiType == "solid") m_solid.inverse = inverse;
-    else if(m_voronoiType == "worley") m_worley.inverse = inverse;
+    if(m_voronoiType == "crystals") {
+        if(m_crystals.inverse == inverse) return;
+        m_crystals.inverse = inverse;
+    }
+    else if(m_voronoiType == "borders") {
+        if(m_borders.inverse == inverse) return;
+        m_borders.inverse = inverse;
+    }
+    else if(m_voronoiType == "solid") {
+        if(m_solid.inverse == inverse) return;
+        m_solid.inverse = inverse;
+    }
+    else if(m_voronoiType == "worley") {
+        if(m_worley.inverse == inverse) return;
+        m_worley.inverse = inverse;
+    }
     inverseChanged(inverse);
+    preview->setInverse(inverse);
+    preview->update();
 }
 
 float VoronoiNode::intensity() {
@@ -381,11 +480,25 @@ float VoronoiNode::intensity() {
 }
 
 void  VoronoiNode::setIntensity(float intensity) {
-    if(m_voronoiType == "crystals") m_crystals.intensity = intensity;
-    else if(m_voronoiType == "borders") m_borders.intensity = intensity;
-    else if(m_voronoiType == "solid") m_solid.intensity = intensity;
-    else if(m_voronoiType == "worley") m_worley.intensity = intensity;
+    if(m_voronoiType == "crystals") {
+        if(m_crystals.intensity == intensity) return;
+        m_crystals.intensity = intensity;
+    }
+    else if(m_voronoiType == "borders") {
+        if(m_borders.intensity == intensity) return;
+        m_borders.intensity = intensity;
+    }
+    else if(m_voronoiType == "solid") {
+        if(m_solid.intensity == intensity) return;
+        m_solid.intensity = intensity;
+    }
+    else if(m_voronoiType == "worley") {
+        if(m_worley.intensity == intensity) return;
+        m_worley.intensity = intensity;
+    }
     intensityChanged(intensity);
+    preview->setIntensity(intensity);
+    preview->update();
 }
 
 float VoronoiNode::bordersSize() {
@@ -395,8 +508,11 @@ float VoronoiNode::bordersSize() {
 
 void VoronoiNode::setBordersSize(float size) {
     if(m_voronoiType == "borders") {
+        if(m_borders.borders == size) return;
         m_borders.borders = size;
         bordersSizeChanged(size);
+        preview->setBordersSize(size);
+        preview->update();
     }
 }
 
@@ -409,18 +525,25 @@ int VoronoiNode::seed() {
 }
 
 void VoronoiNode::setSeed(int seed) {
-    if(m_voronoiType == "crystals") m_crystals.seed = seed;
-    else if(m_voronoiType == "borders") m_borders.seed = seed;
-    else if(m_voronoiType == "solid") m_solid.seed = seed;
-    else if(m_voronoiType == "worley") m_worley.seed = seed;
+    if(m_voronoiType == "crystals") {
+        if(m_crystals.seed == seed) return;
+        m_crystals.seed = seed;
+    }
+    else if(m_voronoiType == "borders") {
+        if(m_borders.seed == seed) return;
+        m_borders.seed = seed;
+    }
+    else if(m_voronoiType == "solid")  {
+        if(m_solid.seed == seed) return;
+        m_solid.seed = seed;
+    }
+    else if(m_voronoiType == "worley") {
+        if(m_worley.seed == seed) return;
+        m_worley.seed = seed;
+    }
     seedChanged(seed);
-}
-
-void VoronoiNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setWidth(174*scale);
-    preview->setHeight(174*scale);
+    preview->setSeed(seed);
+    preview->update();
 }
 
 void VoronoiNode::setOutput() {

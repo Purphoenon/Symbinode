@@ -31,76 +31,103 @@ Item {
     property alias startScaleY: scaleYParam.propertyValue
     property alias startRotation: rotationParam.propertyValue
     property alias startClamp: clampParam.checked
+    property alias startBits: bitsParam.currentIndex
     signal transXChanged(real x)
     signal transYChanged(real y)
     signal scaleXChanged(real x)
     signal scaleYChanged(real y)
     signal angleChanged(int angle)
     signal clampCoordsChanged(bool clamp)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-    ParamSlider {
-        id: transXParam
-        propertyName: "Translate X"
-        minimum: -1
-        onPropertyValueChanged: {
-            transXChanged(transXParam.propertyValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
         }
-        onChangingFinished: {
-            propertyChangingFinished("startTransX", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: transYParam
-        y: 33
-        propertyName: "Translate Y"
-        minimum: -1
-        onPropertyValueChanged: {
-            transYChanged(transYParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startTransY", propertyValue, oldValue)
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: scaleXParam
-        y: 66
-        propertyName: "Scale X"
-        maximum: 2
-        onPropertyValueChanged: {
-            scaleXChanged(scaleXParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: transXParam
+            propertyName: "Translate X"
+            minimum: -1
+            onPropertyValueChanged: {
+                transXChanged(transXParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startTransX", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleX", propertyValue, oldValue)
+        ParamSlider {
+            id: transYParam
+            y: 18
+            propertyName: "Translate Y"
+            minimum: -1
+            onPropertyValueChanged: {
+                transYChanged(transYParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startTransY", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: scaleXParam
+            y: 51
+            propertyName: "Scale X"
+            maximum: 2
+            onPropertyValueChanged: {
+                scaleXChanged(scaleXParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleX", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: scaleYParam
+            y: 84
+            propertyName: "Scale Y"
+            maximum: 2
+            onPropertyValueChanged: {
+                scaleYChanged(scaleYParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleY", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: rotationParam
+            y: 117
+            propertyName: "Rotation"
+            maximum: 360
+            step: 1
+            onPropertyValueChanged: {
+                angleChanged(rotationParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRotation", propertyValue, oldValue)
+            }
         }
     }
-    ParamSlider {
-        id: scaleYParam
-        y: 99
-        propertyName: "Scale Y"
-        maximum: 2
-        onPropertyValueChanged: {
-            scaleYChanged(scaleYParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleY", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: rotationParam
-        y: 132
-        propertyName: "Rotation"
-        maximum: 360
-        step: 1
-        onPropertyValueChanged: {
-            angleChanged(rotationParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startRotation", propertyValue, oldValue)
-        }
-    }
+
     ParamCheckbox {
         id: clampParam
-        y: 180
+        y: 218
         width: 75
         text: qsTr("Clamp")
         onCheckedChanged: {

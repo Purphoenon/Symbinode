@@ -207,9 +207,9 @@ void MainWindow::cut() {
     }
 }
 
-void MainWindow::deleteItems() {
+void MainWindow::deleteItems(bool saveConnection) {
     if(activeTab) {
-        activeTab->scene()->deleteItems();
+        activeTab->scene()->deleteItems(saveConnection);
     }
 }
 
@@ -377,11 +377,14 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     else if(event->key() == Qt::Key_X && event->modifiers() == Qt::ControlModifier) {
         cut();
     }
+    else if(event->key() == Qt::Key_Delete && event->modifiers() == Qt::ControlModifier) {
+        deleteItems(true);
+    }
     else if(event->key() == Qt::Key_Delete) {
         if(activeFocusItem() && activeFocusItem() != contentItem()) {
             QApplication::sendEvent(activeFocusItem(), event);
         }
-        else deleteItems();
+        else deleteItems(false);
     }
     else if(event->key() == Qt::Key_Z && event->modifiers() == Qt::ControlModifier) {        
         if(activeFocusItem() && activeFocusItem() != contentItem()) {

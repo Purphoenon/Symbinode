@@ -37,9 +37,9 @@ Rectangle {
     width: parent.width
     height: parent.height
     color: "#B3212121"
-    radius: 2*scaleView
+    radius: 2//*scaleView
     border.color: hovered ? colors.node_hovered : selected ? colors.node_selected : "transparent"
-    border.width: Math.max(scaleView, 1)
+    border.width: Math.max(1, 1/scaleView)
 
     function createNameInput() {
         var nameInput = Qt.createQmlObject('import QtQuick 2.12; TextInput{width: parent.width;
@@ -51,11 +51,11 @@ Rectangle {
                                             onFocusChanged: {if(!focus) accepted()}}',
                                            frame,
                                            "NodeFrame.qml");
-        nameInput.y = Qt.binding(function(){return 10*scaleView;})
+        nameInput.y = 10//Qt.binding(function(){return 10*scaleView;})
         nameInput.text = frameTitle.text;
-        nameInput.font.pointSize = Qt.binding(function(){return 12*scaleView;})
-        nameInput.leftPadding = Qt.binding(function(){return 5*scaleView;})
-        nameInput.rightPadding = Qt.binding(function(){return 5*scaleView;});
+        nameInput.font.pointSize = 12//Qt.binding(function(){return 12*scaleView;})
+        nameInput.leftPadding = 5//Qt.binding(function(){return 5*scaleView;})
+        nameInput.rightPadding = 5//Qt.binding(function(){return 5*scaleView;});
         nameInput.focus = true
         frameTitle.visible = false;
         function labelUpdate() {
@@ -77,7 +77,7 @@ Rectangle {
     Item {
         id:bubble
         parent: frame.parent.parent
-        x: (frame.width - width)*0.5 + frame.parent.x
+        x: (frame.width*scaleView - width)*0.5 + frame.parent.x
         y: frame.parent.y - height
         z: 6
         width: textMetrics.tightBoundingRect.width + 30
@@ -129,18 +129,18 @@ Rectangle {
 
     Rectangle {
         id: title
-        width: parent.width - 2*Math.max(scaleView, 1)
-        x: Math.max(scaleView, 1)
-        y: Math.max(scaleView, 1)
-        height: 35*scaleView
+        width: parent.width - 2*Math.max(1, 1/scaleView)
+        x: Math.max(1, 1/scaleView)
+        y: Math.max(1, 1/scaleView)
+        height: 35//*scaleView
         color: "#801D1D1D"
         Label {
             id: frameTitle
-            leftPadding: 5*scaleView
-            rightPadding: 5*scaleView
+            leftPadding: 5//*scaleView
+            rightPadding: 5//*scaleView
             text: qsTr("Frame")
             elide: Text.ElideRight
-            font.pointSize: 12*scaleView
+            font.pointSize: 12//*scaleView
             width: parent.width
             height: parent.height
             horizontalAlignment: TextInput.AlignHCenter

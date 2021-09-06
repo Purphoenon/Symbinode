@@ -23,13 +23,13 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-AlbedoObject::AlbedoObject(QQuickItem *parent, QVector2D resolution): QQuickFramebufferObject (parent),
-    m_resolution(resolution)
+AlbedoObject::AlbedoObject(QQuickItem *parent, QVector2D resolution, GLint bpc):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc)
 {
 }
 
 QQuickFramebufferObject::Renderer *AlbedoObject::createRenderer() const {
-    return new AlbedoRenderer(m_resolution);
+    return new AlbedoRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &AlbedoObject::texture() {
@@ -51,7 +51,9 @@ QVector3D AlbedoObject::albedoValue() {
 }
 
 void AlbedoObject::setAlbedoValue(QVector3D albedo) {
+    if(m_albedo == albedo) return;
     m_albedo = albedo;
+    albedoUpdated = true;
 }
 
 void AlbedoObject::setColorTexture(unsigned int texture) {
@@ -76,7 +78,17 @@ void AlbedoObject::setResolution(QVector2D res) {
     update();
 }
 
-AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
+GLint AlbedoObject::bpc() {
+    return m_bpc;
+}
+
+void AlbedoObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+AlbedoRenderer::AlbedoRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
     renderAlbedo = new QOpenGLShaderProgram();
     renderAlbedo->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -108,11 +120,19 @@ AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindFramebuffer(GL_FRAMEBUFFER, albedoFBO);
     glGenTextures(1, &albedoTexture);
     glBindTexture(GL_TEXTURE_2D, albedoTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, albedoTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -122,8 +142,8 @@ AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
     glGenTextures(1, &colorTexture);
     glBindTexture(GL_TEXTURE_2D, colorTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
@@ -134,12 +154,16 @@ AlbedoRenderer::AlbedoRenderer(QVector2D resolution): m_resolution(resolution) {
 
 AlbedoRenderer::~AlbedoRenderer() {
     delete renderAlbedo;
+    glDeleteTextures(1, &albedoTexture);
+    glDeleteTextures(1, &colorTexture);
+    glDeleteFramebuffers(1, &albedoFBO);
+    glDeleteFramebuffers(1, &colorFBO);
+    glDeleteVertexArrays(1, &VAO);
 }
 
 QOpenGLFramebufferObject *AlbedoRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -149,22 +173,32 @@ void AlbedoRenderer::synchronize(QQuickFramebufferObject *item) {
     renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("useAlbedoTex"), albedoItem->useAlbedoTex);
     renderAlbedo->release();
     m_resolution = albedoItem->resolution();
-    m_sourceTexture = albedoItem->albedoTexture();
-    albedoVal = albedoItem->albedoValue();
     if(albedoItem->resUpdated) {
         updateTextureRes();
     }
-    if(albedoItem->useAlbedoTex) {        
-        createAlbedoTexture();
-        albedoItem->setTexture(albedoTexture);
-        albedoItem->updateAlbedo(albedoTexture, true);
-        albedoItem->updatePreview(albedoTexture);
-    }
-    else {           
-        createColor();
-        albedoItem->setTexture(colorTexture);
-        albedoItem->updateAlbedo(albedoVal, false);
-        albedoItem->updatePreview(colorTexture);
+    if(albedoItem->albedoUpdated || albedoItem->bpcUpdated) {
+        if(albedoItem->bpcUpdated) {
+            albedoItem->bpcUpdated = false;
+            m_bpc = albedoItem->bpc();
+            updateTextureRes();
+        }
+        if(albedoItem->albedoUpdated) {
+            albedoItem->albedoUpdated = false;
+            m_sourceTexture = albedoItem->albedoTexture();
+            albedoVal = albedoItem->albedoValue();
+        }
+        if(albedoItem->useAlbedoTex) {
+            createAlbedoTexture();
+            albedoItem->setTexture(albedoTexture);
+            albedoItem->updateAlbedo(albedoTexture, true);
+            albedoItem->updatePreview(albedoTexture);
+        }
+        else {
+            createColor();
+            albedoItem->setTexture(colorTexture);
+            albedoItem->updateAlbedo(albedoVal, false);
+            albedoItem->updatePreview(colorTexture);
+        }
     }
     if(albedoItem->texSaving) {
         albedoItem->texSaving = false;
@@ -187,6 +221,7 @@ void AlbedoRenderer::render() {
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     renderAlbedo->release();
+    glFlush();
 }
 
 void AlbedoRenderer::saveTexture(QString fileName) {
@@ -197,11 +232,16 @@ void AlbedoRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -221,16 +261,44 @@ void AlbedoRenderer::saveTexture(QString fileName) {
     renderAlbedo->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGB16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGB16 *bits = (FIRGB16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*3 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*3 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }
 
 void AlbedoRenderer::createColor() {
@@ -247,6 +315,8 @@ void AlbedoRenderer::createColor() {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderAlbedo->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    glFinish();
 }
 
 void AlbedoRenderer::createAlbedoTexture() {
@@ -260,14 +330,23 @@ void AlbedoRenderer::createAlbedoTexture() {
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);    
     renderAlbedo->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, albedoTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void AlbedoRenderer::updateTextureRes() {
     glBindTexture(GL_TEXTURE_2D, albedoTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }

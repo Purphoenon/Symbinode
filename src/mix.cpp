@@ -23,15 +23,16 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 
-MixObject::MixObject(QQuickItem *parent, QVector2D resolution, float factor, int foregroundOpacity,
-                     int backgroundOpacity, int mode, bool includingAlpha): QQuickFramebufferObject (parent),
-     m_factor(factor), m_fOpacity(foregroundOpacity), m_bOpacity(backgroundOpacity),
-     m_mode(mode), m_includingAlpha(includingAlpha), m_resolution(resolution)
+MixObject::MixObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float factor,
+                     int foregroundOpacity, int backgroundOpacity, int mode, bool includingAlpha):
+    QQuickFramebufferObject (parent), m_factor(factor), m_fOpacity(foregroundOpacity),
+    m_bOpacity(backgroundOpacity), m_mode(mode), m_includingAlpha(includingAlpha), m_resolution(resolution),
+    m_bpc(bpc)
 {
 }
 
 QQuickFramebufferObject::Renderer *MixObject::createRenderer() const {
-    return new MixRenderer(m_resolution);
+    return new MixRenderer(m_resolution, m_bpc);
 }
 
 unsigned int MixObject::maskTexture() {
@@ -69,7 +70,9 @@ QVariant MixObject::factor() {
 }
 
 void MixObject::setFactor(QVariant f) {
+    if(m_factor == f) return;
     m_factor = f;
+    mixedTex = true;
 }
 
 int MixObject::mode() {
@@ -77,7 +80,9 @@ int MixObject::mode() {
 }
 
 void MixObject::setMode(int mode) {
+    if(m_mode == mode) return;
     m_mode = mode;
+    mixedTex = true;
 }
 
 bool MixObject::includingAlpha() {
@@ -85,7 +90,9 @@ bool MixObject::includingAlpha() {
 }
 
 void MixObject::setIncludingAlpha(bool including) {
+    if(m_includingAlpha == including) return;
     m_includingAlpha = including;
+    mixedTex = true;
 }
 
 int MixObject::foregroundOpacity() {
@@ -93,7 +100,9 @@ int MixObject::foregroundOpacity() {
 }
 
 void MixObject::setForegroundOpacity(int opacity) {
+    if(m_fOpacity == opacity) return;
     m_fOpacity = opacity;
+    mixedTex = true;
 }
 
 int MixObject::backgroundOpacity() {
@@ -101,7 +110,9 @@ int MixObject::backgroundOpacity() {
 }
 
 void MixObject::setBackgroundOpacity(int opacity) {
+    if(m_bOpacity == opacity) return;
     m_bOpacity = opacity;
+    mixedTex = true;
 }
 
 QVector2D MixObject::resolution() {
@@ -112,6 +123,16 @@ void MixObject::setResolution(QVector2D res) {
     m_resolution = res;
     resUpdated = true;
     update();
+}
+
+GLint MixObject::bpc() {
+    return m_bpc;
+}
+
+void MixObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
 }
 
 unsigned int &MixObject::texture() {
@@ -127,9 +148,12 @@ MixRenderer::~MixRenderer() {
     delete mixShader;
     delete checkerShader;
     delete renderTexture;
+    glDeleteTextures(1, &mixTexture);
+    glDeleteFramebuffers(1, &mixFBO);
+    glDeleteVertexArrays(1, &VAO);
 }
 
-MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
+MixRenderer::MixRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     mixShader = new QOpenGLShaderProgram();
@@ -156,6 +180,7 @@ MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
 
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
 
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
@@ -179,11 +204,19 @@ MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindFramebuffer(GL_FRAMEBUFFER, mixFBO);
     glGenTextures(1, &mixTexture);
     glBindTexture(GL_TEXTURE_2D, mixTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mixTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -192,7 +225,6 @@ MixRenderer::MixRenderer(QVector2D resolution): m_resolution(resolution) {
 QOpenGLFramebufferObject *MixRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -203,28 +235,37 @@ void MixRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = mixItem->resolution();
         updateTextureRes();
     }
-    if(mixItem->mixedTex) {
-        mixItem->mixedTex = false;
-        firstTexture = mixItem->firstTexture();
-        secondTexture = mixItem->secondTexture();
+    if(mixItem->mixedTex || mixItem->bpcUpdated) {
+        if(mixItem->bpcUpdated) {
+            mixItem->bpcUpdated = false;
+            m_bpc = mixItem->bpc();
+            updateTextureRes();
+        }
+        if(mixItem->mixedTex) {
+            mixItem->mixedTex = false;
+            firstTexture = mixItem->firstTexture();
+            secondTexture = mixItem->secondTexture();
+            if((firstTexture && secondTexture) || (!firstTexture && !secondTexture)) {
+                maskTexture = mixItem->maskTexture();
+                currentMode = mixItem->mode();
+                mixShader->bind();
+                mixShader->setUniformValue(mixShader->uniformLocation("useFactorTex"), mixItem->useFactorTexture);
+                mixShader->setUniformValue(mixShader->uniformLocation("includingAlpha"), mixItem->includingAlpha());
+                mixShader->setUniformValue(mixShader->uniformLocation("useMask"), maskTexture);
+                mixShader->setUniformValue(mixShader->uniformLocation("foregroundOpacity"), mixItem->foregroundOpacity()*0.01f);
+                mixShader->setUniformValue(mixShader->uniformLocation("backgroundOpacity"), mixItem->backgroundOpacity()*0.01f);
+                mixShader->release();
+                if(mixItem->useFactorTexture) {
+                    factorTexture = mixItem->factor().toUInt();
+                }
+                else {
+                    mixFactor = mixItem->factor().toFloat();
+                }
+            }
+        }
         if((firstTexture && secondTexture) || (!firstTexture && !secondTexture)) {
-            maskTexture = mixItem->maskTexture();
-            currentMode = mixItem->mode();
-            mixShader->bind();
-            mixShader->setUniformValue(mixShader->uniformLocation("useFactorTex"), mixItem->useFactorTexture);
-            mixShader->setUniformValue(mixShader->uniformLocation("includingAlpha"), mixItem->includingAlpha());
-            mixShader->setUniformValue(mixShader->uniformLocation("useMask"), maskTexture);
-            mixShader->setUniformValue(mixShader->uniformLocation("foregroundOpacity"), mixItem->foregroundOpacity()*0.01f);
-            mixShader->setUniformValue(mixShader->uniformLocation("backgroundOpacity"), mixItem->backgroundOpacity()*0.01f);
-            mixShader->release();
-            if(mixItem->useFactorTexture) {
-                factorTexture = mixItem->factor().toUInt();
-            }
-            else {
-                mixFactor = mixItem->factor().toFloat();
-            }
-            mix();
             if(firstTexture && secondTexture) {
+                mix();
                 mixItem->setTexture(mixTexture);
                 mixItem->updatePreview(mixTexture);
             }
@@ -291,6 +332,7 @@ void MixRenderer::render() {
         glBindVertexArray(0);
         renderTexture->release();
     }
+    glFlush();
 }
 
 void MixRenderer::mix() {
@@ -313,16 +355,25 @@ void MixRenderer::mix() {
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     glBindVertexArray(0);
     mixShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, mixTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void MixRenderer::updateTextureRes() {
     glBindTexture(GL_TEXTURE_2D, mixTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -334,11 +385,16 @@ void MixRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -357,14 +413,42 @@ void MixRenderer::saveTexture(QString fileName) {
     glBindVertexArray(0);
     renderTexture->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

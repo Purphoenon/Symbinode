@@ -30,7 +30,7 @@ class ThresholdObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    ThresholdObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float threshold = 0.5f);
+    ThresholdObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float threshold = 0.5f);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -43,9 +43,12 @@ public:
     void setThreshold(float value);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool created = false;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -53,6 +56,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_texture = 0;
     unsigned int m_sourceTexture = 0;
     unsigned int m_maskTexture = 0;
@@ -61,7 +65,7 @@ private:
 
 class ThresholdRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    ThresholdRenderer(QVector2D res);
+    ThresholdRenderer(QVector2D res, GLint bpc);
     ~ThresholdRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -71,6 +75,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int thresholdFBO;
     unsigned int m_thresholdTexture = 0;
     unsigned int m_sourceTexture = 0;

@@ -21,10 +21,10 @@
 
 #include "thresholdnode.h"
 
-ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, float threshold):
-    Node(parent, resolution), m_threshold(threshold)
+ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float threshold):
+    Node(parent, resolution, bpc), m_threshold(threshold)
 {
-    preview = new ThresholdObject(grNode, m_resolution, m_threshold);
+    preview = new ThresholdObject(grNode, m_resolution, m_bpc, m_threshold);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -32,16 +32,18 @@ ThresholdNode::ThresholdNode(QQuickItem *parent, QVector2D resolution, float thr
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &ThresholdNode::updateScale);
     connect(this, &Node::generatePreview, this, &ThresholdNode::previewGenerated);
     connect(preview, &ThresholdObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &ThresholdObject::textureChanged, this, &ThresholdNode::setOutput);
-    connect(this, &ThresholdNode::thresholdChanged, preview, &ThresholdObject::setThreshold);
+    connect(this, &Node::changeBPC, preview, &ThresholdObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/ThresholdProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startThreshold", m_threshold);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(thresholdChanged(qreal)), this, SLOT(updateThreshold(qreal)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Threshold");
@@ -54,9 +56,22 @@ ThresholdNode::~ThresholdNode() {
 }
 
 void ThresholdNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->created = true;
+    preview->update();
+    if(deserializing) deserializing == false;
 }
 
 unsigned int &ThresholdNode::getPreviewTexture() {
@@ -65,6 +80,10 @@ unsigned int &ThresholdNode::getPreviewTexture() {
 
 void ThresholdNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
+}
+
+ThresholdNode *ThresholdNode::clone() {
+    return new ThresholdNode(parentItem(), m_resolution, m_bpc, m_threshold);
 }
 
 void ThresholdNode::serialize(QJsonObject &json) const{
@@ -79,6 +98,13 @@ void ThresholdNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> 
         updateThreshold(json["threshold"].toVariant().toReal());
         propertiesPanel->setProperty("startThreshold", m_threshold);
     }
+
+    preview->setThreshold(m_threshold);
+
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float ThresholdNode::threshold() {
@@ -86,14 +112,11 @@ float ThresholdNode::threshold() {
 }
 
 void ThresholdNode::setThreshold(float value) {
+    if(m_threshold == value) return;
     m_threshold = value;
     thresholdChanged(value);
-}
-
-void ThresholdNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setThreshold(value);
+    preview->update();
 }
 
 void ThresholdNode::previewGenerated() {

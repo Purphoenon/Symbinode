@@ -27,12 +27,16 @@
 
 Edge::Edge(QQuickItem *parent): QQuickItem(parent)
 {
+    selEdge = new CubicBezier(this);
     grEdge = new CubicBezier(this);
     if(parent) {
         Scene *scene = reinterpret_cast<Scene*>(parent);
         connect(scene->background(), &BackgroundObject::scaleChanged, this, &Edge::updateScale);
         grEdge->setLineWidth(3.0f*scene->background()->viewScale());
+        selEdge->setLineWidth(5.0f*scene->background()->viewScale());
+        selEdge->setColor(QColor(219, 219, 219));
     }
+    selEdge->setVisible(false);
     setZ(3);
 }
 
@@ -45,19 +49,24 @@ Edge::~Edge() {
     m_startSocket = nullptr;
     m_endSocket = nullptr;
     delete grEdge;
+    delete selEdge;
 }
 
 bool Edge::intersectWith(QPointF p1, QPointF p2) {
     QPainterPath cutLine(p1);
     cutLine.lineTo(p2);
-    QPointF startPoint = grEdge->p1();
-    QPointF c1 = grEdge->p2();
-    QPointF c2 = grEdge->p3();
-    QPointF endPoint = grEdge->p4();
     QPainterPath edgeLine(QPointF(m_startPos.x(), m_startPos.y()));
     edgeLine.cubicTo(QPointF(m_startPos.x() + 0.5*grEdge->width(), m_startPos.y()), QPointF(m_endPos.x() -
                      0.5*grEdge->width(), m_endPos.y()), QPointF(m_endPos.x(), m_endPos.y()));
     return cutLine.intersects(edgeLine);
+}
+
+bool Edge::intersectWith(qreal x, qreal y, qreal width, qreal height) {
+    QRectF nodeRect(x, y, width, height);
+    QPainterPath edgeLine(QPointF(m_startPos.x(), m_startPos.y()));
+    edgeLine.cubicTo(QPointF(m_startPos.x() + 0.5*grEdge->width(), m_startPos.y()), QPointF(m_endPos.x() -
+                     0.5*grEdge->width(), m_endPos.y()), QPointF(m_endPos.x(), m_endPos.y()));
+    return edgeLine.intersects(nodeRect);
 }
 
 QVector2D Edge::startPosition() {
@@ -72,6 +81,8 @@ void Edge::setStartPosition(QVector2D pos) {
     float h = std::abs(m_startPos.y() - m_endPos.y());
     grEdge->setWidth(std::max(w, 0.01f));
     grEdge->setHeight(std::max(h, 0.01f));
+    selEdge->setWidth(grEdge->width());
+    selEdge->setHeight(grEdge->height());
     float p1X = w > 0.0f ? (pos.x() - x())/w : 0.0f;
     float p1Y = h > 0.0f ? (pos.y() - y())/h : 0.0f;
     float offset = 0.5f;
@@ -79,6 +90,10 @@ void Edge::setStartPosition(QVector2D pos) {
     grEdge->setP2(QPointF(p1X + offset, p1Y));
     grEdge->setP4(QPointF(1.0f - p1X, 1.0f - p1Y));
     grEdge->setP3(QPointF(1.0f - offset - p1X, 1.0f - p1Y));
+    selEdge->setP1(grEdge->p1());
+    selEdge->setP2(grEdge->p2());
+    selEdge->setP3(grEdge->p3());
+    selEdge->setP4(grEdge->p4());
     emit startPositionChanged(pos);
 
 }
@@ -95,6 +110,8 @@ void Edge::setEndPosition(QVector2D pos) {
     float h = std::abs(m_startPos.y() - m_endPos.y());
     grEdge->setWidth(std::max(w, 0.01f));
     grEdge->setHeight(std::max(h, 0.01f));
+    selEdge->setWidth(grEdge->width());
+    selEdge->setHeight(grEdge->height());
     float p4X = w > 0.0f ? (pos.x() - x())/w : 0.0f;
     float p4Y = h > 0.0f ? (pos.y() - y())/h : 0.0f;
     float offset = 0.5f;
@@ -102,6 +119,10 @@ void Edge::setEndPosition(QVector2D pos) {
     grEdge->setP3(QPointF(p4X - offset, p4Y));
     grEdge->setP1(QPointF(1.0f - p4X, 1.0f - p4Y));
     grEdge->setP2(QPointF(1.0f + offset - p4X, 1.0f - p4Y));
+    selEdge->setP1(grEdge->p1());
+    selEdge->setP2(grEdge->p2());
+    selEdge->setP3(grEdge->p3());
+    selEdge->setP4(grEdge->p4());
     emit endPositionChanged(pos);
 }
 
@@ -137,9 +158,9 @@ void Edge::setEndSocket(Socket *socket) {
     }
     m_endSocket = socket;
 
-    if(m_startSocket) {
+    /*if(m_startSocket) {
         socket->setValue(m_startSocket->value());
-    }
+    }*/
 }
 
 Socket* Edge::findSockets(Scene *scene, float x, float y) {
@@ -162,6 +183,8 @@ bool Edge::selected() {
 
 void Edge::setSelected(bool selected) {
     m_selected = selected;
+    if(selected) selEdge->setVisible(true);
+    else selEdge->setVisible(false);
     grEdge->setProperty("selected", m_selected);
 }
 
@@ -186,13 +209,13 @@ void Edge::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
             s->addEdge(this);
             setEndPosition(s->globalPos());
         }
-
     }
 }
 
 void Edge::updateScale(float scale) {
     m_scale = scale;
     grEdge->setLineWidth(std::max(3.0f*scale, 1.0f));
+    selEdge->setLineWidth(std::max(5.0f*scale, 1.0f));
 }
 
 void Edge::pressedEdge(bool control) {

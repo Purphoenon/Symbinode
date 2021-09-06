@@ -29,13 +29,14 @@ class CircleNode: public Node
 {
     Q_OBJECT
 public:
-    CircleNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
+    CircleNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int interpolation = 1, float radius = 0.5f, float smooth = 0.01f, bool useAlpha = true);
     ~CircleNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    CircleNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     int interpolation();
     void setInterpolation(int interpolation);
     float radius();
@@ -50,7 +51,6 @@ signals:
     void smoothChanged(float smooth);
     void useAlphaChanged(bool use);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void previewGenerated();
     void updateInterpolation(int interpolation);

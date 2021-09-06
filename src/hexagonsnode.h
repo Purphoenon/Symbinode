@@ -8,13 +8,14 @@ class HexagonsNode: public Node
 {
     Q_OBJECT
 public:
-    HexagonsNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f, float mask = 0.0f, int seed = 1);
+    HexagonsNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f, float mask = 0.0f, int seed = 1);
     ~HexagonsNode();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void operation();
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    void operation() override;
+    HexagonsNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     int columns();
     void setColumns(int columns);
     int rows();
@@ -35,7 +36,6 @@ signals:
     void maskChanged(float mask);
     void seedChanged(int seed);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void updateColumns(int columns);
     void updateRows(int rows);

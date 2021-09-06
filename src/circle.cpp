@@ -23,16 +23,16 @@
 #include "QOpenGLFramebufferObjectFormat"
 #include <iostream>
 
-CircleObject::CircleObject(QQuickItem *parent, QVector2D resolution, int interpolation, float radius,
-                           float smooth, bool useAlpha): QQuickFramebufferObject (parent),
-    m_resolution(resolution), m_interpolation(interpolation), m_radius(radius), m_smooth(smooth),
+CircleObject::CircleObject(QQuickItem *parent, QVector2D resolution, GLint bpc, int interpolation,
+                           float radius, float smooth, bool useAlpha): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_bpc(bpc), m_interpolation(interpolation), m_radius(radius), m_smooth(smooth),
     m_useAlpha(useAlpha)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *CircleObject::createRenderer() const {
-    return new CircleRenderer(m_resolution);
+    return new CircleRenderer(m_resolution, m_bpc);
 }
 
 unsigned int CircleObject::maskTexture() {
@@ -42,7 +42,6 @@ unsigned int CircleObject::maskTexture() {
 void CircleObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     generatedCircle = true;
-    update();
 }
 
 unsigned int &CircleObject::texture() {
@@ -65,9 +64,9 @@ int CircleObject::interpolation() {
 }
 
 void CircleObject::setInterpolation(int interpolation) {
+    if(m_interpolation == interpolation) return;
     m_interpolation = interpolation;
     generatedCircle = true;
-    update();
 }
 
 float CircleObject::radius() {
@@ -75,9 +74,9 @@ float CircleObject::radius() {
 }
 
 void CircleObject::setRadius(float radius) {
+    if(m_radius == radius) return;
     m_radius = radius;
     generatedCircle = true;
-    update();
 }
 
 float CircleObject::smooth() {
@@ -85,9 +84,9 @@ float CircleObject::smooth() {
 }
 
 void CircleObject::setSmooth(float smooth) {
+    if(m_smooth == smooth) return;
     m_smooth = smooth;
     generatedCircle = true;
-    update();
 }
 
 bool CircleObject::useAlpha() {
@@ -95,9 +94,9 @@ bool CircleObject::useAlpha() {
 }
 
 void CircleObject::setUseAlpha(bool use) {
+    if(m_useAlpha == use) return;
     m_useAlpha = use;
     generatedCircle = true;
-    update();
 }
 
 QVector2D CircleObject::resolution() {
@@ -110,7 +109,17 @@ void CircleObject::setResolution(QVector2D res) {
     update();
 }
 
-CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
+GLint CircleObject::bpc() {
+    return m_bpc;
+}
+
+void CircleObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+CircleRenderer::CircleRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
     generateCircle = new QOpenGLShaderProgram();
     generateCircle->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
@@ -129,6 +138,7 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
     renderTexture->link();
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
     float vertQuad[] = {-1.0f, -1.0f,
                     -1.0f, 1.0f,
@@ -166,11 +176,19 @@ CircleRenderer::CircleRenderer(QVector2D resolution): m_resolution(resolution) {
     glBindFramebuffer(GL_FRAMEBUFFER, circleFBO);
     glGenTextures(1, &circleTexture);
     glBindTexture(GL_TEXTURE_2D, circleTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, circleTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -181,12 +199,15 @@ CircleRenderer::~CircleRenderer() {
     delete generateCircle;
     delete checkerShader;
     delete renderTexture;
+    glDeleteTextures(1, &circleTexture);
+    glDeleteFramebuffers(1, &circleFBO);
+    glDeleteVertexArrays(1, &textureVAO);
+    glDeleteVertexArrays(1, &circleVAO);
 }
 
 QOpenGLFramebufferObject *CircleRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -201,16 +222,23 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
             circleItem->setTexture(circleTexture);
         }
     }
-    if(circleItem->generatedCircle) {
-        circleItem->generatedCircle = false;
-        maskTexture = circleItem->maskTexture();
-        generateCircle->bind();
-        generateCircle->setUniformValue(generateCircle->uniformLocation("interpolation"), circleItem->interpolation());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("radius"), circleItem->radius());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("smoothValue"), circleItem->smooth());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("useAlpha"), circleItem->useAlpha());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("useMask"), maskTexture);
-        generateCircle->release();
+    if(circleItem->generatedCircle || circleItem->bpcUpdated) {
+        if(circleItem->bpcUpdated) {
+            circleItem->bpcUpdated = false;
+            m_bpc = circleItem->bpc();
+            updateTexResolution();
+        }
+        if(circleItem->generatedCircle) {
+            circleItem->generatedCircle = false;
+            maskTexture = circleItem->maskTexture();
+            generateCircle->bind();
+            generateCircle->setUniformValue(generateCircle->uniformLocation("interpolation"), circleItem->interpolation());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("radius"), circleItem->radius());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("smoothValue"), circleItem->smooth());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("useAlpha"), circleItem->useAlpha());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("useMask"), maskTexture);
+            generateCircle->release();
+        }
         createCircle();
         circleItem->setTexture(circleTexture);
         circleItem->updatePreview(circleTexture);
@@ -242,6 +270,7 @@ void CircleRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
     renderTexture->release();
+    glFlush();
 }
 
 void CircleRenderer::createCircle() {
@@ -254,16 +283,25 @@ void CircleRenderer::createCircle() {
     generateCircle->setUniformValue(generateCircle->uniformLocation("res"), m_resolution);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     generateCircle->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, circleTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void CircleRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, circleTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -275,11 +313,16 @@ void CircleRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -297,16 +340,43 @@ void CircleRenderer::saveTexture(QString fileName) {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    FIBITMAP *result = FreeImage_ConvertToRGBA16(image);
-    if (FreeImage_Save(FIF_PNG, result, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(result);
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

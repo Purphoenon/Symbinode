@@ -99,26 +99,26 @@ void main()
             coords *= rotate2d(rotationAngle*PI/180.0 + PI*random.z*randRotation);
             coords /= (vec2(scaleX, scaleY) - vec2(random.w*randScale));
             coords /= scale;
-            coords += 0.5;           
+            coords += 0.5;
             if((coords.x < 0.0 || coords.y < 0.0 || coords.x > 1.0 || coords.y > 1.0)) continue;
             int textureNumber = int(floor((random.z + random.w)*0.5*(inputCount - 0.1)));
             if(textureNumber == 0) {
-                image = texture(textureTile, coords);
+                image = textureLod(textureTile, coords, 0);
             }
             else if(textureNumber == 1) {
-                image = texture(tile1, coords);
+                image = textureLod(tile1, coords, 0);
             }
             else if(textureNumber == 2) {
-                image = texture(tile2, coords);
+                image = textureLod(tile2, coords, 0);
             }
             else if(textureNumber == 3) {
-                image = texture(tile3, coords);
+                image = textureLod(tile3, coords, 0);
             }
             else if(textureNumber == 4) {
-                image = texture(tile4, coords);
+                image = textureLod(tile4, coords, 0);
             }
             else if(textureNumber == 5) {
-                image = texture(tile5, coords);
+                image = textureLod(tile5, coords, 0);
             }
             float maskS = 1.0 - (random.x + random.y)*0.5*maskStrength;
 

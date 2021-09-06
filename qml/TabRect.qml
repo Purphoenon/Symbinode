@@ -72,7 +72,7 @@ Rectangle {
         text: fileName
         renderType: Text.NativeRendering
         leftPadding: 15
-        clip: true
+        elide: Text.ElideRight
         topPadding: 0
         bottomPadding: 3
         font.pointSize: 10

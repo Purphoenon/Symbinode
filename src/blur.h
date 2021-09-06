@@ -31,7 +31,7 @@ class BlurObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    BlurObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float intensity = 0.5f);
+    BlurObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float intensity = 0.5f);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -44,8 +44,11 @@ public:
     void setIntensity(float intensity);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool bluredTex = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool selectedItem = false;
     bool texSaving = false;
     QString saveName = "";
@@ -54,6 +57,7 @@ signals:
     void textureChanged();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_texture = 0;
     unsigned int m_sourceTexture = 0;
     unsigned int m_maskTexture = 0;
@@ -62,7 +66,7 @@ private:
 
 class BlurRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    BlurRenderer(QVector2D res);
+    BlurRenderer(QVector2D res, GLint bpc);
     ~BlurRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -72,6 +76,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int pingpongFBO[2];
     unsigned int pingpongBuffer[2];
     unsigned int m_sourceTexture = 0;

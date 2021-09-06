@@ -71,7 +71,7 @@ public:
     Q_INVOKABLE void copy();
     Q_INVOKABLE void paste();
     Q_INVOKABLE void cut();
-    Q_INVOKABLE void deleteItems();
+    Q_INVOKABLE void deleteItems(bool saveConnection);
     Q_INVOKABLE bool saveScene();
     Q_INVOKABLE void saveSceneAs();
     Q_INVOKABLE void loadScene();

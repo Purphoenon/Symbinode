@@ -24,10 +24,10 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include "FreeImage.h"
 
-VoronoiObject::VoronoiObject(QQuickItem *parent, QVector2D resolution, QString voronoiType, int scale,
-                             int scaleX, int scaleY, float jitter, bool inverse, float intensity,
+VoronoiObject::VoronoiObject(QQuickItem *parent, QVector2D resolution, GLint bpc, QString voronoiType,
+                             int scale, int scaleX, int scaleY, float jitter, bool inverse, float intensity,
                              float bordersSize, int seed): QQuickFramebufferObject(parent),
-    m_resolution(resolution), m_voronoiType(voronoiType), m_scale(scale), m_scaleX(scaleX),
+    m_resolution(resolution), m_bpc(bpc), m_voronoiType(voronoiType), m_scale(scale), m_scaleX(scaleX),
     m_scaleY(scaleY), m_jitter(jitter), m_inverse(inverse), m_intensity(intensity),
     m_borders(bordersSize), m_seed(seed)
 {
@@ -35,7 +35,7 @@ VoronoiObject::VoronoiObject(QQuickItem *parent, QVector2D resolution, QString v
 }
 
 QQuickFramebufferObject::Renderer *VoronoiObject::createRenderer() const {
-    return new VoronoiRenderer(m_resolution);
+    return new VoronoiRenderer(m_resolution, m_bpc);
 }
 
 unsigned int VoronoiObject::maskTexture() {
@@ -68,9 +68,9 @@ QString VoronoiObject::voronoiType() {
 }
 
 void VoronoiObject::setVoronoiType(QString type) {
+    if(m_voronoiType == type) return;
     m_voronoiType = type;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::voronoiScale() {
@@ -78,9 +78,9 @@ int VoronoiObject::voronoiScale() {
 }
 
 void VoronoiObject::setVoronoiScale(int scale) {
+    if(m_scale == scale) return;
     m_scale = scale;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::scaleX() {
@@ -88,9 +88,9 @@ int VoronoiObject::scaleX() {
 }
 
 void VoronoiObject::setScaleX(int scale) {
+    if(m_scaleX == scale) return;
     m_scaleX = scale;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::scaleY() {
@@ -98,9 +98,9 @@ int VoronoiObject::scaleY() {
 }
 
 void VoronoiObject::setScaleY(int scale) {
+    if(m_scaleY == scale) return;
     m_scaleY = scale;
     generatedVoronoi = true;
-    update();
 }
 
 float VoronoiObject::jitter() {
@@ -108,9 +108,9 @@ float VoronoiObject::jitter() {
 }
 
 void VoronoiObject::setJitter(float jitter) {
+    if(m_jitter == jitter) return;
     m_jitter = jitter;
     generatedVoronoi = true;
-    update();
 }
 
 bool VoronoiObject::inverse() {
@@ -118,9 +118,9 @@ bool VoronoiObject::inverse() {
 }
 
 void VoronoiObject::setInverse(bool inverse) {
+    if(m_inverse == inverse) return;
     m_inverse = inverse;
     generatedVoronoi = true;
-    update();
 }
 
 float VoronoiObject::intensity() {
@@ -128,9 +128,9 @@ float VoronoiObject::intensity() {
 }
 
 void VoronoiObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     generatedVoronoi = true;
-    update();
 }
 
 float VoronoiObject::bordersSize() {
@@ -138,9 +138,9 @@ float VoronoiObject::bordersSize() {
 }
 
 void VoronoiObject::setBordersSize(float size) {
+    if(m_borders == size) return;
     m_borders = size;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::seed() {
@@ -148,9 +148,9 @@ int VoronoiObject::seed() {
 }
 
 void VoronoiObject::setSeed(int seed) {
+    if(m_seed == seed) return;
     m_seed = seed;
     generatedVoronoi = true;
-    update();
 }
 
 QVector2D VoronoiObject::resolution() {
@@ -163,7 +163,17 @@ void VoronoiObject::setResolution(QVector2D res) {
     update();
 }
 
-VoronoiRenderer::VoronoiRenderer(QVector2D res): m_resolution(res) {
+GLint VoronoiObject::bpc() {
+    return m_bpc;
+}
+
+void VoronoiObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+VoronoiRenderer::VoronoiRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     generateVoronoi = new QOpenGLShaderProgram();
     generateVoronoi->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
@@ -182,6 +192,7 @@ VoronoiRenderer::VoronoiRenderer(QVector2D res): m_resolution(res) {
     generateVoronoi->release();
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
     float vertQuad[] = {-1.0f, -1.0f,
                     -1.0f, 1.0f,
@@ -219,11 +230,19 @@ VoronoiRenderer::VoronoiRenderer(QVector2D res): m_resolution(res) {
     glBindFramebuffer(GL_FRAMEBUFFER, voronoiFBO);
     glGenTextures(1, &voronoiTexture);
     glBindTexture(GL_TEXTURE_2D, voronoiTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, voronoiTexture, 0);    
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -234,12 +253,15 @@ VoronoiRenderer::~VoronoiRenderer() {
     delete generateVoronoi;
     delete  checkerShader;
     delete renderTexture;
+    glDeleteTextures(1, &voronoiTexture);
+    glDeleteFramebuffers(1, &voronoiFBO);
+    glDeleteVertexArrays(1, &voronoiVAO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *VoronoiRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -254,21 +276,28 @@ void VoronoiRenderer::synchronize(QQuickFramebufferObject *item) {
             voronoiItem->setTexture(voronoiTexture);
         }
     }
-    if(voronoiItem->generatedVoronoi) {
-        voronoiItem->generatedVoronoi = false;
-        m_voronoiType = voronoiItem->voronoiType();
-        maskTexture = voronoiItem->maskTexture();
-        generateVoronoi->bind();
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scale"), voronoiItem->voronoiScale());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleX"), voronoiItem->scaleX());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleY"), voronoiItem->scaleY());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("jitter"), voronoiItem->jitter());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("inverse"), voronoiItem->inverse());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("intensity"), voronoiItem->intensity());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("bordersSize"), voronoiItem->bordersSize());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("seed"), voronoiItem->seed());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("useMask"), maskTexture);
-        generateVoronoi->release();
+    if(voronoiItem->generatedVoronoi || voronoiItem->bpcUpdated) {
+        if(voronoiItem->bpcUpdated) {
+            voronoiItem->bpcUpdated = false;
+            m_bpc = voronoiItem->bpc();
+            updateTexResolution();
+        }
+        if(voronoiItem->generatedVoronoi) {
+            voronoiItem->generatedVoronoi = false;
+            m_voronoiType = voronoiItem->voronoiType();
+            maskTexture = voronoiItem->maskTexture();
+            generateVoronoi->bind();
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scale"), voronoiItem->voronoiScale());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleX"), voronoiItem->scaleX());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleY"), voronoiItem->scaleY());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("jitter"), voronoiItem->jitter());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("inverse"), voronoiItem->inverse());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("intensity"), voronoiItem->intensity());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("bordersSize"), voronoiItem->bordersSize());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("seed"), voronoiItem->seed());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("useMask"), maskTexture);
+            generateVoronoi->release();
+        }
         createVoronoi();
         voronoiItem->setTexture(voronoiTexture);
         voronoiItem->updatePreview(voronoiTexture);
@@ -300,6 +329,7 @@ void VoronoiRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
     glBindVertexArray(0);
+    glFlush();
 }
 
 void VoronoiRenderer::createVoronoi() {
@@ -315,16 +345,25 @@ void VoronoiRenderer::createVoronoi() {
     generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("res"), m_resolution);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     generateVoronoi->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, voronoiTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void VoronoiRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, voronoiTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -335,11 +374,16 @@ void VoronoiRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &tex);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -355,14 +399,42 @@ void VoronoiRenderer::saveTexture(QString fileName) {
     renderTexture->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &tex);
+    glDeleteFramebuffers(1, &fbo);
 }

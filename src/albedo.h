@@ -30,7 +30,7 @@ class AlbedoObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    AlbedoObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    AlbedoObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     QVector3D albedoValue();
     void setAlbedoValue(QVector3D albedo);
@@ -42,10 +42,14 @@ public:
     void saveTexture(QString fileName);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool useAlbedoTex = false;
     bool selectedItem = false;
     bool texSaving = false;
+    bool albedoUpdated = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     QString saveName = "";
 signals:
     void updatePreview(unsigned int previewData);
@@ -55,11 +59,12 @@ private:
     unsigned int m_albedoTexture = 0;
     QVector3D m_albedo = QVector3D(1.0f, 1.0f, 1.0f);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
 };
 
 class AlbedoRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    AlbedoRenderer(QVector2D resolution);
+    AlbedoRenderer(QVector2D resolution, GLint bpc);
     ~AlbedoRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -78,6 +83,7 @@ private:
     unsigned int m_sourceTexture = 0;
     QVector3D albedoVal = QVector3D(1.0f, 1.0f, 1.0f);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
 };
 
 #endif // ALBEDO_H

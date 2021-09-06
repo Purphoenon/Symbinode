@@ -27,17 +27,43 @@ Item {
     height: childrenRect.height + 30
     width: parent.width
     property real startMetal: 0
+    property alias startBits: bitsParam.currentIndex
     signal metalChanged(real val)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-    ParamSlider {
-        id: metalParam
-        propertyName: "Metalness"
-        propertyValue: startMetal
-        onPropertyValueChanged: {
-            metalChanged(metalParam.propertyValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
         }
-        onChangingFinished: {
-            propertyChangingFinished("startMetal", propertyValue, oldValue)
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: metalParam
+            propertyName: "Metalness"
+            propertyValue: startMetal
+            onPropertyValueChanged: {
+                metalChanged(metalParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startMetal", propertyValue, oldValue)
+            }
+        }
+   }
 }

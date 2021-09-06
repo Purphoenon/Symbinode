@@ -50,6 +50,7 @@ Frame::Frame(QQuickItem *parent): QQuickItem (parent)
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
     setFlag(ItemAcceptsDrops, true);
+    setTransformOrigin(TopLeft);
     setWidth(200);
     setHeight(100);
     m_view = new QQuickView();
@@ -117,24 +118,6 @@ void Frame::setBaseY(float y) {
     setY(y*m_scale - m_pan.y());
 }
 
-float Frame::baseWidth() {
-    return m_baseWidth;
-}
-
-void Frame::setBaseWidth(float width) {
-    m_baseWidth = width;
-    setWidth(m_baseWidth*m_scale);
-}
-
-float Frame::baseHeight() {
-    return m_baseHeight;
-}
-
-void Frame::setBaseHeight(float height) {
-    m_baseHeight = height;
-    setHeight(m_baseHeight*m_scale);
-}
-
 QString Frame::title() {
     return m_grFrame->property("frameName").toString();
 }
@@ -168,42 +151,42 @@ void Frame::setPan(QVector2D pan) {
 
 void Frame::setScaleView(float scale) {
     m_scale = scale;
-    setWidth(m_baseWidth*scale);
-    setHeight(m_baseHeight*scale);
+    setScale(scale);
     m_grFrame->setProperty("scaleView", scale);
 }
 
 void Frame::resizeByContent() {
     double minX = std::numeric_limits<double>::max();
     double minY = minX;
-    double maxX = std::numeric_limits<double>::min();
+    double maxX = std::numeric_limits<double>::lowest();
     double maxY = maxX;
     for(QQuickItem *item: m_content) {
-        minX = std::min(minX, item->x());
-        minY = std::min(minY, item->y());
-        maxX = std::max(maxX, item->x() + item->width());
-        maxY = std::max(maxY, item->y() + item->height());
+        if(qobject_cast<Node*>(item)) {
+            Node *node = qobject_cast<Node*>(item);
+            minX = std::min(minX, static_cast<double>(node->baseX()));
+            minY = std::min(minY, static_cast<double>(node->baseY()));
+            maxX = std::max(maxX, static_cast<double>(node->baseX()) + node->width());
+            maxY = std::max(maxY, static_cast<double>(node->baseY()) + node->height());
+        }
     }
-    setX(minX - 10*m_scale);
-    setY(minY - 55*m_scale);
-    m_baseX = (x() + m_pan.x())/m_scale;
-    m_baseY = (y() + m_pan.y())/m_scale;
-    setWidth(maxX - minX + 20*m_scale);
-    setHeight(maxY - minY + 75*m_scale);
-    m_baseWidth = width()/m_scale;
-    m_baseHeight = height()/m_scale;
+    setX((minX - 10)*m_scale - m_pan.x());
+    setY((minY - 55)*m_scale - m_pan.y());
+    m_baseX = minX - 10;
+    m_baseY = minY - 55;
+    setWidth(maxX - minX + 20);
+    setHeight(maxY - minY + 75);
 }
 
 void Frame::mousePressEvent(QMouseEvent *event) {
     if(event->button() == Qt::LeftButton) {
         setFocus(true);
         setFocus(false);
-        lastX = event->pos().x();
-        lastY = event->pos().y();
+        lastX = event->pos().x()*m_scale;
+        lastY = event->pos().y()*m_scale;
         m_oldX = m_baseX;
         m_oldY = m_baseY;
         m_moved = false;
-        if(event->pos().y() < 45.0f*m_scale && currentResize == resize::NOT) {
+        if(event->pos().y() < 45.0f && currentResize == resize::NOT) {
             Scene *scene = qobject_cast<Scene*>(parentItem());
             if(event->modifiers() == Qt::ControlModifier) {
                setSelected(!m_selected);
@@ -224,7 +207,7 @@ void Frame::mousePressEvent(QMouseEvent *event) {
                 scene->selectedItems(selectedList);
             }
         }
-        else if(event->pos().y() > 45.0f*m_scale && currentResize == resize::NOT) {
+        else if(event->pos().y() > 45.0f && currentResize == resize::NOT) {
             event->setAccepted(false);
         }
     }
@@ -245,93 +228,93 @@ void Frame::mouseMoveEvent(QMouseEvent *event) {
         float offH = 0;
         switch (currentResize) {
         case LEFT:
-            if(width() - offsetX > m_minWidth*m_scale) {
+            if(width() - offsetX/m_scale > m_minWidth) {
                 offX = (point.x() + m_pan.x())/m_scale - m_baseX;
-                offW = (width() - offsetX)/m_scale - m_baseWidth;
+                offW = -offsetX/m_scale;
             }
             else {
-                offsetX = width() - m_minWidth*m_scale;
+                offsetX = (width() - m_minWidth)*m_scale;
                 offX = (x() + offsetX + m_pan.x())/m_scale - m_baseX;
-                offW = (width() - offsetX)/m_scale - m_baseWidth;
+                offW = -offsetX/m_scale;
             }
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case RIGHT:
-            if(offsetX < m_minWidth*m_scale) offsetX = m_minWidth*m_scale;
-            offW = offsetX/m_scale - m_baseWidth;
+            if(offsetX/m_scale < m_minWidth) offsetX = m_minWidth*m_scale;
+            offW = (offsetX/m_scale - width());
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case TOP:
-            if(height() - offsetY > m_minHeight*m_scale) {
+            if(height() - offsetY/m_scale > m_minHeight) {
                 offY = (point.y() + m_pan.y())/m_scale - m_baseY;
-                offH = (height() - offsetY)/m_scale - m_baseHeight;
+                offH = -offsetY/m_scale;
             }
             else {
-                offsetY = height() - m_minHeight*m_scale;
+                offsetY = (height() - m_minHeight)*m_scale;
                 offY = (y() + offsetY + m_pan.y())/m_scale - m_baseY;
-                offH = (height() - offsetY)/m_scale - m_baseHeight;
+                offH = -offsetY/m_scale;
             }
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case BOTTOM:
-            if(offsetY < m_minHeight*m_scale) offsetY = m_minHeight*m_scale;
-            offH = offsetY/m_scale - m_baseHeight;
+            if(offsetY/m_scale < m_minHeight) offsetY = m_minHeight*m_scale;
+            offH = offsetY/m_scale - height();
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case TOPLEFT:
-            if(width() - offsetX > m_minWidth*m_scale) {
+            if(width() - offsetX/m_scale > m_minWidth) {
                 offX = (point.x() + m_pan.x())/m_scale - m_baseX;
-                offW = (width() - offsetX)/m_scale - m_baseWidth;
+                offW = -offsetX/m_scale;
             }
             else {
-                offsetX = width() - m_minWidth*m_scale;
+                offsetX = (width() - m_minWidth)*m_scale;
                 offX = (x() + offsetX + m_pan.x())/m_scale - m_baseX;
-                offW = (width() - offsetX)/m_scale - m_baseWidth;
+                offW = -offsetX/m_scale;
             }
-            if(height() - offsetY > m_minHeight*m_scale) {
+            if(height() - offsetY/m_scale > m_minHeight) {
                 offY = (point.y() + m_pan.y())/m_scale - m_baseY;
-                offH = (height() - offsetY)/m_scale - m_baseHeight;
+                offH = -offsetY/m_scale;
             }
             else {
-                offsetY = height() - m_minHeight*m_scale;
+                offsetY = (height() - m_minHeight)*m_scale;
                 offY = (y() + offsetY + m_pan.y())/m_scale - m_baseY;
-                offH = (height() - offsetY)/m_scale - m_baseHeight;
+                offH = -offsetY/m_scale;
             }
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case TOPRIGHT:
-            if(offsetX < m_minWidth*m_scale) offsetX = m_minWidth*m_scale;
-            offW = offsetX/m_scale - m_baseWidth;
-            if(height() - offsetY > m_minHeight*m_scale) {
+            if(offsetX/m_scale < m_minWidth) offsetX = m_minWidth*m_scale;
+            offW = offsetX/m_scale - width();
+            if(height() - offsetY/m_scale > m_minHeight) {
                 offY = (point.y() + m_pan.y())/m_scale - m_baseY;
-                offH = (height() - offsetY)/m_scale - m_baseHeight;
+                offH = -offsetY/m_scale;
             }
             else {
-                offsetY = height() - m_minHeight*m_scale;
+                offsetY = (height() - m_minHeight)*m_scale;
                 offY = (y() + offsetY + m_pan.y())/m_scale - m_baseY;
-                offH = (height() - offsetY)/m_scale - m_baseHeight;
+                offH = -offsetY/m_scale;
             }
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case BOTTOMLEFT:
-            if(width() - offsetX > m_minWidth*m_scale) {
+            if(width() - offsetX/m_scale > m_minWidth) {
                 offX = (point.x() + m_pan.x())/m_scale - m_baseX;
-                offW = (width() - offsetX)/m_scale - m_baseWidth;
+                offW = -offsetX/m_scale;
             }
             else {
-                offsetX = width() - m_minWidth*m_scale;
+                offsetX = (width() - m_minWidth)*m_scale;
                 offX = (x() + offsetX + m_pan.x())/m_scale - m_baseX;
-                offW = (width() - offsetX)/m_scale - m_baseWidth;
+                offW = -offsetX/m_scale;
             }
-            if(offsetY < m_minHeight*m_scale) offsetY = m_minHeight*m_scale;
-            offH = offsetY/m_scale - m_baseHeight;
+            if(offsetY/m_scale < m_minHeight) offsetY = m_minHeight*m_scale;
+            offH = offsetY/m_scale - height();
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case BOTTOMRIGHT:
-            if(offsetX < m_minWidth*m_scale) offsetX = m_minWidth*m_scale;
-            offW = offsetX/m_scale - m_baseWidth;
-            if(offsetY < m_minHeight*m_scale) offsetY = m_minHeight*m_scale;
-            offH = offsetY/m_scale - m_baseHeight;
+            if(offsetX/m_scale < m_minWidth) offsetX = m_minWidth*m_scale;
+            offW = offsetX/m_scale - width();
+            if(offsetY/m_scale < m_minHeight) offsetY = m_minHeight*m_scale;
+            offH = offsetY/m_scale - height();
             scene->resizedFrame(this, offX, offY, offW, offH);
             break;
         case NOT:
@@ -388,7 +371,7 @@ void Frame::hoverEnterEvent(QHoverEvent *event) {
 }
 
 void Frame::hoverMoveEvent(QHoverEvent *event) {
-    if(event->pos().y() < 45.0f*m_scale) {
+    if(event->pos().y() < 45.0f) {
         m_grFrame->setProperty("hovered", true);
     }
     else {
@@ -401,35 +384,35 @@ void Frame::hoverMoveEvent(QHoverEvent *event) {
         return;
     }
     float mouseAreaSize = 3.0f;
-    if(event->pos().x() < mouseAreaSize && (event->pos().y() > mouseAreaSize && event->pos().y() < height() - mouseAreaSize)) {
+    if(event->pos().x() < mouseAreaSize/m_scale && (event->pos().y() > mouseAreaSize/m_scale && event->pos().y() < height() - mouseAreaSize/m_scale)) {
         currentResize = LEFT;
         window()->setCursor(QCursor(Qt::SizeHorCursor));
     }
-    else if(event->pos().x() > width() - mouseAreaSize && (event->pos().y() > mouseAreaSize && event->pos().y() < height() - mouseAreaSize)) {
+    else if(event->pos().x() > width() - mouseAreaSize/m_scale && (event->pos().y() > mouseAreaSize/m_scale && event->pos().y() < height() - mouseAreaSize/m_scale)) {
         currentResize = RIGHT;
         window()->setCursor(QCursor(Qt::SizeHorCursor));
     }
-    else if((event->pos().x() > mouseAreaSize && event->pos().x() < width() - mouseAreaSize) && event->pos().y() < mouseAreaSize) {
+    else if((event->pos().x() > mouseAreaSize/m_scale && event->pos().x() < width() - mouseAreaSize/m_scale) && event->pos().y() < mouseAreaSize/m_scale) {
         currentResize = TOP;
         window()->setCursor(QCursor(Qt::SizeVerCursor));
     }
-    else if((event->pos().x() > mouseAreaSize && event->pos().x() < width() - mouseAreaSize) && event->pos().y() > height() - mouseAreaSize) {
+    else if((event->pos().x() > mouseAreaSize/m_scale && event->pos().x() < width() - mouseAreaSize/m_scale) && event->pos().y() > height() - mouseAreaSize/m_scale) {
         currentResize = BOTTOM;
         window()->setCursor(QCursor(Qt::SizeVerCursor));
     }
-    else if(event->pos().x() < mouseAreaSize && event->pos().y() < mouseAreaSize) {
+    else if(event->pos().x() < mouseAreaSize/m_scale && event->pos().y() < mouseAreaSize/m_scale) {
         currentResize = TOPLEFT;
         window()->setCursor(QCursor(Qt::SizeFDiagCursor));
     }
-    else if(event->pos().x() > width() - mouseAreaSize && event->pos().y() < mouseAreaSize) {
+    else if(event->pos().x() > width() - mouseAreaSize/m_scale && event->pos().y() < mouseAreaSize/m_scale) {
         currentResize = TOPRIGHT;
         window()->setCursor(QCursor(Qt::SizeBDiagCursor));
     }
-    else if(event->pos().x() < mouseAreaSize && event->pos().y() > height() - mouseAreaSize) {
+    else if(event->pos().x() < mouseAreaSize/m_scale && event->pos().y() > height() - mouseAreaSize/m_scale) {
         currentResize = BOTTOMLEFT;
         window()->setCursor(QCursor(Qt::SizeBDiagCursor));
     }
-    else if(event->pos().x() > width() - mouseAreaSize && event->pos().y() > height() - mouseAreaSize) {
+    else if(event->pos().x() > width() - mouseAreaSize/m_scale && event->pos().y() > height() - mouseAreaSize/m_scale) {
         currentResize = BOTTOMRIGHT;
         window()->setCursor(QCursor(Qt::SizeFDiagCursor));
     }
@@ -459,10 +442,6 @@ void Frame::addNodes(QList<QQuickItem *> nodes) {
 
 void Frame::removeItem(QQuickItem *item) {
     m_content.removeOne(item);
-    /*if(qobject_cast<Node*>(item)) {
-        Node *node = qobject_cast<Node*>(item);
-        node->setAttachedFrame(nullptr);
-    }*/
     if(m_content.size() > 0) resizeByContent();
 }
 
@@ -492,8 +471,8 @@ void Frame::serialize(QJsonObject &json) const {
     json["title"] = m_grFrame->property("frameName").toString();
     json["baseX"] = m_baseX;
     json["baseY"] = m_baseY;
-    json["baseWidth"] = m_baseWidth;
-    json["baseHeight"] = m_baseHeight;
+    json["width"] = width();
+    json["height"] = height();
     QJsonArray nodesArray;
     for(auto item: m_content) {
         if(qobject_cast<Node*>(item)) {
@@ -519,13 +498,11 @@ void Frame::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
     if(json.contains("baseY")) {
         setBaseY(json["baseY"].toVariant().toFloat());
     }
-    if(json.contains("baseWidth")) {
-        m_baseWidth = json["baseWidth"].toVariant().toFloat();
-        setWidth(m_baseWidth*m_scale);
+    if(json.contains("width")) {
+        setWidth(json["width"].toVariant().toFloat());
     }
-    if(json.contains("baseHeight")) {
-        m_baseHeight = json["baseHeight"].toVariant().toFloat();
-        setHeight(m_baseHeight*m_scale);
+    if(json.contains("height")) {
+        setHeight(json["height"].toVariant().toFloat());
     }
     if(json.contains("title")) {
         m_grFrame->setProperty("frameName", json["title"].toString());
@@ -547,6 +524,7 @@ void Frame::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
             }
         }
     }
+    resizeByContent();
 }
 
 void Frame::titleChanged(QString newTitle, QString oldTitle) {

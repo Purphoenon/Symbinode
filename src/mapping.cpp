@@ -22,16 +22,16 @@
 #include "mapping.h"
 #include <QOpenGLFramebufferObjectFormat>
 
-MappingObject::MappingObject(QQuickItem *parent, QVector2D resolution, float inputMin, float inputMax,
-                             float outputMin, float outputMax): QQuickFramebufferObject (parent),
-    m_resolution(resolution), m_inputMin(inputMin), m_inputMax(inputMax), m_outputMin(outputMin),
-    m_outputMax(outputMax)
+MappingObject::MappingObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float inputMin,
+                             float inputMax, float outputMin, float outputMax):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc), m_inputMin(inputMin),
+    m_inputMax(inputMax), m_outputMin(outputMin), m_outputMax(outputMax)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *MappingObject::createRenderer() const {
-    return new MappingRenderer(m_resolution);
+    return new MappingRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &MappingObject::texture() {
@@ -50,7 +50,6 @@ unsigned int MappingObject::maskTexture() {
 void MappingObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     mappedTex = true;
-    update();
 }
 
 unsigned int MappingObject::sourceTexture() {
@@ -60,7 +59,6 @@ unsigned int MappingObject::sourceTexture() {
 void MappingObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     mappedTex = true;
-    update();
 }
 
 void MappingObject::saveTexture(QString fileName) {
@@ -74,9 +72,9 @@ float MappingObject::inputMin() {
 }
 
 void MappingObject::setInputMin(float value) {
+    if(m_inputMin == value) return;
     m_inputMin = value;
     mappedTex = true;
-    update();
 }
 
 float MappingObject::inputMax() {
@@ -84,9 +82,9 @@ float MappingObject::inputMax() {
 }
 
 void MappingObject::setInputMax(float value) {
+    if(m_inputMax == value) return;
     m_inputMax = value;
     mappedTex = true;
-    update();
 }
 
 float MappingObject::outputMin() {
@@ -94,9 +92,9 @@ float MappingObject::outputMin() {
 }
 
 void MappingObject::setOutputMin(float value) {
+    if(m_outputMin == value) return;
     m_outputMin = value;
     mappedTex = true;
-    update();
 }
 
 float MappingObject::outputMax() {
@@ -104,9 +102,9 @@ float MappingObject::outputMax() {
 }
 
 void MappingObject::setOutputMax(float value) {
+    if(m_outputMax == value) return;
     m_outputMax = value;
     mappedTex = true;
-    update();
 }
 
 QVector2D MappingObject::resolution() {
@@ -119,13 +117,26 @@ void MappingObject::setResolution(QVector2D res) {
     update();
 }
 
+GLint MappingObject::bpc() {
+    return m_bpc;
+}
+
+void MappingObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
 MappingRenderer::~MappingRenderer() {
     delete mappingShader;
     delete checkerShader;
     delete textureShader;
+    glDeleteTextures(1, &m_mappingTexture);
+    glDeleteFramebuffers(1, &mappingFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
-MappingRenderer::MappingRenderer(QVector2D res): m_resolution(res) {
+MappingRenderer::MappingRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     mappingShader = new QOpenGLShaderProgram();
     mappingShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -145,6 +156,7 @@ MappingRenderer::MappingRenderer(QVector2D res): m_resolution(res) {
     mappingShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                            -1.0f, 1.0f, 0.0f, 1.0f,
@@ -167,11 +179,23 @@ MappingRenderer::MappingRenderer(QVector2D res): m_resolution(res) {
     glBindFramebuffer(GL_FRAMEBUFFER, mappingFBO);
     glGenTextures(1, &m_mappingTexture);
     glBindTexture(GL_TEXTURE_2D, m_mappingTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_mappingTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -180,7 +204,6 @@ MappingRenderer::MappingRenderer(QVector2D res): m_resolution(res) {
 QOpenGLFramebufferObject *MappingRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -191,18 +214,27 @@ void MappingRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = mappingItem->resolution();
         updateTexResolution();
     }
-    if(mappingItem->mappedTex) {
-        mappingItem->mappedTex = false;
-        m_sourceTexture = mappingItem->sourceTexture();
+    if(mappingItem->mappedTex || mappingItem->bpcUpdated) {
+        if(mappingItem->bpcUpdated) {
+            mappingItem->bpcUpdated = false;
+            m_bpc = mappingItem->bpc();
+            updateTexResolution();
+        }
+        if(mappingItem->mappedTex) {
+            mappingItem->mappedTex = false;
+            m_sourceTexture = mappingItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = mappingItem->maskTexture();
+                mappingShader->bind();
+                mappingShader->setUniformValue(mappingShader->uniformLocation("inputMin"), mappingItem->inputMin());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("inputMax"), mappingItem->inputMax());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("outputMin"), mappingItem->outputMin());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("outputMax"), mappingItem->outputMax());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("useMask"), maskTexture);
+                mappingShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = mappingItem->maskTexture();
-            mappingShader->bind();
-            mappingShader->setUniformValue(mappingShader->uniformLocation("inputMin"), mappingItem->inputMin());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("inputMax"), mappingItem->inputMax());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("outputMin"), mappingItem->outputMin());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("outputMax"), mappingItem->outputMax());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("useMask"), maskTexture);
-            mappingShader->release();
             map();
             mappingItem->setTexture(m_mappingTexture);
             mappingItem->updatePreview(m_mappingTexture);
@@ -237,6 +269,7 @@ void MappingRenderer::render() {
         textureShader->release();
         glBindVertexArray(0);
     }
+    glFlush();
 }
 
 void MappingRenderer::map() {
@@ -251,18 +284,29 @@ void MappingRenderer::map() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     mappingShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_mappingTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void MappingRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_mappingTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -274,11 +318,16 @@ void MappingRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -296,14 +345,42 @@ void MappingRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

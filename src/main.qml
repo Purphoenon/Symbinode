@@ -21,7 +21,6 @@
 
 import QtQuick 2.12
 import QtQuick.Window 2.12
-import QtQuick.Shapes 1.12
 import QtQuick.Controls 2.5
 import QtQuick.Dialogs 1.2
 import QtGraphicalEffects 1.0
@@ -669,6 +668,7 @@ MainWindow {
             }
         }
     }
+
     ColorSettings {
         id:colors
     }
@@ -695,6 +695,7 @@ MainWindow {
     onPreview3DChanged: {
         if(oldPreview) {
             oldPreview.visible = false
+            dragPreview3D.resized.disconnect(oldPreview.sizeUpdated)
         }
         if(newPreview) {
             newPreview.visible = true
@@ -703,6 +704,7 @@ MainWindow {
             newPreview.height = 240
             newPreview.width = Qt.binding(function(){return newPreview.parent.width})
             newPreview.height = Qt.binding(function(){return newPreview.parent.height - 27})
+            dragPreview3D.resized.connect(newPreview.sizeUpdated)
             primitivesType.currentIndex = newPreview.primitivesType
             tilesType.currentIndex = newPreview.tilesSize - 1
             heightScale.propertyValue = 10*newPreview.heightScale
@@ -737,18 +739,18 @@ MainWindow {
                 function saveFunction() {
                     var saved = tab.save()
                     if(saved) {
-                        var index = tabsList.tabs.indexOf(tab)
-                        tabsList.tabs.splice(index, 1)
                         mainWindow.closeTab(tab)
+                        var index = tabsList.tabs.indexOf(tab)
+                        tabsList.tabs.splice(index, 1)                        
                     }
                     exitDialogObject.accepted.disconnect(saveFunction)
                     exitDialogObject.destroy()
                 }
                 exitDialogObject.accepted.connect(saveFunction)
                 exitDialogObject.discard.connect(function() {
-                    var index = tabsList.tabs.indexOf(tab)
-                    tabsList.tabs.splice(index, 1)
                     mainWindow.closeTab(tab)
+                    var index = tabsList.tabs.indexOf(tab)                    
+                    tabsList.tabs.splice(index, 1)                    
                     exitDialogObject.destroy()
 
                 })
@@ -759,9 +761,9 @@ MainWindow {
         }
         else {
             console.log(tabsList)
-            var index = tabsList.tabs.indexOf(tab)
-            tabsList.tabs.splice(index, 1)
             mainWindow.closeTab(tab)
+            var index = tabsList.tabs.indexOf(tab)
+            tabsList.tabs.splice(index, 1)            
         }
     }
 
@@ -822,7 +824,6 @@ MainWindow {
             parent: rightDock.container
             width: parent.width
             height: parent.height - dragPreview.height
-            clip: true
             Flickable {
                 id: flickable
                 y: 25
@@ -858,7 +859,7 @@ MainWindow {
                 id: preview
                 y: 25
                 width: parent.width
-                height: parent.height - 27
+                height: parent.height - 27                
             }
 
             Rectangle {
@@ -941,6 +942,9 @@ MainWindow {
         height: parent.height - 30
         z: 1
         limit: rightDock.width + 5 + tabsList.children.length*50
+        onResized: {
+            dragPreview3D.resized(resized)
+        }
         DragContainer {
             title: "Material View"
             id: dragPreview3D
@@ -1030,29 +1034,75 @@ MainWindow {
                                 changeTilePreview3D(index)
                                 focus = false
                             }
-                        }                        
-
-                        ParamSlider {
-                            id: heightScale
-                            x: 5
-                            y: 90
-                            width: parent.width - 10
-                            maximum: 1
-                            propertyName: "Height scale"
-                            onPropertyValueChanged: {
-                                changeHeightScale(propertyValue)
-                            }
                         }
 
-                        ParamSlider {
-                            id: emissiveStrenght
-                            x: 5
-                            y: 125
-                            width: parent.width - 10
-                            maximum: 10
-                            propertyName: "Emissive strength"
-                            onPropertyValueChanged: {
-                                changeEmissiveStrenght(propertyValue)
+                        Item {
+                            width: parent.width - 40
+                            height: childrenRect.height
+                            x: 10
+                            y: 105
+                            clip: true
+                            ParamSlider {
+                                id: heightScale
+                                //x: 5
+                                //width: parent.width - 10
+                                maximum: 1
+                                propertyName: "Height scale"
+                                onPropertyValueChanged: {
+                                    changeHeightScale(propertyValue)
+                                }
+                            }
+
+                            ParamSlider {
+                                id: emissiveStrenght
+                                //x: 5
+                                y: 18
+                                //width: parent.width - 10
+                                maximum: 10
+                                propertyName: "Emissive strength"
+                                onPropertyValueChanged: {
+                                    changeEmissiveStrenght(propertyValue)
+                                }
+                            }
+
+                            ParamSlider {
+                                id: bloomThreshold
+                                visible: bloom.checked
+                                //x: 5
+                                y: 88
+                                //width: parent.width - 10
+                                maximum: 5
+                                propertyName: "Bloom threshold"
+                                onPropertyValueChanged: {
+                                    changeBloomThreshold(propertyValue)
+                                }
+                            }
+
+                            ParamSlider {
+                                id: bloomRadius
+                                visible: bloom.checked
+                                //x: 5
+                                y: 121
+                                //width: parent.width - 10
+                                minimum: 1
+                                maximum: 10
+                                propertyName: "Bloom radius"
+                                onPropertyValueChanged: {
+                                    changeBloomRadius(propertyValue)
+                                }
+                            }
+
+                            ParamSlider {
+                                id: bloomIntensity
+                                visible: bloom.checked
+                                //x: 5
+                                y: 154
+                                //width: parent.width - 10
+                                maximum: 1
+                                propertyName: "Bloom intensity"
+                                onPropertyValueChanged: {
+                                   changeBloomIntensity(propertyValue)
+                                }
                             }
                         }
 
@@ -1065,47 +1115,7 @@ MainWindow {
                             onToggled: {
                                 changeBloom(checked)
                             }
-                        }
-
-                        ParamSlider {
-                            id: bloomThreshold
-                            visible: bloom.checked
-                            x: 5
-                            y: 195
-                            width: parent.width - 10
-                            maximum: 5
-                            propertyName: "Bloom threshold"
-                            onPropertyValueChanged: {
-                                changeBloomThreshold(propertyValue)
-                            }
-                        }
-
-                        ParamSlider {
-                            id: bloomRadius
-                            visible: bloom.checked
-                            x: 5
-                            y: 230
-                            width: parent.width - 10
-                            minimum: 1
-                            maximum: 10
-                            propertyName: "Bloom radius"
-                            onPropertyValueChanged: {
-                                changeBloomRadius(propertyValue)
-                            }
-                        }
-
-                        ParamSlider {
-                            id: bloomIntensity
-                            visible: bloom.checked
-                            x: 5
-                            y: 265
-                            width: parent.width - 10
-                            maximum: 1
-                            propertyName: "Bloom intensity"
-                            onPropertyValueChanged: {
-                               changeBloomIntensity(propertyValue)
-                            }
-                        }
+                        }                        
                     }
                     background:
                         Rectangle {

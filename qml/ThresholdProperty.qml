@@ -27,16 +27,42 @@ Item {
     height: childrenRect.height + 30
     width: parent.width
     property alias startThreshold: thresholdParam.propertyValue
+    property alias startBits: bitsParam.currentIndex
     signal thresholdChanged(real value)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-    ParamSlider {
-        id: thresholdParam
-        propertyName: "Threshold"
-        onPropertyValueChanged: {
-            thresholdChanged(thresholdParam.propertyValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
         }
-        onChangingFinished: {
-            propertyChangingFinished("startThreshold", propertyValue, oldValue)
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: thresholdParam
+            propertyName: "Threshold"
+            onPropertyValueChanged: {
+                thresholdChanged(thresholdParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startThreshold", propertyValue, oldValue)
+            }
         }
     }
 }

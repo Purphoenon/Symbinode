@@ -37,7 +37,7 @@ class Node: public QQuickItem
     Q_PROPERTY(QVector2D pan READ pan WRITE setPan NOTIFY changePan)
     Q_PROPERTY(bool selected READ selected WRITE setSelected NOTIFY changeSelected)
 public:
-    Node(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    Node(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     Node(const Node &node);
     ~Node();
     float baseX();
@@ -46,11 +46,19 @@ public:
     void setBaseY(float value);
     QVector2D pan();
     void setPan(QVector2D pan);
+    QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     float scaleView();
     bool selected();
     void setSelected(bool select);
     bool checkConnected(Node* node, socketType type);
+    bool isPointInRadius(QVector2D point);
+    Socket *getNearestOutputSocket(QVector2D center, float radius);
+    Socket *getNearestInputSocket(QVector2D center, float radius);
+    Socket *getInputSocket(int index) const;
+    Socket *getOutputSocket(int index) const;
     QList<Edge*> getEdges() const;
     QQuickItem *getPropertyPanel();
     Frame *attachedFrame();
@@ -60,6 +68,7 @@ public:
     void mouseReleaseEvent(QMouseEvent *event);
     void hoverMoveEvent(QHoverEvent *event);
     void hoverLeaveEvent(QHoverEvent *event);
+    virtual Node* clone();
     virtual void serialize(QJsonObject &json) const;
     virtual void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
     void setPropertyOnPanel(const char* name, QVariant value);
@@ -71,12 +80,14 @@ public:
     virtual void saveTexture(QString fileName);
 public slots:
     void scaleUpdate(float scale);
+    void bpcUpdate(int bpcType);
     void propertyChanged(QString propName, QVariant newValue, QVariant oldValue);
 signals:
     void changeBaseX(float value);
     void changeBaseY(float value);
     void changePan(QVector2D pan);
     void changeResolution(QVector2D res);
+    void changeBPC(GLint bpc);
     void changeSelected(bool select);
     void changeScaleView(float scale);
     void updatePreview(unsigned int previewData);
@@ -90,9 +101,12 @@ protected:
     QVector<Socket *> m_socketOutput;
     QVector<Socket *> m_additionalInputs;
     QVector2D m_resolution;
+    GLint m_bpc;
+    bool deserializing = false;
 private:
     QQuickView *view;
     Frame *m_attachedFrame = nullptr;
+    Edge *m_intersectingEdge = nullptr;
     float m_baseX = 0;
     float m_baseY = 0;
     float m_scale = 1.0f;

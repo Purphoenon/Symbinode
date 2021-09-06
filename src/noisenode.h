@@ -38,7 +38,7 @@ class NoiseNode: public Node
 {
     Q_OBJECT
 public:
-    NoiseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), NoiseParams perlin = NoiseParams(), NoiseParams simple = NoiseParams{0.5f, 1.0f, 1, 1, 20, 8, 1}, QString noiseType = "noisePerlin");
+    NoiseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, NoiseParams perlin = NoiseParams(), NoiseParams simple = NoiseParams{0.5f, 1.0f, 1, 1, 20, 8, 1}, QString noiseType = "noisePerlin");
     ~NoiseNode();
     QString noiseType();    
     void setNoiseType(QString type);
@@ -58,11 +58,12 @@ public:
     void setAmplitude(float value);
     int seed();
     void setSeed(int seed);
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void operation();
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    void operation() override;
+    NoiseNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
 signals:
     void noiseTypeChanged(QString type);
     void noiseScaleChanged(float scale);
@@ -83,7 +84,6 @@ public slots:
     void updateAmplitude(qreal value);
     void updateSeed(int seed);
     void previewGenerated();
-    void updateScale(float scale);
 private:
     NoiseObject *preview = nullptr;
     QString m_noiseType = "perlinNoise";

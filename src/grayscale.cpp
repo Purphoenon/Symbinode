@@ -1,14 +1,14 @@
 #include "grayscale.h"
 #include <QOpenGLFramebufferObjectFormat>
 
-GrayscaleObject::GrayscaleObject(QQuickItem *parent, QVector2D resolution):
-    QQuickFramebufferObject (parent), m_resolution(resolution)
+GrayscaleObject::GrayscaleObject(QQuickItem *parent, QVector2D resolution, GLint bpc):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *GrayscaleObject::createRenderer() const {
-    return new GrayscaleRenderer(m_resolution);
+    return new GrayscaleRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &GrayscaleObject::texture() {
@@ -27,7 +27,6 @@ unsigned int GrayscaleObject::sourceTexture() {
 void GrayscaleObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     grayscaledTex = true;
-    update();
 }
 
 void GrayscaleObject::saveTexture(QString fileName) {
@@ -46,7 +45,17 @@ void GrayscaleObject::setResolution(QVector2D res) {
     update();
 }
 
-GrayscaleRenderer::GrayscaleRenderer(QVector2D res): m_resolution(res) {
+GLint GrayscaleObject::bpc() {
+    return m_bpc;
+}
+
+void GrayscaleObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+GrayscaleRenderer::GrayscaleRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     grayscaleShader = new QOpenGLShaderProgram();
     grayscaleShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -65,6 +74,7 @@ GrayscaleRenderer::GrayscaleRenderer(QVector2D res): m_resolution(res) {
     grayscaleShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -86,13 +96,23 @@ GrayscaleRenderer::GrayscaleRenderer(QVector2D res): m_resolution(res) {
     glGenTextures(1, &m_grayscaleTexture);
     glBindFramebuffer(GL_FRAMEBUFFER, m_grayscaleFBO);
     glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_grayscaleTexture, 0
     );
@@ -101,13 +121,17 @@ GrayscaleRenderer::GrayscaleRenderer(QVector2D res): m_resolution(res) {
 }
 
 GrayscaleRenderer::~GrayscaleRenderer() {
-
+    delete grayscaleShader;
+    delete checkerShader;
+    delete textureShader;
+    glDeleteTextures(1, &m_grayscaleTexture);
+    glDeleteFramebuffers(1, &m_grayscaleFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *GrayscaleRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -119,10 +143,16 @@ void GrayscaleRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = grayscaleItem->resolution();
         updateTexResolution();
     }
-
-    if(grayscaleItem->grayscaledTex) {
-        grayscaleItem->grayscaledTex = false;
-        m_sourceTexture = grayscaleItem->sourceTexture();
+    if(grayscaleItem->grayscaledTex || grayscaleItem->bpcUpdated) {
+        if(grayscaleItem->bpcUpdated) {
+            grayscaleItem->bpcUpdated = false;
+            m_bpc = grayscaleItem->bpc();
+            updateTexResolution();
+        }
+        if(grayscaleItem->grayscaledTex) {
+            grayscaleItem->grayscaledTex = false;
+            m_sourceTexture = grayscaleItem->sourceTexture();
+        }
         if(m_sourceTexture) {
             toGrayscale();
             grayscaleItem->setTexture(m_grayscaleTexture);
@@ -159,6 +189,7 @@ void GrayscaleRenderer::render() {
         textureShader->release();
         glBindVertexArray(0);
     }
+    glFlush();
 }
 
 void GrayscaleRenderer::toGrayscale() {
@@ -173,15 +204,26 @@ void GrayscaleRenderer::toGrayscale() {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindTexture(GL_TEXTURE_2D, 0);
     grayscaleShader->release();
-    glBindVertexArray(0);
+    glBindVertexArray(0);    
+    glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void GrayscaleRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -192,11 +234,16 @@ void GrayscaleRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -214,14 +261,42 @@ void GrayscaleRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

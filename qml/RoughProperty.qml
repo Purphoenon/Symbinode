@@ -27,17 +27,43 @@ Item {
     height: childrenRect.height + 30
     width: parent.width
     property real startRough: 0.2
+    property alias startBits: bitsParam.currentIndex
     signal roughChanged(real val)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-    ParamSlider {
-        id: roughParam
-        propertyName: "Roughness"
-        propertyValue: startRough
-        onPropertyValueChanged: {
-            roughChanged(roughParam.propertyValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
         }
-        onChangingFinished: {
-            propertyChangingFinished("startRough", propertyValue, oldValue)
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: roughParam
+            propertyName: "Roughness"
+            propertyValue: startRough
+            onPropertyValueChanged: {
+                roughChanged(roughParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRough", propertyValue, oldValue)
+            }
         }
     }
 }

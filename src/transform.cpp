@@ -23,16 +23,16 @@
 #include "QOpenGLFramebufferObjectFormat"
 #include "FreeImage.h"
 
-TransformObject::TransformObject(QQuickItem *parent, QVector2D resolution, float transX, float transY,
-                                 float scaleX, float scaleY, int angle, bool clamp):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_translateX(transX), m_translateY(transY),
-    m_scaleX(scaleX), m_scaleY(scaleY), m_angle(angle), m_clamp(clamp)
+TransformObject::TransformObject(QQuickItem *parent, QVector2D resolution, GLint bpc, float transX,
+                                 float transY, float scaleX, float scaleY, int angle, bool clamp):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc), m_translateX(transX),
+    m_translateY(transY), m_scaleX(scaleX), m_scaleY(scaleY), m_angle(angle), m_clamp(clamp)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *TransformObject::createRenderer() const {
-    return new TransformRenderer(m_resolution);
+    return new TransformRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &TransformObject::texture() {
@@ -51,7 +51,6 @@ unsigned int TransformObject::maskTexture() {
 void TransformObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     transformedTex = true;
-    update();
 }
 
 unsigned int TransformObject::sourceTexture() {
@@ -61,7 +60,6 @@ unsigned int TransformObject::sourceTexture() {
 void TransformObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     transformedTex = true;
-    update();
 }
 
 void TransformObject::saveTexture(QString fileName) {
@@ -75,9 +73,9 @@ float TransformObject::translateX() {
 }
 
 void TransformObject::setTranslateX(float transX) {
+    if(m_translateX == transX) return;
     m_translateX = transX;
     transformedTex = true;
-    update();
 }
 
 float TransformObject::translateY() {
@@ -85,9 +83,9 @@ float TransformObject::translateY() {
 }
 
 void TransformObject::setTranslateY(float transY) {
+    if(m_translateY == transY) return;
     m_translateY = transY;
     transformedTex = true;
-    update();
 }
 
 float TransformObject::scaleX() {
@@ -95,9 +93,9 @@ float TransformObject::scaleX() {
 }
 
 void TransformObject::setScaleX(float scaleX) {
+    if(m_scaleX == scaleX) return;
     m_scaleX = scaleX;
     transformedTex = true;
-    update();
 }
 
 float TransformObject::scaleY() {
@@ -105,9 +103,9 @@ float TransformObject::scaleY() {
 }
 
 void TransformObject::setScaleY(float scaleY) {
+    if(m_scaleY == scaleY) return;
     m_scaleY = scaleY;
     transformedTex = true;
-    update();
 }
 
 int TransformObject::rotation() {
@@ -115,9 +113,9 @@ int TransformObject::rotation() {
 }
 
 void TransformObject::setRotation(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     transformedTex = true;
-    update();
 }
 
 bool TransformObject::clampCoords() {
@@ -125,9 +123,9 @@ bool TransformObject::clampCoords() {
 }
 
 void TransformObject::setClampCoords(bool clamp) {
+    if(m_clamp == clamp) return;
     m_clamp = clamp;
     transformedTex = true;
-    update();
 }
 
 QVector2D TransformObject::resolution() {
@@ -140,7 +138,17 @@ void TransformObject::setResolution(QVector2D res) {
     update();
 }
 
-TransformRenderer::TransformRenderer(QVector2D resolution): m_resolution(resolution) {
+GLint TransformObject::bpc() {
+    return m_bpc;
+}
+
+void TransformObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+TransformRenderer::TransformRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
     transformShader = new QOpenGLShaderProgram();
     transformShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -160,6 +168,7 @@ TransformRenderer::TransformRenderer(QVector2D resolution): m_resolution(resolut
     transformShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -181,11 +190,19 @@ TransformRenderer::TransformRenderer(QVector2D resolution): m_resolution(resolut
     glBindFramebuffer(GL_FRAMEBUFFER, transformFBO);
     glGenTextures(1, &m_transformedTexture);
     glBindTexture(GL_TEXTURE_2D, m_transformedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_transformedTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -195,12 +212,14 @@ TransformRenderer::~TransformRenderer() {
     delete transformShader;
     delete checkerShader;
     delete textureShader;
+    glDeleteTextures(1, &m_transformedTexture);
+    glDeleteFramebuffers(1, &transformFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *TransformRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -211,19 +230,27 @@ void TransformRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = transformItem->resolution();
         updateTexResolution();
     }
-
-    if(transformItem->transformedTex) {
-        transformItem->transformedTex = false;
-        m_sourceTexture = transformItem->sourceTexture();
+    if(transformItem->transformedTex || transformItem->bpcUpdated) {
+        if(transformItem->bpcUpdated) {
+            transformItem->bpcUpdated = false;
+            m_bpc = transformItem->bpc();
+            updateTexResolution();
+        }
+        if(transformItem->transformedTex) {
+            transformItem->transformedTex = false;
+            m_sourceTexture = transformItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = transformItem->maskTexture();
+                transformShader->bind();
+                transformShader->setUniformValue(transformShader->uniformLocation("translate"), QVector2D(transformItem->translateX(), transformItem->translateY()));
+                transformShader->setUniformValue(transformShader->uniformLocation("scale"), QVector2D(transformItem->scaleX(), transformItem->scaleY()));
+                transformShader->setUniformValue(transformShader->uniformLocation("angle"), transformItem->rotation());
+                transformShader->setUniformValue(transformShader->uniformLocation("clampTrans"), transformItem->clampCoords());
+                transformShader->setUniformValue(transformShader->uniformLocation("useMask"), maskTexture);
+                transformShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = transformItem->maskTexture();
-            transformShader->bind();
-            transformShader->setUniformValue(transformShader->uniformLocation("translate"), QVector2D(transformItem->translateX(), transformItem->translateY()));
-            transformShader->setUniformValue(transformShader->uniformLocation("scale"), QVector2D(transformItem->scaleX(), transformItem->scaleY()));
-            transformShader->setUniformValue(transformShader->uniformLocation("angle"), transformItem->rotation());
-            transformShader->setUniformValue(transformShader->uniformLocation("clampTrans"), transformItem->clampCoords());
-            transformShader->setUniformValue(transformShader->uniformLocation("useMask"), maskTexture);
-            transformShader->release();
             transformateTexture();
             transformItem->setTexture(m_transformedTexture);
             transformItem->updatePreview(m_transformedTexture);
@@ -258,6 +285,7 @@ void TransformRenderer::render() {
         textureShader->release();
         glBindVertexArray(0);
     }
+    glFlush();
 }
 
 void TransformRenderer::transformateTexture() {
@@ -272,15 +300,24 @@ void TransformRenderer::transformateTexture() {
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glBindVertexArray(textureVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);    
     transformShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_transformedTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void TransformRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_transformedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -291,11 +328,16 @@ void TransformRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &tex);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -311,14 +353,42 @@ void TransformRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &tex);
+    glDeleteFramebuffers(1, &fbo);
 }

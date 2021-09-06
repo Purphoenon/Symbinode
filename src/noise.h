@@ -30,7 +30,7 @@ class NoiseObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    NoiseObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), QString type = "noisePerlin", float noiseScale = 5.0f, float scaleX = 1.0f, float scaleY = 1.0f, int layers = 8, float persistence = 0.5f,
+    NoiseObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, QString type = "noisePerlin", float noiseScale = 5.0f, float scaleX = 1.0f, float scaleY = 1.0f, int layers = 8, float persistence = 0.5f,
                 float amplitude = 1.0f, int seed = 1);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int maskTexture();
@@ -54,10 +54,13 @@ public:
     void setSeed(int seed);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     unsigned int &texture();
     void setTexture(unsigned int texture);
     bool generatedNoise = true;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool selectedItem = false;
     bool texSaving = false;
     QString saveName = "";
@@ -75,12 +78,13 @@ private:
     int m_seed = 1;
     unsigned int m_texture = 0;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_maskTexture = 0;
 };
 
 class NoiseRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    NoiseRenderer(QVector2D resolution);
+    NoiseRenderer(QVector2D resolution, GLint bpc);
     ~NoiseRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -96,6 +100,7 @@ private:
     unsigned int noiseVAO, textureVAO;
     unsigned int noiseTexture = 0;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     QString m_noiseType;
     unsigned int m_maskTexture = 0;
 };

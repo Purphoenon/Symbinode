@@ -26,16 +26,42 @@ Item {
     height: childrenRect.height + 30
     width: parent.width
     property alias startIntensity: intensityParam.propertyValue
+    property alias startBits: bitsParam.currentIndex
     signal intensityChanged(real intensity)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-    ParamSlider {
-        id: intensityParam
-        propertyName: "Intensity"
-        onPropertyValueChanged: {
-            intensityChanged(intensityParam.propertyValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
         }
-        onChangingFinished: {
-            propertyChangingFinished("startIntensity", propertyValue, oldValue)
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: intensityParam
+            propertyName: "Intensity"
+            onPropertyValueChanged: {
+                intensityChanged(intensityParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startIntensity", propertyValue, oldValue)
+            }
         }
     }
 }

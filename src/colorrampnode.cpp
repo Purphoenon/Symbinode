@@ -23,9 +23,10 @@
 #include <QQmlComponent>
 #include <iostream>
 
-ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, QJsonArray stops): Node(parent, resolution)
+ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, GLint bpc, QJsonArray stops):
+    Node(parent, resolution, bpc)
 {
-    preview = new ColorRampObject(grNode, m_resolution, stops);
+    preview = new ColorRampObject(grNode, m_resolution, m_bpc, stops);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -33,19 +34,22 @@ ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, QJsonArra
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &ColorRampNode::updateScale);
     connect(this, &Node::generatePreview, this, &ColorRampNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &ColorRampObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &ColorRampObject::setBPC);
     connect(preview, &ColorRampObject::textureChanged, this, &ColorRampNode::setOutput);
     connect(preview, &ColorRampObject::updatePreview, this, &ColorRampNode::updatePreview);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorRampProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(gradientStopAdded(QVector3D, qreal, int)), preview, SLOT(gradientAdd(QVector3D, qreal, int)));
     connect(propertiesPanel, SIGNAL(positionChanged(qreal, int)), preview, SLOT(positionUpdate(qreal, int)));
     connect(propertiesPanel, SIGNAL(colorChanged(QVector3D, int)), preview, SLOT(colorUpdate(QVector3D, int)));
     connect(propertiesPanel, SIGNAL(gradientStopDeleted(int)), preview, SLOT(gradientDelete(int)));
     connect(this, SIGNAL(stopsChanged(QVariant)), propertiesPanel, SIGNAL(gradientsStopsChanged(QVariant)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(2, 1);
     setTitle("Color Ramp");
@@ -60,9 +64,21 @@ ColorRampNode::~ColorRampNode() {
 
 void ColorRampNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->update();
+    deserializing = false;
 }
 
 unsigned int &ColorRampNode::getPreviewTexture() {
@@ -71,6 +87,10 @@ unsigned int &ColorRampNode::getPreviewTexture() {
 
 void ColorRampNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
+}
+
+ColorRampNode *ColorRampNode::clone() {
+    return new ColorRampNode(parentItem(), m_resolution, m_bpc, stops());
 }
 
 void ColorRampNode::serialize(QJsonObject &json) const {
@@ -86,6 +106,8 @@ void ColorRampNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> 
         stopsChanged(QVariant(gradientStops));
         preview->setGradientsStops(gradientStops);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 QJsonArray ColorRampNode::stops() const{
@@ -96,12 +118,6 @@ QJsonArray ColorRampNode::stops() const{
         stops.push_back(i);
     }
     return stops;
-}
-
-void ColorRampNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void ColorRampNode::previewGenerated() {

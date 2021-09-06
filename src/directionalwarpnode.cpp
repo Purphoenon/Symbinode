@@ -1,14 +1,15 @@
 #include "directionalwarpnode.h"
 
-DirectionalWarpNode::DirectionalWarpNode(QQuickItem *parent, QVector2D resolution, float intensity, int angle):
-    Node (parent, resolution), m_intensity(intensity), m_angle(angle)
+DirectionalWarpNode::DirectionalWarpNode(QQuickItem *parent, QVector2D resolution, GLint bpc,
+                                         float intensity, int angle): Node (parent, resolution, bpc),
+    m_intensity(intensity), m_angle(angle)
 {
     createSockets(3, 1);
     setTitle("Directional Warp");
     m_socketsInput[0]->setTip("Source");
     m_socketsInput[1]->setTip("Factor");
     m_socketsInput[2]->setTip("Mask");
-    preview = new DirectionalWarpObject(grNode, m_resolution, m_intensity, m_angle);
+    preview = new DirectionalWarpObject(grNode, m_resolution, m_bpc, m_intensity, m_angle);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -16,19 +17,20 @@ DirectionalWarpNode::DirectionalWarpNode(QQuickItem *parent, QVector2D resolutio
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &DirectionalWarpNode::updateScale);
-    connect(this, &DirectionalWarpNode::intensityChanged, preview, &DirectionalWarpObject::setIntensity);
-    connect(this, &DirectionalWarpNode::angleChanged, preview, &DirectionalWarpObject::setAngle);
     connect(preview, &DirectionalWarpObject::changedTexture, this, &DirectionalWarpNode::setOutput);
     connect(preview, &DirectionalWarpObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &DirectionalWarpObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &DirectionalWarpObject::setBPC);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/DirectionalWarpProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startIntensity", m_intensity);
     propertiesPanel->setProperty("startAngle", m_angle);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(intensityChanged(qreal)), this, SLOT(updateIntensity(qreal)));
     connect(propertiesPanel, SIGNAL(angleChanged(int)), this, SLOT(updateAngle(int)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
@@ -37,10 +39,27 @@ DirectionalWarpNode::~DirectionalWarpNode() {
 }
 
 void DirectionalWarpNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode2 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode2 && inputNode2->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
+    }
+    if(!m_socketsInput[2]->getEdges().isEmpty()) {
+        Node *inputNode3 = static_cast<Node*>(m_socketsInput[2]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode3 && inputNode3->resolution() != m_resolution) return;
+        if(m_socketsInput[2]->value() == 0 && deserializing) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setWarpTexture(m_socketsInput[1]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[2]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->update();
+    deserializing = false;
 }
 
 unsigned int &DirectionalWarpNode::getPreviewTexture() {
@@ -49,6 +68,10 @@ unsigned int &DirectionalWarpNode::getPreviewTexture() {
 
 void DirectionalWarpNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
+}
+
+DirectionalWarpNode *DirectionalWarpNode::clone() {
+    return new DirectionalWarpNode(parentItem(), m_resolution, m_bpc, m_intensity, m_angle);
 }
 
 void DirectionalWarpNode::serialize(QJsonObject &json) const {
@@ -68,6 +91,14 @@ void DirectionalWarpNode::deserialize(const QJsonObject &json, QHash<QUuid, Sock
     }
     propertiesPanel->setProperty("startIntensity", m_intensity);
     propertiesPanel->setProperty("startAngle", m_angle);
+
+    preview->setIntensity(m_intensity);
+    preview->setAngle(m_angle);
+
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float DirectionalWarpNode::intensity() {
@@ -75,8 +106,11 @@ float DirectionalWarpNode::intensity() {
 }
 
 void DirectionalWarpNode::setIntnsity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     intensityChanged(intensity);
+    preview->setIntensity(intensity);
+    preview->update();
 }
 
 int DirectionalWarpNode::angle() {
@@ -84,14 +118,11 @@ int DirectionalWarpNode::angle() {
 }
 
 void DirectionalWarpNode::setAngle(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     angleChanged(angle);
-}
-
-void DirectionalWarpNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setAngle(angle);
+    preview->update();
 }
 
 void DirectionalWarpNode::updateIntensity(qreal intensity) {

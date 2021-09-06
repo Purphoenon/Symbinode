@@ -1,16 +1,17 @@
 #include "gradient.h"
 #include <QOpenGLFramebufferObjectFormat>
 
-GradientObject::GradientObject(QQuickItem *parent, QVector2D resolution, QString type, float startX,
-                               float startY, float endX, float endY, float centerWidth, bool tiling):
-    QQuickFramebufferObject (parent), m_gradientType(type), m_startX(startX), m_startY(startY), m_endX(endX),
-    m_endY(endY), m_reflectedWidth(centerWidth), m_tiling(tiling), m_resolution(resolution)
+GradientObject::GradientObject(QQuickItem *parent, QVector2D resolution, GLint bpc, QString type,
+                               float startX, float startY, float endX, float endY, float centerWidth,
+                               bool tiling): QQuickFramebufferObject (parent), m_gradientType(type),
+    m_startX(startX), m_startY(startY), m_endX(endX), m_endY(endY), m_reflectedWidth(centerWidth),
+    m_tiling(tiling), m_resolution(resolution), m_bpc(bpc)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *GradientObject::createRenderer() const {
-    return new GradientRenderer(m_resolution);
+    return new GradientRenderer(m_resolution, m_bpc);
 }
 
 QString GradientObject::gradientType() {
@@ -18,9 +19,9 @@ QString GradientObject::gradientType() {
 }
 
 void GradientObject::setGradientType(QString type) {
+    if(m_gradientType == type) return;
     m_gradientType = type;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::startX() {
@@ -28,9 +29,9 @@ float GradientObject::startX() {
 }
 
 void GradientObject::setStartX(float x) {
+    if(m_startX == x) return;
     m_startX = x;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::startY() {
@@ -38,9 +39,9 @@ float GradientObject::startY() {
 }
 
 void GradientObject::setStartY(float y) {
+    if(m_startY == y) return;
     m_startY = y;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::endX() {
@@ -48,9 +49,9 @@ float GradientObject::endX() {
 }
 
 void GradientObject::setEndX(float x) {
+    if(m_endX == x) return;
     m_endX = x;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::endY() {
@@ -58,9 +59,9 @@ float GradientObject::endY() {
 }
 
 void GradientObject::setEndY(float y) {
+    if(m_endY == y) return;
     m_endY = y;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::reflectedWidth() {
@@ -68,9 +69,9 @@ float GradientObject::reflectedWidth() {
 }
 
 void GradientObject::setReflectedWidth(float width) {
+    if(m_reflectedWidth == width) return;
     m_reflectedWidth = width;
     generatedGradient = true;
-    update();
 }
 
 bool GradientObject::tiling() {
@@ -78,9 +79,9 @@ bool GradientObject::tiling() {
 }
 
 void GradientObject::setTiling(bool tiling) {
+    if(m_tiling == tiling) return;
     m_tiling = tiling;
     generatedGradient = true;
-    update();
 }
 
 unsigned int GradientObject::maskTexture() {
@@ -118,7 +119,17 @@ void GradientObject::setResolution(QVector2D res) {
     update();
 }
 
-GradientRenderer::GradientRenderer(QVector2D res): m_resolution(res){
+GLint GradientObject::bpc() {
+    return m_bpc;
+}
+
+void GradientObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+GradientRenderer::GradientRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc){
     initializeOpenGLFunctions();
     gradientShader = new QOpenGLShaderProgram();
     gradientShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
@@ -137,6 +148,7 @@ GradientRenderer::GradientRenderer(QVector2D res): m_resolution(res){
 
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
 
     gradientShader->bind();
@@ -179,11 +191,19 @@ GradientRenderer::GradientRenderer(QVector2D res): m_resolution(res){
     glBindFramebuffer(GL_FRAMEBUFFER, gradientFBO);
     glGenTextures(1, &gradientTexture);
     glBindTexture(GL_TEXTURE_2D, gradientTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gradientTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -191,13 +211,18 @@ GradientRenderer::GradientRenderer(QVector2D res): m_resolution(res){
 }
 
 GradientRenderer::~GradientRenderer() {
-
+    delete gradientShader;
+    delete checkerShader;
+    delete renderTexture;
+    glDeleteTextures(1, &gradientTexture);
+    glDeleteFramebuffers(1, &gradientFBO);
+    glDeleteVertexArrays(1, &gradientVAO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *GradientRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -213,18 +238,24 @@ void GradientRenderer::synchronize(QQuickFramebufferObject *item) {
             gradientItem->setTexture(gradientTexture);
         }
     }
-
-    if(gradientItem->generatedGradient) {
-        gradientItem->generatedGradient = false;
-        m_maskTexture = gradientItem->maskTexture();
-        m_gradientType = gradientItem->gradientType();
-        gradientShader->bind();
-        gradientShader->setUniformValue(gradientShader->uniformLocation("startPos"), QVector2D(gradientItem->startX(), gradientItem->startY()));
-        gradientShader->setUniformValue(gradientShader->uniformLocation("endPos"), QVector2D(gradientItem->endX(), gradientItem->endY()));
-        gradientShader->setUniformValue(gradientShader->uniformLocation("whiteWidth"), gradientItem->reflectedWidth());
-        gradientShader->setUniformValue(gradientShader->uniformLocation("tiling"), gradientItem->tiling());
-        gradientShader->setUniformValue(gradientShader->uniformLocation("useMask"), m_maskTexture);
-        gradientShader->release();
+    if(gradientItem->generatedGradient || gradientItem->bpcUpdated) {
+        if(gradientItem->bpcUpdated) {
+            gradientItem->bpcUpdated = false;
+            m_bpc = gradientItem->bpc();
+            updateTexResolution();
+        }
+        if(gradientItem->generatedGradient) {
+            gradientItem->generatedGradient = false;
+            m_maskTexture = gradientItem->maskTexture();
+            m_gradientType = gradientItem->gradientType();
+            gradientShader->bind();
+            gradientShader->setUniformValue(gradientShader->uniformLocation("startPos"), QVector2D(gradientItem->startX(), gradientItem->startY()));
+            gradientShader->setUniformValue(gradientShader->uniformLocation("endPos"), QVector2D(gradientItem->endX(), gradientItem->endY()));
+            gradientShader->setUniformValue(gradientShader->uniformLocation("whiteWidth"), gradientItem->reflectedWidth());
+            gradientShader->setUniformValue(gradientShader->uniformLocation("tiling"), gradientItem->tiling());
+            gradientShader->setUniformValue(gradientShader->uniformLocation("useMask"), m_maskTexture);
+            gradientShader->release();
+        }
         createGradient();
         gradientItem->setTexture(gradientTexture);
         gradientItem->updatePreview(gradientTexture);
@@ -257,6 +288,7 @@ void GradientRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
     glBindVertexArray(0);
+    glFlush();
 }
 
 void GradientRenderer::createGradient() {
@@ -271,17 +303,26 @@ void GradientRenderer::createGradient() {
     glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &index);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     gradientShader->release();
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, gradientTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void GradientRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, gradientTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -293,11 +334,16 @@ void GradientRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -315,16 +361,42 @@ void GradientRenderer::saveTexture(QString fileName) {
     glBindTexture(GL_TEXTURE_2D, 0);
     renderTexture->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    FIBITMAP *result = FreeImage_ConvertToRGBA16(image);
-    if (FreeImage_Save(FIF_PNG, result, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(result);
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

@@ -42,11 +42,14 @@ uniform bool useEmisMap = false;
 
 uniform int tilesSize = 1;
 
-uniform float heightScale = 0.1;
-uniform float emissiveStrenght = 10.0;
+uniform float heightScale = 0.04;
+uniform float emissiveStrenght = 1.0;
 uniform bool bloom = false;
 
-uniform vec3 albedoVal = vec3(0.8, 0.8, 0.0);
+uniform bool transformating = false;
+uniform vec2 resolution;
+
+uniform vec3 albedoVal = vec3(1.0, 1.0, 1.0);
 uniform float metallicVal;
 uniform float roughnessVal;
 uniform float aoVal;
@@ -68,11 +71,13 @@ uniform vec3 lightPosition = vec3(-5, 5, 19);
 uniform vec3 lightColor = vec3(300, 300, 300);
 
 const float PI = 3.14159265359;
+int lod = 0;
 
 // ----------------------------------------------------------------------------
 vec3 getNormalFromMap(vec2 coords)
 {
-    vec3 tangentNormal = texture(normalMap, coords).xyz*2.0 - vec3(1.0);
+    vec3 texValue = transformating ? textureLod(normalMap, coords, lod).xyz : texture(normalMap, coords).xyz;
+    vec3 tangentNormal = texValue*2.0 - vec3(1.0);
 
     mat3 TBN = mat3(Tangent, -Bitangent, Normal);
 
@@ -81,7 +86,9 @@ vec3 getNormalFromMap(vec2 coords)
 // ----------------------------------------------------------------------------
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-    float numLayers = 128;
+    const float minLayers = 16;
+    const float maxLayers = 64;
+    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)))/tilesSize;
 
     float layerDepth = 1.0 / numLayers;
 
@@ -90,20 +97,23 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     vec2 P = viewDir.xy * heightScale;
     vec2 deltaTexCoords = P / numLayers;
 
-    vec2  currentTexCoords     = texCoords;
-    float currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+    vec2  currentTexCoords     = tilesSize*texCoords;
+    float texValue = transformating ? textureLod(heightMap, currentTexCoords, lod).r : texture(heightMap, currentTexCoords).r;
+    float currentDepthMapValue = 1.0 - texValue;
 
     while(currentLayerDepth < currentDepthMapValue)
     {
         currentTexCoords -= deltaTexCoords;
-        currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+        texValue = transformating ? textureLod(heightMap, currentTexCoords, lod).r : texture(heightMap, currentTexCoords).r;
+        currentDepthMapValue = 1.0 - texValue;
         currentLayerDepth += layerDepth;
     }
 
     vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
 
     float afterDepth  = currentDepthMapValue - currentLayerDepth;
-    float beforeDepth = 1.0 - texture(heightMap, prevTexCoords).r - currentLayerDepth + layerDepth;
+    texValue = transformating ? textureLod(heightMap, prevTexCoords, lod).r : texture(heightMap, prevTexCoords).r;
+    float beforeDepth = 1.0 - texValue - currentLayerDepth + layerDepth;
 
     float weight = afterDepth / (afterDepth - beforeDepth);
     vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
@@ -163,18 +173,33 @@ void main()
 {
     vec3 V = normalize(camPos - WorldPos);
 
-    vec2 coords = useHeightMap ? ParallaxMapping(TexCoords*tilesSize, normalize(tangentView - tangentFragPos)) : TexCoords*tilesSize;
+    //reduce the resolution of textures when transforming the view
+    if(transformating) {
+        if(resolution.x > 2048) lod = 2;
+        else if(resolution.x > 1024) lod = 1;
+    }
+
+    vec2 coords = useHeightMap ? ParallaxMapping(TexCoords, normalize(tangentView - tangentFragPos)) : (tilesSize*TexCoords);
 
     vec4 texAlbedo = vec4(albedoVal, 1.0);
-    vec4 texColor = texture(albedoMap, coords);
-    if(useAlbMap) texAlbedo = texColor;
+    //vec4 texColor = texture(albedoMap, coords);
+    if(useAlbMap) texAlbedo = transformating ? textureLod(albedoMap, coords, lod) : texture(albedoMap, coords);
 
     vec3 albedo = texAlbedo.rgb;
     albedo = pow(albedo, vec3(2.2));
-    float metallic = useMetalMap ? texture(metallicMap, coords).r : metallicVal;
-    vec3 emissive = useEmisMap ? texture(emissionMap, coords).rgb*emissiveStrenght : vec3(0.0);
 
-    float roughness = useRoughMap ? texture(roughnessMap, coords).r : roughnessVal;
+    float metallic = metallicVal;
+    if(useMetalMap) metallic = transformating ? textureLod(metallicMap, coords, lod).r : texture(metallicMap, coords).r;
+
+    vec3 emissive = vec3(0.0);
+    if(useEmisMap) {
+        emissive = transformating ? textureLod(emissionMap, coords, lod).rgb : texture(emissionMap, coords).rgb;
+        emissive *= emissiveStrenght;
+    }
+
+    float roughness = roughnessVal;
+    if(useRoughMap) roughness = transformating ? textureLod(roughnessMap, coords, lod).r : texture(roughnessMap, coords).r;
+
     roughness = clamp(roughness, 0.05, 1.0);
 
     vec3 N = useNormMap ? getNormalFromMap(coords) : normalize(Normal);

@@ -9,7 +9,7 @@ class HexagonsObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    HexagonsObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f, float mask = 0.0f, int seed = 1);
+    HexagonsObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16, int columns = 5, int rows = 6, float size = 0.9f, float smooth = 0.0f, float mask = 0.0f, int seed = 1);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -30,8 +30,11 @@ public:
     void setSeed(int seed);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool generatedTex = true;
     bool resUpdated = true;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -39,6 +42,7 @@ signals:
     void changedTexture();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int m_texture = 0;
     unsigned int m_maskTexture = 0;
     int m_columns = 5;
@@ -51,7 +55,7 @@ private:
 
 class HexagonsRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    HexagonsRenderer(QVector2D res);
+    HexagonsRenderer(QVector2D res, GLint bpc);
     ~HexagonsRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -61,6 +65,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA16;
     unsigned int hexagonsFBO;
     unsigned int m_hexagonsTexture = 0;
     unsigned int m_maskTexture = 0;

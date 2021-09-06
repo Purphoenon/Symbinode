@@ -31,7 +31,7 @@ class MixObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float factor = 1.0f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
+    MixObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float factor = 1.0f, int foregroundOpacity = 100, int backgroundOpacity = 100, int mode = 0, bool includingAlpha = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int firstTexture();
     void setFirstTexture(unsigned int texture);
@@ -52,12 +52,15 @@ public:
     void setBackgroundOpacity(int opacity);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     unsigned int &texture();
     void setTexture(unsigned int texture);    
     bool mixedTex = false;
     bool selectedItem = false;
     bool useFactorTexture = false;
     bool resUpdated = false;
+    bool bpcUpdated = true;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -72,13 +75,14 @@ private:
     int m_mode = 0;
     bool m_includingAlpha = true;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_texture = 0;
     unsigned int m_maskTexture = 0;
 };
 
 class MixRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    MixRenderer(QVector2D resolution);
+    MixRenderer(QVector2D resolution, GLint bpc);
     ~MixRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -98,6 +102,7 @@ private:
     unsigned int factorTexture = 0;
     float mixFactor = 1.0f;
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int VAO;
     int currentMode = 0;
     QList<std::string> blendFunc {"normal", "mixMode", "overlay", "screen", "soft_light", "hard_light",

@@ -33,7 +33,7 @@ class Socket;
 
 class MoveCommand: public QUndoCommand {
 public:
-    MoveCommand(QList<QQuickItem*> nodes, QVector2D movVector, Frame *frame = nullptr, QUndoCommand *parent = nullptr);
+    MoveCommand(QList<QQuickItem*> nodes, QVector2D movVector, Frame *frame = nullptr, Edge *edge = nullptr, QUndoCommand *parent = nullptr);
     ~MoveCommand();
     void undo();
     void redo();
@@ -46,6 +46,9 @@ private:
     float m_oldFrameY;
     float m_oldFrameWidth;
     float m_oldFrameHeight;
+    Edge *m_intersectingEdge;
+    Edge *m_newEdge = nullptr;
+    Socket *m_oldEndSocket;
 };
 
 class AddNode: public QUndoCommand {
@@ -84,13 +87,18 @@ private:
 
 class DeleteCommand: public QUndoCommand {
 public:
-    DeleteCommand(QList<QQuickItem*> items, Scene *scene, QUndoCommand *parent = nullptr);
+    DeleteCommand(QList<QQuickItem*> items, Scene *scene, bool saveConnection = false, QUndoCommand *parent = nullptr);
     ~DeleteCommand();
     void undo();
     void redo();
 private:
+    void deleteBase();
+    void deleteWithSaveConnection();
+    void cancelDelete();
     Scene *m_scene;
     QList<QQuickItem*> m_items;
+    QList<Edge*> m_newEdges;
+    bool m_saveConnection;
 };
 
 class SelectCommand: public QUndoCommand {

@@ -29,49 +29,76 @@ Item {
     property alias startScale: scaleParam.propertyValue
     property alias startSmooth: smoothParam.propertyValue
     property alias startUseAlpha: useAlphaParam.checked
+    property alias startBits: bitsParam.currentIndex
     signal sidesChanged(int sides)
     signal polygonScaleChanged(real scale)
     signal polygonSmoothChanged(real smooth)
     signal useAlphaChanged(bool use)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-    ParamSlider {
-        id: sidesParam
-        propertyName: "Sides"
-        maximum: 36
-        minimum: 3
-        step: 1
-        onPropertyValueChanged: {
-            sidesChanged(sidesParam.propertyValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
         }
-        onChangingFinished: {
-            propertyChangingFinished("startSides", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: scaleParam
-        y: 33
-        propertyName: "Scale"
-        onPropertyValueChanged: {
-            polygonScaleChanged(scaleParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startScale", propertyValue, oldValue)
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: smoothParam
-        y: 66
-        propertyName: "Smooth"
-        onPropertyValueChanged: {
-            polygonSmoothChanged(smoothParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: sidesParam
+            propertyName: "Sides"
+            maximum: 36
+            minimum: 3
+            step: 1
+            onPropertyValueChanged: {
+                sidesChanged(sidesParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSides", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startSmooth", propertyValue, oldValue)
+        ParamSlider {
+            id: scaleParam
+            y: 18
+            propertyName: "Scale"
+            onPropertyValueChanged: {
+                polygonScaleChanged(scaleParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScale", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: smoothParam
+            y: 51
+            propertyName: "Smooth"
+            onPropertyValueChanged: {
+                polygonSmoothChanged(smoothParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSmooth", propertyValue, oldValue)
+            }
         }
     }
+
     ParamCheckbox {
         id: useAlphaParam
-        y: 114
+        y: 152
         width: 90
         text: qsTr("Use alpha")
         checked: true

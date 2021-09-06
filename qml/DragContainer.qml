@@ -25,6 +25,7 @@ import QtQuick.Controls 2.5
 Item {
     property real minimumHeight: 200
     property string title: "Title"
+    signal resized(bool resized)
     id: dragContainer
     width: parent.width
     height: parent.height
@@ -137,7 +138,12 @@ Item {
         }
 
         onPositionChanged: {
+            resized(true)
             dragContainer.parent.containerHeightChange(dragContainer, mouse.y)
+        }
+
+        onReleased: {
+            resized(false)
         }
 
         Rectangle {
@@ -156,8 +162,13 @@ Item {
         width: 6
         height: 6
         onPositionChanged: {
+            resized(true)
             dragContainer.parent.containerSizeChange(dragContainer, mouse.x, mouse.y)
         }
+        onReleased: {
+            resized(false)
+        }
+
         Canvas {
             id: resizeCanvas
             width: 6

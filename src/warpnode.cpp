@@ -21,10 +21,10 @@
 
 #include "warpnode.h"
 
-WarpNode::WarpNode(QQuickItem *parent, QVector2D resolution, float intensity): Node(parent, resolution),
-    m_intensity(intensity)
+WarpNode::WarpNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float intensity):
+    Node(parent, resolution, bpc), m_intensity(intensity)
 {
-    preview = new WarpObject(grNode, m_resolution, m_intensity);
+    preview = new WarpObject(grNode, m_resolution, m_bpc, m_intensity);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -32,17 +32,19 @@ WarpNode::WarpNode(QQuickItem *parent, QVector2D resolution, float intensity): N
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &WarpNode::updateScale);
     connect(this, &Node::generatePreview, this, &WarpNode::previewGenerated);
     connect(preview, &WarpObject::changedTexture, this, &WarpNode::setOutput);
     connect(this, &Node::changeResolution, preview, &WarpObject::setResolution);
-    connect(this, &WarpNode::intensityChanged, preview, &WarpObject::setIntensity);
+    connect(this, &Node::changeBPC, preview, &WarpObject::setBPC);
     connect(preview, &WarpObject::updatePreview, this, &WarpNode::updatePreview);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/WarpProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startIntensity", m_intensity);
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
     connect(propertiesPanel, SIGNAL(intensityChanged(qreal)), this, SLOT(updateIntensity(qreal)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(3, 1);
     setTitle("Warp");
@@ -57,10 +59,27 @@ WarpNode::~WarpNode() {
 
 void WarpNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
+    if(!m_socketsInput[1]->getEdges().isEmpty()) {
+        Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
+    }
+    if(!m_socketsInput[2]->getEdges().isEmpty()) {
+        Node *inputNode2 = static_cast<Node*>(m_socketsInput[2]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode2 && inputNode2->resolution() != m_resolution) return;
+        if(m_socketsInput[2]->value() == 0 && deserializing) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setWarpTexture(m_socketsInput[1]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[2]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->update();
+    deserializing = false;
 }
 
 unsigned int &WarpNode::getPreviewTexture() {
@@ -69,6 +88,10 @@ unsigned int &WarpNode::getPreviewTexture() {
 
 void WarpNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
+}
+
+WarpNode *WarpNode::clone() {
+    return new WarpNode(parentItem(), m_resolution, m_bpc, m_intensity);
 }
 
 void WarpNode::serialize(QJsonObject &json) const{
@@ -83,6 +106,13 @@ void WarpNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash
         m_intensity = json["intensity"].toVariant().toFloat();
     }
     propertiesPanel->setProperty("startIntensity", m_intensity);
+
+    preview->setIntensity(m_intensity);
+
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float WarpNode::intensity() {
@@ -90,14 +120,11 @@ float WarpNode::intensity() {
 }
 
 void WarpNode::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     intensityChanged(intensity);
-}
-
-void WarpNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setIntensity(intensity);
+    preview->update();
 }
 
 void WarpNode::previewGenerated() {

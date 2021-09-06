@@ -41,15 +41,16 @@ class VoronoiNode: public Node
     Q_OBJECT
 public:
     VoronoiNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024),
-                VoronoiParams crystals = VoronoiParams(), VoronoiParams borders = VoronoiParams(),
-                VoronoiParams solid = VoronoiParams(), VoronoiParams worley = VoronoiParams(),
-                QString voronoiType = "crystals");
+                GLint bpc = GL_RGBA16, VoronoiParams crystals = VoronoiParams(),
+                VoronoiParams borders = VoronoiParams(), VoronoiParams solid = VoronoiParams(),
+                VoronoiParams worley = VoronoiParams(), QString voronoiType = "crystals");
     ~VoronoiNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    VoronoiNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     VoronoiParams crystalsParam();
     VoronoiParams bordersParam();
     VoronoiParams solidParam();
@@ -83,7 +84,6 @@ signals:
     void bordersSizeChanged(float size);
     void seedChanged(int seed);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void previewGenerated();
     void updateVoronoiType(QString type);

@@ -21,10 +21,10 @@
 
 #include "coloringnode.h"
 
-ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D color):
-    Node(parent, resolution), m_color(color)
+ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, GLint bpc, QVector3D color):
+    Node(parent, resolution, bpc), m_color(color)
 {
-    preview = new ColoringObject(grNode, m_resolution, m_color);
+    preview = new ColoringObject(grNode, m_resolution, m_bpc, m_color);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -32,17 +32,19 @@ ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, QVector3D c
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &ColoringNode::updateScale);
     connect(this, &Node::generatePreview, this, &ColoringNode::previewGenerated);
     connect(preview, &ColoringObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &ColoringObject::setResolution);
+    connect(this, &Node::changeBPC, preview, &ColoringObject::setBPC);
     connect(preview, &ColoringObject::textureChanged, this, &ColoringNode::setOutput);
-    connect(this, &ColoringNode::colorChanged, preview, &ColoringObject::setColor);
     propView = new QQuickView();
-    propView->setSource(QUrl(QStringLiteral("qrc:/qml/ColorProperty.qml")));
+    propView->setSource(QUrl(QStringLiteral("qrc:/qml/AlbedoProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
     propertiesPanel->setProperty("startColor", m_color);
-    connect(propertiesPanel, SIGNAL(colorChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+    connect(propertiesPanel, SIGNAL(albedoChanged(QVector3D)), this, SLOT(updateColor(QVector3D)));
+    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
     connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
     createSockets(1, 1);
     setTitle("Coloring");
@@ -55,8 +57,15 @@ ColoringNode::~ColoringNode() {
 
 void ColoringNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
+    preview->update();
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &ColoringNode::getPreviewTexture() {
@@ -65,6 +74,10 @@ unsigned int &ColoringNode::getPreviewTexture() {
 
 void ColoringNode::saveTexture(QString fileName) {
     preview->saveTexture(fileName);
+}
+
+ColoringNode *ColoringNode::clone() {
+    return new ColoringNode(parentItem(), m_resolution, m_bpc, m_color);
 }
 
 void ColoringNode::serialize(QJsonObject &json) const {
@@ -82,9 +95,10 @@ void ColoringNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &
     if(json.contains("color")) {
         QJsonArray color = json["color"].toArray();
         QVector3D c = QVector3D(color[0].toVariant().toFloat(), color[1].toVariant().toFloat(), color[2].toVariant().toFloat());
-        updateColor(c);
         propertiesPanel->setProperty("startColor", c);
     }
+    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
+    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 QVector3D ColoringNode::color() {
@@ -92,14 +106,11 @@ QVector3D ColoringNode::color() {
 }
 
 void ColoringNode::setColor(QVector3D color) {
+    if(m_color == color) return;
     m_color = color;
     colorChanged(color);
-}
-
-void ColoringNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setColor(color);
+    preview->update();
 }
 
 void ColoringNode::previewGenerated() {

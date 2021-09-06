@@ -58,7 +58,8 @@
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
 {
-    setAcceptedMouseButtons(Qt::AllButtons);
+    setFlag(ItemHasContents, true);
+    setAcceptedMouseButtons(Qt::AllButtons);    
     m_background = new BackgroundObject(this);
     m_preview3d = new Preview3DObject();
     m_undoStack = new QUndoStack(this);
@@ -126,14 +127,12 @@ bool Scene::addSelected(QQuickItem *item) {
     if(qobject_cast<Node*>(item)) {
         Node *n = qobject_cast<Node*>(item);
         n->setZ(5);
-        //m_nodes.move(m_nodes.indexOf(n), 0);
         m_activeItem = n;
         activeItemChanged();
     }
     else if(qobject_cast<Frame*>(item)) {
         Frame *f = qobject_cast<Frame*>(item);
         f->setZ(1);
-        //m_frames.move(m_frames.indexOf(f), 0);
         m_activeItem = f;
         activeItemChanged();
     }
@@ -295,7 +294,6 @@ void Scene::addNode(Node *node) {
         m_emissionConnected = true;
     }
     connect(node, &Node::dataChanged, this, &Scene::nodeDataChanged);
-    connect(this, &Scene::resolutionUpdate, node, &Node::setResolution);
     connect(m_background, &BackgroundObject::scaleChanged, node, &Node::scaleUpdate);
     connect(m_background, &BackgroundObject::panChanged, node, &Node::setPan);
     node->scaleUpdate(m_background->viewScale());
@@ -304,12 +302,11 @@ void Scene::addNode(Node *node) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);
     }
-    std::cout << "scene add node" << std::endl;
 }
 
 Node *Scene::nodeAt(float x, float y) {
     for(Node *node: m_nodes) {
-        if(node->x() <= x && node->x() + node->width() >= x && node->y() <= y && node->y() + node->height() >= y) {
+        if(node->x() <= x && node->x() + node->width()*node->scale() >= x && node->y() <= y && node->y() + node->height()*node->scale() >= y) {
             return node;
         }
     }
@@ -370,7 +367,7 @@ void Scene::addFrame(Frame *frame) {
 Frame *Scene::frameAt(float x, float y) {
     for(Frame *frame: m_frames) {
         if(frame->selected()) continue;
-        if((frame->x() <= x && frame->x() + frame->width() >= x) && (frame->y() <= y && frame->y() + frame->height() >= y)){
+        if((frame->x() <= x && frame->x() + frame->width()*frame->scale() >= x) && (frame->y() <= y && frame->y() + frame->height()*frame->scale() >= y)){
             return frame;
         }
     }
@@ -418,7 +415,6 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
     }
     else if(event->buttons() == Qt::LeftButton) {
         if(!rectSelect) {
-           // rectView = new QQuickView();
             rectView->setSource(QUrl(QStringLiteral("qrc:/qml/RectSelection.qml")));
             rectSelect = qobject_cast<QQuickItem*>(rectView->rootObject());
             rectSelect->setParentItem(this);
@@ -446,8 +442,8 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
         rectSelect->setHeight(abs(difY));
 
         for(auto n: m_nodes) {
-            if(rectSelect->x() + rectSelect->width() < n->x() + 6 || rectSelect->x() > n->x() + n->width() - 6 ||
-               rectSelect->y() + rectSelect->height() < n->y() || rectSelect->y() > n->y() + n->height()) {
+            if(rectSelect->x() + rectSelect->width() < n->x() + 6*n->scale() || rectSelect->x() > n->x() + (n->width() - 6)*n->scale() ||
+               rectSelect->y() + rectSelect->height() < n->y() || rectSelect->y() > n->y() + n->height()*n->scale()) {
                 if(n->selected()) {
                     n->setSelected(false);
                     m_selectedItem.removeOne(n);
@@ -461,8 +457,8 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
             }
         }
         for(auto f: m_frames) {
-            if(rectSelect->x() + rectSelect->width() < f->x() || rectSelect->x() > f->x() + f->width() ||
-               rectSelect->y() + rectSelect->height() < f->y() || rectSelect->y() > f->y() + 45.0f*m_background->viewScale()) {
+            if(rectSelect->x() + rectSelect->width() < f->x() || rectSelect->x() > f->x() + f->width()*f->scale() ||
+               rectSelect->y() + rectSelect->height() < f->y() || rectSelect->y() > f->y() + 45.0f*f->scale()) {
                 if(f->selected()) {
                     f->setSelected(false);
                     m_selectedItem.removeOne(f);
@@ -481,9 +477,7 @@ void Scene::mouseMoveEvent(QMouseEvent *event) {
 void Scene::mouseReleaseEvent(QMouseEvent *event) {
     if(rectSelect) {
         delete rectSelect;
-        //delete rectView;
         rectSelect = nullptr;
-        //rectView = nullptr;
         selectedItems(QList<QQuickItem*>());
     }
     if(cutLine) {
@@ -498,7 +492,7 @@ void Scene::mouseReleaseEvent(QMouseEvent *event) {
                 }
             }
         }
-        if(intersectedEdges.size() > 0) deletedItems(intersectedEdges);
+        if(intersectedEdges.size() > 0) deletedItems(intersectedEdges, false);
         delete cutLine;
         cutLine = nullptr;
     }
@@ -689,17 +683,17 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
     return node;
 }
 
-void Scene::deleteItems() {
+void Scene::deleteItems(bool saveConnection) {
     for(auto item: m_selectedItem) {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
             QList<Edge*> edges = node->getEdges();
             for(auto edge: edges) {
-                m_selectedItem.append(edge);
+                if(!m_selectedItem.contains(edge)) m_selectedItem.append(edge);
             }
         }
     }
-    deletedItems(m_selectedItem);
+    deletedItems(m_selectedItem, saveConnection);
     m_selectedItem.clear();
 }
 
@@ -766,7 +760,7 @@ void Scene::cut() {
             }
         }
     }
-    deletedItems(m_selectedItem);
+    deletedItems(m_selectedItem, false);
     clearSelected();
 }
 
@@ -796,16 +790,15 @@ void Scene::addToFrame() {
 }
 
 void Scene::focusNode() {
-    //m_background->setViewScale(1.0f);
     if(m_nodes.size() > 0) {
-        float maxX = m_nodes[0]->x() + m_nodes[0]->width();
-        float maxY = m_nodes[0]->y() + m_nodes[0]->height();
+        float maxX = m_nodes[0]->x() + m_nodes[0]->width()*m_nodes[0]->scale();
+        float maxY = m_nodes[0]->y() + m_nodes[0]->height()*m_nodes[0]->scale();
         float minX = m_nodes[0]->x();
         float minY = m_nodes[0]->y();
         for(int i = 1; i< m_nodes.size(); ++i) {
             auto n = m_nodes[i];
-            maxX = std::max(maxX, static_cast<float>(n->x() + n->width()));
-            maxY = std::max(maxY, static_cast<float>(n->y() + n->height()));
+            maxX = std::max(maxX, static_cast<float>(n->x() + n->width()*n->scale()));
+            maxY = std::max(maxY, static_cast<float>(n->y() + n->height()*n->scale()));
             minX = std::min(minX, static_cast<float>(n->x()));
             minY = std::min(minY, static_cast<float>(n->y()));
         }
@@ -816,8 +809,8 @@ void Scene::focusNode() {
 
 }
 
-void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame) {
-    m_undoStack->push(new MoveCommand(nodes, vec, frame));
+void Scene::movedNodes(QList<QQuickItem *> nodes, QVector2D vec, Frame *frame, Edge *edge) {
+    m_undoStack->push(new MoveCommand(nodes, vec, frame, edge));
     if(!m_modified) {
         m_modified = true;
         fileNameUpdate(m_fileName, m_modified);
@@ -836,8 +829,8 @@ void Scene::addedEdge(Edge *edge) {
     m_undoStack->push(new AddEdge(edge, this));
 }
 
-void Scene::deletedItems(QList<QQuickItem *> items) {
-    m_undoStack->push(new DeleteCommand(items, this));
+void Scene::deletedItems(QList<QQuickItem *> items, bool saveConnection) {
+    m_undoStack->push(new DeleteCommand(items, this, saveConnection));
 }
 
 void Scene::selectedItems(QList<QQuickItem *> items) {
@@ -895,4 +888,7 @@ QVector2D Scene::resolution() {
 void Scene::setResolution(QVector2D res) {
     m_resolution = res;
     emit resolutionUpdate(res);
+    for(auto n: m_nodes) {
+        n->setResolution(res);
+    }
 }

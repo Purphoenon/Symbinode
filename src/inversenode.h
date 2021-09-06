@@ -29,14 +29,15 @@ class InverseNode: public Node
 {
     Q_OBJECT
 public:
-    InverseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    InverseNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8);
     ~InverseNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    InverseNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
 private:

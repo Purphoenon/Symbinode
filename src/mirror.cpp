@@ -22,14 +22,14 @@
 #include "mirror.h"
 #include <QOpenGLFramebufferObjectFormat>
 
-MirrorObject::MirrorObject(QQuickItem *parent, QVector2D resolution, int dir):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_direction(dir)
+MirrorObject::MirrorObject(QQuickItem *parent, QVector2D resolution, GLint bpc, int dir):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc), m_direction(dir)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *MirrorObject::createRenderer() const {
-    return new MirrorRenderer(m_resolution);
+    return new MirrorRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &MirrorObject::texture() {
@@ -47,8 +47,6 @@ unsigned int MirrorObject::maskTexture() {
 
 void MirrorObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
-    mirroredTex = true;
-    update();
 }
 
 unsigned int MirrorObject::sourceTexture() {
@@ -57,8 +55,6 @@ unsigned int MirrorObject::sourceTexture() {
 
 void MirrorObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
-    mirroredTex = true;
-    update();
 }
 
 void MirrorObject::saveTexture(QString fileName) {
@@ -72,9 +68,9 @@ int MirrorObject::direction() {
 }
 
 void MirrorObject::setDirection(int dir) {
+    if(m_direction == dir) return;
     m_direction = dir;
     mirroredTex = true;
-    update();
 }
 
 QVector2D MirrorObject::resolution() {
@@ -87,7 +83,17 @@ void MirrorObject::setResolution(QVector2D res) {
     update();
 }
 
-MirrorRenderer::MirrorRenderer(QVector2D res): m_resolution(res) {
+GLint MirrorObject::bpc() {
+    return m_bpc;
+}
+
+void MirrorObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+MirrorRenderer::MirrorRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     mirrorShader = new QOpenGLShaderProgram();
     mirrorShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -107,6 +113,7 @@ MirrorRenderer::MirrorRenderer(QVector2D res): m_resolution(res) {
     mirrorShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                            -1.0f, 1.0f, 0.0f, 1.0f,
@@ -129,11 +136,23 @@ MirrorRenderer::MirrorRenderer(QVector2D res): m_resolution(res) {
     glBindFramebuffer(GL_FRAMEBUFFER, mirrorFBO);
     glGenTextures(1, &m_mirrorTexture);
     glBindTexture(GL_TEXTURE_2D, m_mirrorTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_mirrorTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -142,12 +161,15 @@ MirrorRenderer::MirrorRenderer(QVector2D res): m_resolution(res) {
 MirrorRenderer::~MirrorRenderer() {
     delete mirrorShader;
     delete textureShader;
+    delete checkerShader;
+    glDeleteTextures(1, &m_mirrorTexture);
+    glDeleteFramebuffers(1, &mirrorFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *MirrorRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -158,15 +180,24 @@ void MirrorRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = mirrorItem->resolution();
         updateTexResolution();
     }
-    if(mirrorItem->mirroredTex) {
-        mirrorItem->mirroredTex = false;
-        m_sourceTexture = mirrorItem->sourceTexture();
+    if(mirrorItem->mirroredTex || mirrorItem->bpcUpdated) {
+        if(mirrorItem->bpcUpdated) {
+            mirrorItem->bpcUpdated = false;
+            m_bpc = mirrorItem->bpc();
+            updateTexResolution();
+        }
+        if(mirrorItem->mirroredTex) {
+            mirrorItem->mirroredTex = false;
+            m_sourceTexture = mirrorItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = mirrorItem->maskTexture();
+                mirrorShader->bind();
+                mirrorShader->setUniformValue(mirrorShader->uniformLocation("dir"), mirrorItem->direction());
+                mirrorShader->setUniformValue(mirrorShader->uniformLocation("useMask"), maskTexture);
+                mirrorShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = mirrorItem->maskTexture();
-            mirrorShader->bind();
-            mirrorShader->setUniformValue(mirrorShader->uniformLocation("dir"), mirrorItem->direction());
-            mirrorShader->setUniformValue(mirrorShader->uniformLocation("useMask"), maskTexture);
-            mirrorShader->release();
             mirror();
             mirrorItem->setTexture(m_mirrorTexture);
             mirrorItem->updatePreview(m_mirrorTexture);
@@ -201,6 +232,7 @@ void MirrorRenderer::render() {
         glBindVertexArray(0);
         textureShader->release();
     }
+    glFlush();
 }
 
 void MirrorRenderer::mirror() {
@@ -214,18 +246,29 @@ void MirrorRenderer::mirror() {
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     mirrorShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_mirrorTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void MirrorRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_mirrorTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
-    );
+    if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -237,11 +280,16 @@ void MirrorRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -259,14 +307,42 @@ void MirrorRenderer::saveTexture(QString fileName) {
     glBindVertexArray(0);
     textureShader->release();
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

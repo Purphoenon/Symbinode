@@ -43,12 +43,14 @@ public:
     QPointF p4() const;
     int segmentCount() const;
     float lineWidth() const;
+    QColor color() const;
     void setP1(const QPointF &point);
     void setP2(const QPointF &point);
     void setP3(const QPointF &point);
     void setP4(const QPointF &point);
     void setSegmentCount(int count);
     void setLineWidth(float width);
+    void setColor(QColor color);
 signals:
     void p1Changed(const QPointF &point);
     void p2Changed(const QPointF &point);
@@ -63,6 +65,7 @@ private:
     QPointF m_p4;
     int m_segmentCount;
     float m_lineWidth;
+    QColor m_color;
 };
 
 #endif // CUBICBEZIER_H

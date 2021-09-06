@@ -44,6 +44,7 @@ public:
     void deleteEdge(Edge *edge);
     QVector2D globalPos();
     void setGlobalPos(QVector2D pos);
+    bool inCircle(QVector2D center, float radius);
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);

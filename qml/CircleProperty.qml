@@ -29,15 +29,34 @@ Item {
     property alias startRadius: radiusParam.propertyValue
     property alias startSmooth: smoothParam.propertyValue
     property alias startUseAlpha: useAlphaParam.checked
+    property alias startBits: bitsParam.currentIndex
     signal interpolationChanged(int interpolation)
     signal radiusChanged(real radius)
     signal smoothValueChanged(real smooth)
     signal useAlphaChanged(bool use)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
 
     ParamDropDown {
-        id: control
+        id: bitsParam
         y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
+        }
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
+        }
+    }
+    ParamDropDown {
+        id: control
+        y: 53
         model: ["Linear", "Hermite"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
@@ -52,31 +71,37 @@ Item {
             propertyChangingFinished("startInterpolation", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: radiusParam
-        y: 38
-        propertyName: "Radius"
-        onPropertyValueChanged: {
-            radiusChanged(radiusParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 91
+        clip: true
+        ParamSlider {
+            id: radiusParam
+            propertyName: "Radius"
+            onPropertyValueChanged: {
+                radiusChanged(radiusParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRadius", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startRadius", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: smoothParam
-        y: 71
-        propertyName: "Smooth"
-        onPropertyValueChanged: {
-            smoothValueChanged(smoothParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSmooth", propertyValue, oldValue)
+        ParamSlider {
+            id: smoothParam
+            y: 18
+            propertyName: "Smooth"
+            onPropertyValueChanged: {
+                smoothValueChanged(smoothParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSmooth", propertyValue, oldValue)
+            }
         }
     }
     ParamCheckbox {
         id: useAlphaParam
-        y: 119
+        y: 157
         width: 90
         text: qsTr("Use alpha")
         checked: true

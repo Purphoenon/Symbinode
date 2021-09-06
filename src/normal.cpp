@@ -23,14 +23,14 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include "FreeImage.h"
 
-NormalObject::NormalObject(QQuickItem *parent, QVector2D resolution): QQuickFramebufferObject (parent),
-    m_resolution(resolution)
+NormalObject::NormalObject(QQuickItem *parent, QVector2D resolution, GLint bpc):
+    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *NormalObject::createRenderer() const{
-    return new NormalRenderer(m_resolution);
+    return new NormalRenderer(m_resolution, m_bpc);
 }
 
 QVector2D NormalObject::resolution() {
@@ -39,6 +39,15 @@ QVector2D NormalObject::resolution() {
 
 void NormalObject::setResolution(QVector2D res) {
     m_resolution = res;
+}
+
+GLint NormalObject::bpc() {
+    return m_bpc;
+}
+
+void NormalObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
 }
 
 unsigned int &NormalObject::normalTexture() {
@@ -55,7 +64,7 @@ void NormalObject::saveTexture(QString fileName) {
     update();
 }
 
-NormalRenderer::NormalRenderer(QVector2D resolution): m_resolution(resolution) {
+NormalRenderer::NormalRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
     initializeOpenGLFunctions();
 
     renderNormal = new QOpenGLShaderProgram();
@@ -87,12 +96,12 @@ NormalRenderer::NormalRenderer(QVector2D resolution): m_resolution(resolution) {
 
 NormalRenderer::~NormalRenderer() {
     delete renderNormal;
+    glDeleteVertexArrays(1, &VAO);
 }
 
 QOpenGLFramebufferObject *NormalRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -100,6 +109,7 @@ void NormalRenderer::synchronize(QQuickFramebufferObject *item) {
     NormalObject *normalItem = static_cast<NormalObject*>(item);
     m_normalTexture = normalItem->normalTexture();
     m_resolution = normalItem->resolution();
+    m_bpc = normalItem->bpc();
     normalItem->updateNormal(m_normalTexture);
     normalItem->updatePreview(m_normalTexture);
 
@@ -124,6 +134,7 @@ void NormalRenderer::render() {
         glBindVertexArray(0);
         renderNormal->release();
     }
+    glFlush();
 }
 
 void NormalRenderer::saveTexture(QString name) {
@@ -133,11 +144,16 @@ void NormalRenderer::saveTexture(QString name) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -154,14 +170,41 @@ void NormalRenderer::saveTexture(QString name) {
     renderNormal->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, name.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGB16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGB16 *bits = (FIRGB16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*3 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*3 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, name.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(3*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGR, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 3 * m_resolution.x(), 24, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, name.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

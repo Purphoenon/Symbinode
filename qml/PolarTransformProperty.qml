@@ -6,37 +6,63 @@ Item {
     property alias startRadius: radiusParam.propertyValue
     property alias startClamp: clampParam.checked
     property alias startRotation: rotationParam.propertyValue
+    property alias startBits: bitsParam.currentIndex
     signal radiusChanged(real radius)
     signal clampChanged(bool clamp)
     signal angleChanged(int angle)
+    signal bitsChanged(int bitsType)
     signal propertyChangingFinished(string name, var newValue, var oldValue)
-    ParamSlider {
-        id: radiusParam
-        maximum: 10
-        propertyName: "Radius"
-        onPropertyValueChanged: {
-            radiusChanged(propertyValue)
+    ParamDropDown {
+        id: bitsParam
+        y: 15
+        model: ["8 bits", "16 bits"]
+        onCurrentIndexChanged: {
+            if(currentIndex == 0) {
+                bitsChanged(0)
+            }
+            else if(currentIndex == 1) {
+                bitsChanged(1)
+            }
+            focus = false
         }
-        onChangingFinished: {
-            propertyChangingFinished("startRadius", propertyValue, oldValue)
+        onActivated: {
+            propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: rotationParam
-        y: 33
-        maximum: 360
-        step: 1
-        propertyName: "Rotation"
-        onPropertyValueChanged: {
-            angleChanged(propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: radiusParam
+            maximum: 10
+            propertyName: "Radius"
+            onPropertyValueChanged: {
+                radiusChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRadius", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startRotation", propertyValue, oldValue)
+        ParamSlider {
+            id: rotationParam
+            y: 18
+            maximum: 360
+            step: 1
+            propertyName: "Rotation"
+            onPropertyValueChanged: {
+                angleChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRotation", propertyValue, oldValue)
+            }
         }
     }
     ParamCheckbox {
         id: clampParam
-        y: 81
+        y: 119
         width: 75
         text: qsTr("Clamp")
         checked: false

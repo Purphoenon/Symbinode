@@ -29,14 +29,14 @@ class NormalNode: public Node
 {
      Q_OBJECT
 public:
-    NormalNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024));
+    NormalNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA16);
     ~NormalNode();
     void operation();
     unsigned int &getPreviewTexture();
     void saveTexture(QString fileName);
     void serialize(QJsonObject &json) const;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
-    void updateScale(float scale);
     void saveNormal(QString dir);
 signals:
     void normalChanged(unsigned int normalMap);

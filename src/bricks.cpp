@@ -3,17 +3,17 @@
 #include "FreeImage.h"
 #include <iostream>
 
-BricksObject::BricksObject(QQuickItem *parent, QVector2D resolution, int columns, int rows, float offset,
-                           float width, float height, float smoothX, float smoothY, float mask, int seed):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_columns(columns), m_rows(rows),
-    m_offset(offset), m_width(width), m_height(height), m_mask(mask), m_smoothX(smoothX), m_smoothY(smoothY),
-    m_seed(seed)
+BricksObject::BricksObject(QQuickItem *parent, QVector2D resolution, GLint bpc, int columns, int rows,
+                           float offset, float width, float height, float smoothX, float smoothY,
+                           float mask, int seed): QQuickFramebufferObject (parent), m_resolution(resolution),
+    m_bpc(bpc), m_columns(columns), m_rows(rows), m_offset(offset), m_width(width), m_height(height),
+    m_mask(mask), m_smoothX(smoothX), m_smoothY(smoothY), m_seed(seed)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *BricksObject::createRenderer() const {
-    return new BricksRenderer(m_resolution);
+    return new BricksRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &BricksObject::texture() {
@@ -38,7 +38,6 @@ unsigned int BricksObject::maskTexture() {
 void BricksObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     generatedTex = true;
-    update();
 }
 
 int BricksObject::columns() {
@@ -46,9 +45,9 @@ int BricksObject::columns() {
 }
 
 void BricksObject::setColumns(int columns) {
+    if(m_columns == columns) return;
     m_columns = columns;
     generatedTex = true;
-    update();
 }
 
 int BricksObject::rows() {
@@ -56,9 +55,9 @@ int BricksObject::rows() {
 }
 
 void BricksObject::setRows(int rows) {
+    if(m_rows == rows) return;
     m_rows = rows;
     generatedTex = true;
-    update();
 }
 
 float BricksObject::offset() {
@@ -66,9 +65,9 @@ float BricksObject::offset() {
 }
 
 void BricksObject::setOffset(float offset) {
+    if(m_offset == offset) return;
     m_offset = offset;
     generatedTex = true;
-    update();
 }
 
 float BricksObject::bricksWidth() {
@@ -76,9 +75,9 @@ float BricksObject::bricksWidth() {
 }
 
 void BricksObject::setBricksWidth(float width) {
+    if(m_width == width) return;
     m_width = width;
     generatedTex = true;
-    update();
 }
 
 float BricksObject::bricksHeight() {
@@ -86,9 +85,9 @@ float BricksObject::bricksHeight() {
 }
 
 void BricksObject::setBricksHeight(float height) {
+    if(m_height == height) return;
     m_height = height;
     generatedTex = true;
-    update();
 }
 
 float BricksObject::mask() {
@@ -96,9 +95,9 @@ float BricksObject::mask() {
 }
 
 void BricksObject::setMask(float mask) {
+    if(m_mask == mask) return;
     m_mask = mask;
     generatedTex = true;
-    update();
 }
 
 float BricksObject::smoothX() {
@@ -106,9 +105,9 @@ float BricksObject::smoothX() {
 }
 
 void BricksObject::setSmoothX(float smooth) {
+    if(m_smoothX == smooth) return;
     m_smoothX = smooth;
     generatedTex = true;
-    update();
 }
 
 float BricksObject::smoothY() {
@@ -116,9 +115,9 @@ float BricksObject::smoothY() {
 }
 
 void BricksObject::setSmoothY(float smooth) {
+    if(m_smoothY == smooth) return;
     m_smoothY = smooth;
     generatedTex = true;
-    update();
 }
 
 int BricksObject::seed() {
@@ -126,9 +125,9 @@ int BricksObject::seed() {
 }
 
 void BricksObject::setSeed(int seed) {
+    if(m_seed == seed) return;
     m_seed = seed;
     generatedTex = true;
-    update();
 }
 
 QVector2D BricksObject::resolution() {
@@ -140,8 +139,17 @@ void BricksObject::setResolution(QVector2D res) {
     resUpdated = true;
     update();
 }
+GLint BricksObject::bpc() {
+    return m_bpc;
+}
 
-BricksRenderer::BricksRenderer(QVector2D res): m_resolution(res) {
+void BricksObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+BricksRenderer::BricksRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
     initializeOpenGLFunctions();
     bricksShader = new QOpenGLShaderProgram();
     bricksShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -161,6 +169,7 @@ BricksRenderer::BricksRenderer(QVector2D res): m_resolution(res) {
     bricksShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -182,13 +191,23 @@ BricksRenderer::BricksRenderer(QVector2D res): m_resolution(res) {
     glGenTextures(1, &m_bricksTexture);
     glBindFramebuffer(GL_FRAMEBUFFER, bricksFBO);
     glBindTexture(GL_TEXTURE_2D, m_bricksTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
-    );
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_bricksTexture, 0
     );
@@ -200,31 +219,40 @@ BricksRenderer::~BricksRenderer() {
     delete bricksShader;
     delete textureShader;
     delete checkerShader;
+    glDeleteTextures(1, &m_bricksTexture);
+    glDeleteFramebuffers(1, &bricksFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *BricksRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
 void BricksRenderer::synchronize(QQuickFramebufferObject *item) {
     BricksObject *bricksItem = static_cast<BricksObject*>(item);
-    if(bricksItem->generatedTex) {
-        bricksItem->generatedTex = false;
-        m_maskTexture = bricksItem->maskTexture();
-        bricksShader->bind();
-        bricksShader->setUniformValue(bricksShader->uniformLocation("columns"), bricksItem->columns());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("rows"), bricksItem->rows());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("offset"), bricksItem->offset());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("width"), bricksItem->bricksWidth());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("height"), bricksItem->bricksHeight());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("maskStrength"), bricksItem->mask());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("smoothX"), bricksItem->smoothX());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("smoothY"), bricksItem->smoothY());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("seed"), bricksItem->seed());
-        bricksShader->setUniformValue(bricksShader->uniformLocation("useMask"), m_maskTexture);
+    if(bricksItem->generatedTex || bricksItem->bpcUpdated) {
+        if(bricksItem->bpcUpdated) {
+            bricksItem->bpcUpdated = false;
+            m_bpc = bricksItem->bpc();
+            updateTexResolution();
+        }
+        if(bricksItem->generatedTex) {
+            bricksItem->generatedTex = false;
+            m_maskTexture = bricksItem->maskTexture();
+            bricksShader->bind();
+            bricksShader->setUniformValue(bricksShader->uniformLocation("columns"), bricksItem->columns());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("rows"), bricksItem->rows());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("offset"), bricksItem->offset());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("width"), bricksItem->bricksWidth());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("height"), bricksItem->bricksHeight());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("maskStrength"), bricksItem->mask());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("smoothX"), bricksItem->smoothX());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("smoothY"), bricksItem->smoothY());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("seed"), bricksItem->seed());
+            bricksShader->setUniformValue(bricksShader->uniformLocation("useMask"), m_maskTexture);
+        }
         createBricks();
         bricksItem->setTexture(m_bricksTexture);
         bricksItem->updatePreview(m_bricksTexture);
@@ -265,6 +293,7 @@ void BricksRenderer::render() {
     glBindTexture(GL_TEXTURE_2D, 0);
     textureShader->release();
     glBindVertexArray(0);
+    glFlush();
 }
 
 void BricksRenderer::createBricks() {
@@ -281,16 +310,27 @@ void BricksRenderer::createBricks() {
     bricksShader->setUniformValue(bricksShader->uniformLocation("res"), m_resolution);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     bricksShader->release();
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);    
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_bricksTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void BricksRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_bricksTexture);
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
-    );
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
+        );
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+        );
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -301,11 +341,16 @@ void BricksRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &texture);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -323,14 +368,42 @@ void BricksRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
 }

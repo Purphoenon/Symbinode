@@ -29,13 +29,14 @@ class MappingNode: public Node
 {
     Q_OBJECT
 public:
-    MappingNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float inputMin = 0.0f, float inputMax = 1.0f, float outputMin = 0.0f, float outputMax = 1.0f);
+    MappingNode(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float inputMin = 0.0f, float inputMax = 1.0f, float outputMin = 0.0f, float outputMax = 1.0f);
     ~MappingNode();
-    void operation();
-    unsigned int &getPreviewTexture();
-    void saveTexture(QString fileName);
-    void serialize(QJsonObject &json) const;
-    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
+    void operation() override;
+    unsigned int &getPreviewTexture() override;
+    void saveTexture(QString fileName) override;
+    MappingNode *clone() override;
+    void serialize(QJsonObject &json) const override;
+    void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
     float inputMin();
     void setInputMin(float value);
     float inputMax();
@@ -50,7 +51,6 @@ signals:
     void outputMinChanged(float value);
     void outputMaxChanged(float value);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
     void updateInputMin(qreal value);

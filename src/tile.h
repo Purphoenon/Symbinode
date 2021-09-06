@@ -30,7 +30,7 @@ class TileObject: public QQuickFramebufferObject
 {
     Q_OBJECT
 public:
-    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scale = 1.0f, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true, bool depthMask = true);
+    TileObject(QQuickItem *parent = nullptr, QVector2D resolution = QVector2D(1024, 1024), GLint bpc = GL_RGBA8, float offsetX = 0.0f, float offsetY = 0.0f, int columns = 5, int rows = 5, float scale = 1.0f, float scaleX = 1.0f, float scaleY = 1.0f, int rotation = 0, float randPosition = 0.0f, float randRotation = 0.0f, float randScale = 0.0f, float maskStrength = 0.0f, int inputsCount = 1, int seed = 1, bool keepProportion = false, bool useAlpha = true, bool depthMask = true);
     QQuickFramebufferObject::Renderer *createRenderer() const;
     unsigned int &texture();
     void setTexture(unsigned int texture);
@@ -85,10 +85,13 @@ public:
     void setDepthMask(bool depth);
     QVector2D resolution();
     void setResolution(QVector2D res);
+    GLint bpc();
+    void setBPC(GLint bpc);
     bool tiledTex = false;
     bool randUpdated = true;
     bool selectedItem = false;
     bool resUpdated = false;
+    bool bpcUpdated = false;
     bool texSaving = false;
     QString saveName = "";
 signals:
@@ -96,6 +99,7 @@ signals:
     void changedTexture();
 private:
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_texture = 0;
     unsigned int m_sourceTexture = 0;
     unsigned int m_tile1 = 0;
@@ -125,7 +129,7 @@ private:
 
 class TileRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
 public:
-    TileRenderer(QVector2D res);
+    TileRenderer(QVector2D res, GLint bpc);
     ~TileRenderer();
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
     void synchronize(QQuickFramebufferObject *item);
@@ -136,6 +140,7 @@ private:
     void updateTexResolution();
     void saveTexture(QString fileName);
     QVector2D m_resolution;
+    GLint m_bpc = GL_RGBA8;
     unsigned int m_sourceTexture = 0;
     unsigned int m_tile1 = 0;
     unsigned int m_tile2 = 0;

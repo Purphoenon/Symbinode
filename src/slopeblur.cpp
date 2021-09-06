@@ -3,15 +3,15 @@
 #include "FreeImage.h"
 
 
-SlopeBlurObject::SlopeBlurObject(QQuickItem *parent, QVector2D resolution, int mode, float intensity,
-                                 int samples): QQuickFramebufferObject (parent), m_resolution(resolution),
-    m_mode(mode), m_intensity(intensity), m_samples(samples)
+SlopeBlurObject::SlopeBlurObject(QQuickItem *parent, QVector2D resolution, GLint bpc, int mode,
+                                 float intensity, int samples): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_bpc(bpc), m_mode(mode), m_intensity(intensity), m_samples(samples)
 {
 
 }
 
 QQuickFramebufferObject::Renderer *SlopeBlurObject::createRenderer() const {
-    return new SlopeBlurRenderer(m_resolution);
+    return new SlopeBlurRenderer(m_resolution, m_bpc);
 }
 
 unsigned int &SlopeBlurObject::texture() {
@@ -29,8 +29,6 @@ unsigned int SlopeBlurObject::maskTexture() {
 
 void SlopeBlurObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
-    slopedTex = true;
-    update();
 }
 
 unsigned int SlopeBlurObject::sourceTexture() {
@@ -39,8 +37,6 @@ unsigned int SlopeBlurObject::sourceTexture() {
 
 void SlopeBlurObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
-    slopedTex = true;
-    update();
 }
 
 unsigned int SlopeBlurObject::slopeTexture() {
@@ -49,8 +45,6 @@ unsigned int SlopeBlurObject::slopeTexture() {
 
 void SlopeBlurObject::setSlopeTexture(unsigned int texture) {
     m_slopeTexture = texture;
-    slopedTex = true;
-    update();
 }
 
 void SlopeBlurObject::saveTexture(QString fileName) {
@@ -64,9 +58,9 @@ int SlopeBlurObject::mode() {
 }
 
 void SlopeBlurObject::setMode(int mode) {
+    if(m_mode == mode) return;
     m_mode = mode;
     slopedTex = true;
-    update();
 }
 
 float SlopeBlurObject::intensity() {
@@ -74,9 +68,9 @@ float SlopeBlurObject::intensity() {
 }
 
 void SlopeBlurObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     slopedTex = true;
-    update();
 }
 
 int SlopeBlurObject::samples() {
@@ -84,9 +78,9 @@ int SlopeBlurObject::samples() {
 }
 
 void SlopeBlurObject::setSamples(int samples) {
+    if(m_samples == samples) return;
     m_samples = samples;
     slopedTex = true;
-    update();
 }
 
 QVector2D SlopeBlurObject::resolution() {
@@ -99,7 +93,17 @@ void SlopeBlurObject::setResolution(QVector2D res) {
     update();
 }
 
-SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res): m_resolution(res)
+GLint SlopeBlurObject::bpc() {
+    return m_bpc;
+}
+
+void SlopeBlurObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
+    m_bpc = bpc;
+    bpcUpdated = true;
+}
+
+SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc)
 {
     initializeOpenGLFunctions();
     slopeBlurShader = new QOpenGLShaderProgram();
@@ -121,6 +125,7 @@ SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res): m_resolution(res)
     slopeBlurShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -142,11 +147,19 @@ SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res): m_resolution(res)
     glBindFramebuffer(GL_FRAMEBUFFER, slopeFBO);
     glGenTextures(1, &m_slopedTexture);
     glBindTexture(GL_TEXTURE_2D, m_slopedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_slopedTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -157,29 +170,40 @@ SlopeBlurRenderer::~SlopeBlurRenderer()
     delete slopeBlurShader;
     delete checkerShader;
     delete textureShader;
+    glDeleteTextures(1, &m_slopedTexture);
+    glDeleteFramebuffers(1, &slopeFBO);
+    glDeleteVertexArrays(1, &textureVAO);
 }
 
 QOpenGLFramebufferObject *SlopeBlurRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
 void SlopeBlurRenderer::synchronize(QQuickFramebufferObject *item) {
     SlopeBlurObject *slopeBlurItem = static_cast<SlopeBlurObject*>(item);
-    if(slopeBlurItem->slopedTex) {
-        slopeBlurItem->slopedTex = false;
-        m_sourceTexture = slopeBlurItem->sourceTexture();
+    if(slopeBlurItem->slopedTex || slopeBlurItem->bpcUpdated) {
+        if(slopeBlurItem->bpcUpdated) {
+            slopeBlurItem->bpcUpdated = false;
+            m_bpc = slopeBlurItem->bpc();
+            updateTexResolution();
+        }
+        if(slopeBlurItem->slopedTex) {
+            slopeBlurItem->slopedTex = false;
+            m_sourceTexture = slopeBlurItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = slopeBlurItem->maskTexture();
+                m_slopeTexture = slopeBlurItem->slopeTexture();
+                slopeBlurShader->bind();
+                slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("mode"), slopeBlurItem->mode());
+                slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("intensity"), slopeBlurItem->intensity());
+                slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("samples"), slopeBlurItem->samples());
+                slopeBlurShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = slopeBlurItem->maskTexture();
-            m_slopeTexture = slopeBlurItem->slopeTexture();
-            slopeBlurShader->bind();
-            slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("mode"), slopeBlurItem->mode());
-            slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("intensity"), slopeBlurItem->intensity());
-            slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("samples"), slopeBlurItem->samples());
             createSlopeBlur();
-            slopeBlurShader->release();
             slopeBlurItem->setTexture(m_slopedTexture);
             slopeBlurItem->updatePreview(m_slopedTexture);
         }
@@ -218,6 +242,7 @@ void SlopeBlurRenderer::render() {
         textureShader->release();
         glBindVertexArray(0);
     }
+    glFlush();
 }
 
 void SlopeBlurRenderer::createSlopeBlur() {
@@ -235,16 +260,25 @@ void SlopeBlurRenderer::createSlopeBlur() {
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     slopeBlurShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_slopedTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
+    glFinish();
 }
 
 void SlopeBlurRenderer::updateTexResolution() {
     glBindTexture(GL_TEXTURE_2D, m_slopedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -255,11 +289,16 @@ void SlopeBlurRenderer::saveTexture(QString fileName) {
     glGenTextures(1, &tex);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if(m_bpc == GL_RGBA16) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
+    }
+    else if(m_bpc == GL_RGBA8) {
+        glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
@@ -275,15 +314,43 @@ void SlopeBlurRenderer::saveTexture(QString fileName) {
     textureShader->release();
     glBindVertexArray(0);
 
-    BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-    if (FreeImage_Save(FIF_PNG, image, fileName.toStdString().c_str(), 0))
-        printf("Successfully saved!\n");
-    else
-        printf("Failed saving!\n");
-    FreeImage_Unload(image);
+    if(m_bpc == GL_RGBA16) {
+        GLushort *pixels = (GLushort*)malloc(sizeof(GLushort)*4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_SHORT, pixels);
+        FIBITMAP *image16 = FreeImage_AllocateT(FIT_RGBA16, m_resolution.x(), m_resolution.y());
+        int m_width = FreeImage_GetWidth(image16);
+        int m_height = FreeImage_GetHeight(image16);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBA16 *bits = (FIRGBA16*)FreeImage_GetScanLine(image16, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*(m_height - 1 - y) + x)*4 + 2];
+                bits[x].green = pixels[(m_width*(m_height - 1 - y) + x)*4 + 1];
+                bits[x].blue = pixels[(m_width*(m_height - 1 - y) + x)*4];
+                bits[x].alpha = pixels[(m_width*(m_height - 1 - y) + x)*4 + 3];
+            }
+        }
+        if (FreeImage_Save(FIF_PNG, image16, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image16);
+        delete [] pixels;
+    }
+    else if(m_bpc == GL_RGBA8) {
+        BYTE *pixels = (BYTE*)malloc(4*m_resolution.x()*m_resolution.y());
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, m_resolution.x(), m_resolution.y(), GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, m_resolution.x(), m_resolution.y(), 4 * m_resolution.x(), 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+        if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        FreeImage_Unload(image);
+        delete [] pixels;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteTextures(1, &tex);
+    glDeleteFramebuffers(1, &fbo);
 }
 
