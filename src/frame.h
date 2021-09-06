@@ -37,10 +37,10 @@ public:
     void setBaseX(float x);
     float baseY();
     void setBaseY(float y);
-    float baseWidth();
-    void setBaseWidth(float width);
-    float baseHeight();
-    void setBaseHeight(float height);
+    //float baseWidth();
+    //void setBaseWidth(float width);
+    //float baseHeight();
+    //void setBaseHeight(float height);
     QString title();
     void setTitle(QString title);
     QQuickItem *getPropertyPanel();
@@ -80,8 +80,8 @@ private:
     QList<QQuickItem*> m_content;
     float m_baseX;
     float m_baseY;
-    float m_baseWidth = 200;
-    float m_baseHeight = 100;
+    //float m_baseWidth = 200;
+    //float m_baseHeight = 100;
     float m_scale = 1.0f;
     QVector2D m_pan = QVector2D(0, 0);
     float lastX = 0;

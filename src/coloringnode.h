@@ -42,7 +42,6 @@ public:
 signals:
     void colorChanged(QVector3D color);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
     void updateColor(QVector3D color);

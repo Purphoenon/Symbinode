@@ -38,7 +38,6 @@ public:
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
     void updateMetal(qreal metal);
-    void updateScale(float scale);
     void saveMetal(QString dir);
 signals:
     void metalChanged(QVariant metal, bool useTexture);

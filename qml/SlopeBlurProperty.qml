@@ -15,7 +15,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -43,29 +43,35 @@ Item {
             propertyChangingFinished("mode", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: intensityParam
-        y: 76
-        propertyName: "Intensity"
-        onPropertyValueChanged: {
-            intensityChanged(propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 91
+        clip: true
+        ParamSlider {
+            id: intensityParam
+            propertyName: "Intensity"
+            onPropertyValueChanged: {
+                intensityChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startIntensity", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startIntensity", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: samplesParam
-        y: 109
-        propertyName: "Samples"
-        maximum: 16
-        minimum: 1
-        step: 1
-        onPropertyValueChanged: {
-            samplesChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSamples", propertyValue, oldValue)
+        ParamSlider {
+            id: samplesParam
+            y: 18
+            propertyName: "Samples"
+            maximum: 16
+            minimum: 1
+            step: 1
+            onPropertyValueChanged: {
+                samplesChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSamples", propertyValue, oldValue)
+            }
         }
     }
 }

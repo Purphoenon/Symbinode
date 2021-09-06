@@ -33,7 +33,6 @@ AlbedoNode::AlbedoNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Nod
     preview->setY(30*s);
     preview->setScale(s);
     connect(preview, &AlbedoObject::updatePreview, this, &AlbedoNode::updatePreview);
-    connect(this, &Node::changeScaleView, this, &AlbedoNode::updateScale);
     connect(preview, &AlbedoObject::updateAlbedo, this, &AlbedoNode::albedoChanged);
     connect(this, &Node::changeResolution, preview, &AlbedoObject::setResolution);
     connect(this, &Node::changeBPC, preview, &AlbedoObject::setBPC);
@@ -55,7 +54,10 @@ AlbedoNode::~AlbedoNode() {
 }
 
 void AlbedoNode::operation() {
-    if(m_socketsInput[0]->countEdge() > 0) {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
         preview->useAlbedoTex = true;
         preview->setAlbedoTexture(m_socketsInput[0]->value().toUInt());
     }
@@ -63,8 +65,9 @@ void AlbedoNode::operation() {
         preview->useAlbedoTex = false;        
     }
     preview->setAlbedoValue(m_albedo);
-    preview->selectedItem = selected();
+    preview->albedoUpdated = true;
     preview->update();
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &AlbedoNode::getPreviewTexture() {
@@ -91,26 +94,18 @@ void AlbedoNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &ha
         QJsonArray albedo = json["albedo"].toArray();
         QVector3D color = QVector3D(albedo[0].toVariant().toFloat(), albedo[1].toVariant().toFloat(),
                              albedo[2].toVariant().toFloat());
-        updateAlbedo(color);
         propertiesPanel->setProperty("startColor", color);
     }
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
 }
 
 void AlbedoNode::updateAlbedo(QVector3D color) {
+    if(m_albedo == color) return;
     m_albedo = color;
     operation();
-    /*if(m_socketsInput[0]->countEdge() == 0) {
-        operation();
-    }*/
     dataChanged();
-}
-
-void AlbedoNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void AlbedoNode::saveAlbedo(QString dir) {

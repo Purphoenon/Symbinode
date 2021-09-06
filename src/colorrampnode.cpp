@@ -34,7 +34,6 @@ ColorRampNode::ColorRampNode(QQuickItem *parent, QVector2D resolution, GLint bpc
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &ColorRampNode::updateScale);
     connect(this, &Node::generatePreview, this, &ColorRampNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &ColorRampObject::setResolution);
     connect(this, &Node::changeBPC, preview, &ColorRampObject::setBPC);
@@ -68,14 +67,18 @@ void ColorRampNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->update();
+    deserializing = false;
 }
 
 unsigned int &ColorRampNode::getPreviewTexture() {
@@ -115,12 +118,6 @@ QJsonArray ColorRampNode::stops() const{
         stops.push_back(i);
     }
     return stops;
-}
-
-void ColorRampNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void ColorRampNode::previewGenerated() {

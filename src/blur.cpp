@@ -48,7 +48,6 @@ unsigned int BlurObject::maskTexture() {
 void BlurObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     bluredTex = true;
-    update();
 }
 
 unsigned int BlurObject::sourceTexture() {
@@ -58,7 +57,6 @@ unsigned int BlurObject::sourceTexture() {
 void BlurObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     bluredTex = true;
-    update();
 }
 
 void BlurObject::saveTexture(QString fileName) {
@@ -72,9 +70,9 @@ float BlurObject::intensity() {
 }
 
 void BlurObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     bluredTex = true;
-    update();
 }
 
 QVector2D BlurObject::resolution() {
@@ -92,9 +90,9 @@ GLint BlurObject::bpc() {
 }
 
 void BlurObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 BlurRenderer::BlurRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -117,6 +115,7 @@ BlurRenderer::BlurRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(b
     blurShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -150,10 +149,13 @@ BlurRenderer::BlurRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(b
                 GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
             );
         }
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
         glFramebufferTexture2D(
             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0
         );
@@ -174,7 +176,6 @@ BlurRenderer::~BlurRenderer() {
 QOpenGLFramebufferObject *BlurRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -185,21 +186,23 @@ void BlurRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = blurItem->resolution();
         updateTexResolution();
     }
-    if(blurItem->bpcUpdated) {
-        blurItem->bpcUpdated = false;
-        m_bpc = blurItem->bpc();
-        updateTexResolution();
-        createBlur();
-        blurItem->setTexture(pingpongBuffer[1]);
-    }
-    if(blurItem->bluredTex) {
-        blurItem->bluredTex = false;
-        m_sourceTexture = blurItem->sourceTexture();
+    if(blurItem->bluredTex || blurItem->bpcUpdated) {
+        if(blurItem->bpcUpdated) {
+            blurItem->bpcUpdated = false;
+            m_bpc = blurItem->bpc();
+            updateTexResolution();
+        }
+        if(blurItem->bluredTex) {
+            blurItem->bluredTex = false;
+            m_sourceTexture = blurItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = blurItem->maskTexture();
+                blurShader->bind();
+                blurShader->setUniformValue(blurShader->uniformLocation("intensity"), blurItem->intensity());
+                blurShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = blurItem->maskTexture();
-            blurShader->bind();
-            blurShader->setUniformValue(blurShader->uniformLocation("intensity"), blurItem->intensity());
-            blurShader->release();
             createBlur();
             blurItem->setTexture(pingpongBuffer[1]);
             blurItem->updatePreview(pingpongBuffer[1]);
@@ -235,6 +238,7 @@ void BlurRenderer::render() {
         glBindVertexArray(0);
     }
     glFlush();
+
 }
 
 void BlurRenderer::createBlur() {
@@ -264,13 +268,17 @@ void BlurRenderer::createBlur() {
         if(i == amount - 1) blurShader->setUniformValue(blurShader->uniformLocation("useMask"), maskTexture);
 
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glBindTexture(GL_TEXTURE_2D, 0);
         blurShader->release();
         glBindVertexArray(0);
         if (first_iteration)
             first_iteration = false;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i%2]);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glFlush();
     glFinish();
 }

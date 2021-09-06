@@ -38,7 +38,6 @@ public:
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
     void updateRough(qreal rough);
-    void updateScale(float scale);
     void saveRough(QString dir);
 signals:
     void roughChanged(QVariant rough, bool useTexture);

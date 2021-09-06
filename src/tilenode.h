@@ -91,7 +91,6 @@ signals:
     void useAlphaChanged(bool use);
     void depthMaskChanged(bool depth);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void updateOffsetX(qreal offset);
     void updateOffsetY(qreal offset);

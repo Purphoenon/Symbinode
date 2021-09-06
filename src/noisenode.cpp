@@ -36,16 +36,8 @@ NoiseNode::NoiseNode(QQuickItem *parent, QVector2D resolution, GLint bpc, NoiseP
     preview->setScale(s);
     connect(this, &NoiseNode::generatePreview, this, &NoiseNode::previewGenerated);
     connect(this, &NoiseNode::noiseTypeChanged, preview, &NoiseObject::setNoiseType);
-    connect(this, &NoiseNode::noiseScaleChanged, preview, &NoiseObject::setNoiseScale);
-    connect(this, &NoiseNode::scaleXChanged, preview, &NoiseObject::setScaleX);
-    connect(this, &NoiseNode::scaleYChanged, preview, &NoiseObject::setScaleY);
-    connect(this, &NoiseNode::layersChanged, preview, &NoiseObject::setLayers);
-    connect(this, &NoiseNode::persistenceChanged, preview, &NoiseObject::setPersistence);
-    connect(this, &NoiseNode::amplitudeChanged, preview, &NoiseObject::setAmplitude);
-    connect(this, &NoiseNode::seedChanged, preview, &NoiseObject::setSeed);
     connect(preview, &NoiseObject::updatePreview, this, &NoiseNode::updatePreview);
     connect(preview, &NoiseObject::changedTexture, this, &NoiseNode::setOutput);
-    connect(this, &Node::changeScaleView, this, &NoiseNode::updateScale);
     connect(this, &Node::changeResolution, preview, &NoiseObject::setResolution);
     connect(this, &Node::changeBPC, preview, &NoiseObject::setBPC);
     createSockets(1, 1);
@@ -87,6 +79,7 @@ QString NoiseNode::noiseType() {
 }
 
 void NoiseNode::setNoiseType(QString type) {
+    if(m_noiseType == type) return;
     m_noiseType = type;    
     propertiesPanel->setProperty("startNoiseScale", noiseScale());
     propertiesPanel->setProperty("startScaleX", scaleX());
@@ -96,6 +89,15 @@ void NoiseNode::setNoiseType(QString type) {
     propertiesPanel->setProperty("startAmplitude", amplitude());
     propertiesPanel->setProperty("startSeed", seed());
     noiseTypeChanged(type);
+
+    preview->setNoiseScale(noiseScale());
+    preview->setScaleX(scaleX());
+    preview->setScaleY(scaleY());
+    preview->setLayers(layers());
+    preview->setPersistence(persistence());
+    preview->setAmplitude(amplitude());
+    preview->setSeed(seed());
+    preview->update();
 }
 
 NoiseParams NoiseNode::perlinParams() {
@@ -113,9 +115,17 @@ int NoiseNode::noiseScale() {
 }
 
 void NoiseNode::setNoiseScale(int scale) {
-    if(m_noiseType == "noisePerlin") perlinNoise.scale = scale;
-    else if(m_noiseType == "noiseSimple") simpleNoise.scale = scale;
+    if(m_noiseType == "noisePerlin") {
+        if(perlinNoise.scale == scale) return;
+        perlinNoise.scale = scale;
+    }
+    else if(m_noiseType == "noiseSimple") {
+        if(simpleNoise.scale == scale) return;
+        simpleNoise.scale = scale;
+    }
     noiseScaleChanged(scale);
+    preview->setNoiseScale(scale);
+    preview->update();
 }
 
 int NoiseNode::scaleX() {
@@ -125,9 +135,17 @@ int NoiseNode::scaleX() {
 }
 
 void NoiseNode::setScaleX(int scale) {
-    if(m_noiseType == "noisePerlin") perlinNoise.scaleX = scale;
-    else if(m_noiseType == "noiseSimple") simpleNoise.scaleX = scale;
+    if(m_noiseType == "noisePerlin") {
+        if(perlinNoise.scaleX == scale) return;
+        perlinNoise.scaleX = scale;
+    }
+    else if(m_noiseType == "noiseSimple") {
+        if(simpleNoise.scaleX == scale) return;
+        simpleNoise.scaleX = scale;
+    }
     scaleXChanged(scale);
+    preview->setScaleX(scale);
+    preview->update();
 }
 
 int NoiseNode::scaleY() {
@@ -137,9 +155,17 @@ int NoiseNode::scaleY() {
 }
 
 void NoiseNode::setScaleY(int scale) {
-    if(m_noiseType == "noisePerlin") perlinNoise.scaleY = scale;
-    else if(m_noiseType == "noiseSimple") simpleNoise.scaleY = scale;
+    if(m_noiseType == "noisePerlin") {
+        if(perlinNoise.scaleY == scale) return;
+        perlinNoise.scaleY = scale;
+    }
+    else if(m_noiseType == "noiseSimple") {
+        if(simpleNoise.scaleY == scale) return;
+        simpleNoise.scaleY = scale;
+    }
     scaleYChanged(scale);
+    preview->setScaleY(scale);
+    preview->update();
 }
 
 int NoiseNode::layers() {
@@ -149,9 +175,17 @@ int NoiseNode::layers() {
 }
 
 void NoiseNode::setLayers(int num) {
-    if(m_noiseType == "noisePerlin") perlinNoise.layers = num;
-    else if(m_noiseType == "noiseSimple") simpleNoise.layers = num;
+    if(m_noiseType == "noisePerlin") {
+        if(perlinNoise.layers == num) return;
+        perlinNoise.layers = num;
+    }
+    else if(m_noiseType == "noiseSimple") {
+        if(simpleNoise.layers == num) return;
+        simpleNoise.layers = num;
+    }
     layersChanged(num);
+    preview->setLayers(num);
+    preview->update();
 }
 
 float NoiseNode::persistence() {
@@ -161,9 +195,17 @@ float NoiseNode::persistence() {
 }
 
 void NoiseNode::setPersistence(float value) {
-    if(m_noiseType == "noisePerlin") perlinNoise.persistence = value;
-    else if(m_noiseType == "noiseSimple") simpleNoise.persistence = value;
+    if(m_noiseType == "noisePerlin") {
+        if(perlinNoise.persistence == value) return;
+        perlinNoise.persistence = value;
+    }
+    else if(m_noiseType == "noiseSimple") {
+        if(simpleNoise.persistence == value) return;
+        simpleNoise.persistence = value;
+    }
     persistenceChanged(value);
+    preview->setPersistence(value);
+    preview->update();
 }
 
 float NoiseNode::amplitude() {
@@ -173,9 +215,17 @@ float NoiseNode::amplitude() {
 }
 
 void NoiseNode::setAmplitude(float value) {
-    if(m_noiseType == "noisePerlin") perlinNoise.amplitude = value;
-    else if(m_noiseType == "noiseSimple") simpleNoise.amplitude = value;
+    if(m_noiseType == "noisePerlin") {
+        if(perlinNoise.amplitude == value) return;
+        perlinNoise.amplitude = value;
+    }
+    else if(m_noiseType == "noiseSimple") {
+        if(simpleNoise.amplitude == value) return;
+        simpleNoise.amplitude = value;
+    }
     amplitudeChanged(value);
+    preview->setAmplitude(value);
+    preview->update();
 }
 
 int NoiseNode::seed() {
@@ -185,9 +235,17 @@ int NoiseNode::seed() {
 }
 
 void NoiseNode::setSeed(int seed) {
-    if(m_noiseType == "noisePerlin") perlinNoise.seed = seed;
-    else if(m_noiseType == "noiseSimple") simpleNoise.seed = seed;
+    if(m_noiseType == "noisePerlin") {
+        if(perlinNoise.seed == seed) return;
+        perlinNoise.seed = seed;
+    }
+    else if(m_noiseType == "noiseSimple") {
+        if(simpleNoise.seed == seed) return;
+        simpleNoise.seed = seed;
+    }
     seedChanged(seed);
+    preview->setSeed(seed);
+    preview->update();
 }
 
 unsigned int &NoiseNode::getPreviewTexture() {
@@ -203,8 +261,11 @@ void NoiseNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode && inputNode->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value().toUInt() == 0 && deserializing) return;
     }
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+    m_socketOutput[0]->setValue(preview->texture());
+    deserializing = false;
 }
 
 NoiseNode *NoiseNode::clone() {
@@ -298,9 +359,18 @@ void NoiseNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &has
         propertiesPanel->setProperty("startPersistence", persistence());
         propertiesPanel->setProperty("startAmplitude", amplitude());
         propertiesPanel->setProperty("startSeed", seed());
+
+        preview->setNoiseScale(noiseScale());
+        preview->setScaleX(scaleX());
+        preview->setScaleY(scaleY());
+        preview->setLayers(layers());
+        preview->setPersistence(persistence());
+        preview->setAmplitude(amplitude());
+        preview->setSeed(seed());
     }
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+    preview->update();
 }
 
 void NoiseNode::updateNoiseType(QString type) {
@@ -346,12 +416,6 @@ void NoiseNode::updateSeed(int seed) {
 void NoiseNode::previewGenerated() {
     preview->generatedNoise = true;
     preview->update();
-}
-
-void NoiseNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void NoiseNode::setOutput() {

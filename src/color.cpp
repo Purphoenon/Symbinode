@@ -53,9 +53,9 @@ QVector3D ColorObject::color() {
 }
 
 void ColorObject::setColor(QVector3D color) {
+    if(m_color == color) return;
     m_color = color;
     createdTexture = true;
-    update();
 }
 
 QVector2D ColorObject::resolution() {
@@ -140,7 +140,6 @@ ColorRenderer::~ColorRenderer() {
 QOpenGLFramebufferObject *ColorRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 

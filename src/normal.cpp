@@ -46,6 +46,7 @@ GLint NormalObject::bpc() {
 }
 
 void NormalObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
 }
 
@@ -101,7 +102,6 @@ NormalRenderer::~NormalRenderer() {
 QOpenGLFramebufferObject *NormalRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 

@@ -45,7 +45,6 @@ signals:
     void smoothYChanged(float smooth);
     void seedChanged(int seed);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void updateColumns(int columns);
     void updateRows(int rows);

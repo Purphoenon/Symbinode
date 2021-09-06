@@ -40,7 +40,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -54,48 +54,54 @@ Item {
             propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: inputMinParam
-        y: 38
-        propertyName: "Input Min"
-        onPropertyValueChanged: {
-            inputMinChanged(inputMinParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: inputMinParam
+            propertyName: "Input Min"
+            onPropertyValueChanged: {
+                inputMinChanged(inputMinParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startInputMin", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startInputMin", propertyValue, oldValue)
+        ParamSlider {
+            id: inputMaxParam
+            y: 18
+            propertyName: "Input Max"
+            onPropertyValueChanged: {
+                inputMaxChanged(inputMaxParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startInputMax", propertyValue, oldValue)
+            }
         }
-    }
-    ParamSlider {
-        id: inputMaxParam
-        y: 71
-        propertyName: "Input Max"
-        onPropertyValueChanged: {
-            inputMaxChanged(inputMaxParam.propertyValue)
+        ParamSlider {
+            id: outputMinParam
+            y: 51
+            propertyName: "Output Min"
+            onPropertyValueChanged: {
+                outputMinChanged(outputMinParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startOutputMin", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startInputMax", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: outputMinParam
-        y: 104
-        propertyName: "Output Min"
-        onPropertyValueChanged: {
-            outputMinChanged(outputMinParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startOutputMin", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: outputMaxParam
-        y: 137
-        propertyName: "Output Max"
-        onPropertyValueChanged: {
-            outputMaxChanged(outputMaxParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startOutputMax", propertyValue, oldValue)
+        ParamSlider {
+            id: outputMaxParam
+            y: 84
+            propertyName: "Output Max"
+            onPropertyValueChanged: {
+                outputMaxChanged(outputMaxParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startOutputMax", propertyValue, oldValue)
+            }
         }
     }
 }

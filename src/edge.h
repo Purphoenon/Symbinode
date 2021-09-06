@@ -62,6 +62,7 @@ public slots:
     void pressedEdge(bool controlModifier);
 private:
     CubicBezier *grEdge;
+    CubicBezier *selEdge;
     QVector2D m_startPos;
     QVector2D m_endPos;
     Socket *m_startSocket = nullptr;

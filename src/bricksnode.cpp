@@ -18,17 +18,7 @@ BricksNode::BricksNode(QQuickItem *parent, QVector2D resolution, GLint bpc, int 
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &BricksNode::updateScale);
     connect(preview, &BricksObject::changedTexture, this, &BricksNode::setOutput);
-    connect(this, &BricksNode::columnsChanged, preview, &BricksObject::setColumns);
-    connect(this, &BricksNode::rowsChanged, preview, &BricksObject::setRows);
-    connect(this, &BricksNode::offsetChanged, preview, &BricksObject::setOffset);
-    connect(this, &BricksNode::bricksWidthChanged, preview, &BricksObject::setBricksWidth);
-    connect(this, &BricksNode::bricksHeightChanged, preview, &BricksObject::setBricksHeight);
-    connect(this, &BricksNode::maskChanged, preview, &BricksObject::setMask);
-    connect(this, &BricksNode::smoothXChanged, preview, &BricksObject::setSmoothX);
-    connect(this, &BricksNode::smoothYChanged, preview, &BricksObject::setSmoothY);
-    connect(this, &BricksNode::seedChanged, preview, &BricksObject::setSeed);
     connect(preview, &BricksObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &BricksObject::setResolution);
     connect(this, &Node::changeBPC, preview, &BricksObject::setBPC);
@@ -73,7 +63,14 @@ void BricksNode::saveTexture(QString fileName) {
 }
 
 void BricksNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+    preview->update();
+    if(deserializing) deserializing = false;
 }
 
 BricksNode *BricksNode::clone() {
@@ -133,8 +130,21 @@ void BricksNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &ha
     propertiesPanel->setProperty("startSmothY", m_smoothY);
     propertiesPanel->setProperty("startMask", m_mask);
     propertiesPanel->setProperty("startSeed", m_seed);
+
+    preview->setColumns(m_columns);
+    preview->setRows(m_rows);
+    preview->setOffset(m_offset);
+    preview->setBricksWidth(m_width);
+    preview->setBricksHeight(m_height);
+    preview->setSmoothX(m_smoothX);
+    preview->setSmoothY(m_smoothY);
+    preview->setMask(m_mask);
+    preview->setSeed(m_seed);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 int BricksNode::columns() {
@@ -142,8 +152,11 @@ int BricksNode::columns() {
 }
 
 void BricksNode::setColumns(int columns) {
+    if(m_columns == columns) return;
     m_columns = columns;
     columnsChanged(columns);
+    preview->setColumns(columns);
+    preview->update();
 }
 
 int BricksNode::rows() {
@@ -151,8 +164,11 @@ int BricksNode::rows() {
 }
 
 void BricksNode::setRows(int rows) {
+    if(m_rows == rows) return;
     m_rows = rows;
     rowsChanged(rows);
+    preview->setRows(rows);
+    preview->update();
 }
 
 float BricksNode::offset() {
@@ -160,8 +176,11 @@ float BricksNode::offset() {
 }
 
 void BricksNode::setOffset(float offset) {
+    if(m_offset == offset) return;
     m_offset = offset;
     offsetChanged(offset);
+    preview->setOffset(offset);
+    preview->update();
 }
 
 float BricksNode::bricksWidth() {
@@ -169,8 +188,11 @@ float BricksNode::bricksWidth() {
 }
 
 void BricksNode::setBricksWidth(float width) {
+    if(m_width == width) return;
     m_width = width;
     bricksWidthChanged(width);
+    preview->setBricksWidth(width);
+    preview->update();
 }
 
 float BricksNode::bricksHeight() {
@@ -178,8 +200,11 @@ float BricksNode::bricksHeight() {
 }
 
 void BricksNode::setBricksHeight(float height) {
+    if(m_height == height) return;
     m_height = height;
     bricksHeightChanged(height);
+    preview->setBricksHeight(height);
+    preview->update();
 }
 
 float BricksNode::mask() {
@@ -187,8 +212,11 @@ float BricksNode::mask() {
 }
 
 void BricksNode::setMask(float mask) {
+    if(m_mask == mask) return;
     m_mask = mask;
     maskChanged(mask);
+    preview->setMask(mask);
+    preview->update();
 }
 
 float BricksNode::smoothX() {
@@ -196,8 +224,11 @@ float BricksNode::smoothX() {
 }
 
 void BricksNode::setSmoothX(float smooth) {
+    if(m_smoothX == smooth) return;
     m_smoothX = smooth;
     smoothXChanged(smooth);
+    preview->setSmoothX(smooth);
+    preview->update();
 }
 
 float BricksNode::smoothY() {
@@ -205,8 +236,11 @@ float BricksNode::smoothY() {
 }
 
 void BricksNode::setSmoothY(float smooth) {
+    if(m_smoothY == smooth) return;
     m_smoothY = smooth;
     smoothYChanged(smooth);
+    preview->setSmoothY(smooth);
+    preview->update();
 }
 
 int BricksNode::seed() {
@@ -214,14 +248,11 @@ int BricksNode::seed() {
 }
 
 void BricksNode::setSeed(int seed) {
+    if(m_seed == seed) return;
     m_seed = seed;
     seedChanged(seed);
-}
-
-void BricksNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setSeed(seed);
+    preview->update();
 }
 
 void BricksNode::setOutput() {

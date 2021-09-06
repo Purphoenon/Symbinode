@@ -65,7 +65,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -79,177 +79,184 @@ Item {
             propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: columnsParam
-        y: 38
-        propertyName: "Columns"
-        minimum: 1
-        maximum: 20
-        step: 1
-        onPropertyValueChanged: {
-            columnsChanged(columnsParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: columnsParam
+            propertyName: "Columns"
+            minimum: 1
+            maximum: 20
+            step: 1
+            onPropertyValueChanged: {
+                columnsChanged(columnsParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startColumns", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startColumns", propertyValue, oldValue)
+        ParamSlider {
+            id: rowsParam
+            y: 18
+            propertyName: "Rows"
+            minimum: 1
+            maximum: 20
+            step: 1
+            onPropertyValueChanged: {
+                rowsChanged(rowsParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRows", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: offsetXParam
+            y: 51
+            propertyName: "Offset X"
+            onPropertyValueChanged: {
+                offsetXChanged(offsetXParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startOffsetX", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: offsetYParam
+            y: 84
+            propertyName: "Offset Y"
+            onPropertyValueChanged: {
+                offsetYChanged(offsetYParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startOffsetY", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: scaleParam
+            y: 117
+            maximum: 4
+            propertyName: "Scale"
+            onPropertyValueChanged: {
+                scaleTileChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startTileScale", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: scaleXParam
+            y: 150
+            maximum: 4
+            propertyName: "Scale X"
+            onPropertyValueChanged: {
+                scaleXChanged(scaleXParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleX", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: scaleYParam
+            y: 184
+            maximum: 4
+            propertyName: "Scale Y"
+            onPropertyValueChanged: {
+                scaleYChanged(scaleYParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleY", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: rotationParam
+            y: 216
+            maximum: 360
+            step: 1
+            propertyName: "Rotation"
+            onPropertyValueChanged: {
+                rotationAngleChanged(rotationParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRotation", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: randPositionParam
+            y: 249
+            propertyName: "Randomizing position"
+            onPropertyValueChanged: {
+                randPositionChanged(randPositionParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRandPosition", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: randRotationParam
+            y: 282
+            propertyName: "Randomizing rotation"
+            onPropertyValueChanged: {
+                randRotationChanged(randRotationParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRandRotation", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: randScaleParam
+            y: 315
+            propertyName: "Randomizing scale"
+            onPropertyValueChanged: {
+                randScaleChanged(randScaleParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRandScale", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: maskStrengthParam
+            y: 348
+            propertyName: "Mask"
+            onPropertyValueChanged: {
+                maskChanged(maskStrengthParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startMask", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: inputsCountParam
+            y: 381
+            minimum: 1
+            maximum: 6
+            step: 1
+            propertyName: "Inputs count"
+            onPropertyValueChanged: {
+                inputsCountChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startInputsCount", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: seedParam
+            y: 414
+            minimum: 1
+            maximum: 100
+            step: 1
+            propertyName: "Seed"
+            onPropertyValueChanged: {
+                seedChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSeed", propertyValue, oldValue)
+            }
         }
     }
-    ParamSlider {
-        id: rowsParam
-        y: 71
-        propertyName: "Rows"
-        minimum: 1
-        maximum: 20
-        step: 1
-        onPropertyValueChanged: {
-            rowsChanged(rowsParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startRows", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: offsetXParam
-        y: 104
-        propertyName: "Offset X"
-        onPropertyValueChanged: {
-            offsetXChanged(offsetXParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startOffsetX", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: offsetYParam
-        y: 137
-        propertyName: "Offset Y"
-        onPropertyValueChanged: {
-            offsetYChanged(offsetYParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startOffsetY", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: scaleParam
-        y: 170
-        maximum: 4
-        propertyName: "Scale"
-        onPropertyValueChanged: {
-            scaleTileChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startTileScale", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: scaleXParam
-        y: 203
-        maximum: 4
-        propertyName: "Scale X"
-        onPropertyValueChanged: {
-            scaleXChanged(scaleXParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleX", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: scaleYParam
-        y: 236
-        maximum: 4
-        propertyName: "Scale Y"
-        onPropertyValueChanged: {
-            scaleYChanged(scaleYParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleY", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: rotationParam
-        y: 269
-        maximum: 360
-        step: 1
-        propertyName: "Rotation"
-        onPropertyValueChanged: {
-            rotationAngleChanged(rotationParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startRotation", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: randPositionParam
-        y: 302
-        propertyName: "Randomizing position"
-        onPropertyValueChanged: {
-            randPositionChanged(randPositionParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startRandPosition", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: randRotationParam
-        y: 335
-        propertyName: "Randomizing rotation"
-        onPropertyValueChanged: {
-            randRotationChanged(randRotationParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startRandRotation", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: randScaleParam
-        y: 368
-        propertyName: "Randomizing scale"
-        onPropertyValueChanged: {
-            randScaleChanged(randScaleParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startRandScale", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: maskStrengthParam
-        y: 401
-        propertyName: "Mask"
-        onPropertyValueChanged: {
-            maskChanged(maskStrengthParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startMask", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: inputsCountParam
-        y: 434
-        minimum: 1
-        maximum: 6
-        step: 1
-        propertyName: "Inputs count"
-        onPropertyValueChanged: {
-            inputsCountChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startInputsCount", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: seedParam
-        y: 467
-        minimum: 1
-        maximum: 100
-        step: 1
-        propertyName: "Seed"
-        onPropertyValueChanged: {
-            seedChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSeed", propertyValue, oldValue)
-        }
-    }
+
     ParamCheckbox{
         id: keepProportionParam
         y: 515

@@ -24,6 +24,9 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
+#include <QTime>
+#include <QTimer>
+#include <QLabel>
 #include "FreeImage.h"
 
 class Preview3DObject: public QQuickFramebufferObject
@@ -42,6 +45,7 @@ public:
     QQuickFramebufferObject::Renderer *createRenderer() const override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void hoverEnterEvent(QHoverEvent *event) override;
@@ -65,6 +69,7 @@ public:
     void setBloomThreshold(float intensity);
     bool bloom();
     void setBloom(bool enable);
+    void transformed();
     QVariant albedo();
     QVariant metalness();
     QVariant roughness();
@@ -76,6 +81,8 @@ public:
     bool translationView = false;
     bool zoomView = false;
     bool rotationObject = false;
+    bool resized = false;
+    bool transformView = false;
     bool updateRes = false;
     bool useAlbedoTex = false;
     bool useMetalTex = false;
@@ -94,6 +101,7 @@ public slots:
     void updateNormal(unsigned int normal);
     void updateHeight(unsigned int height);
     void updateEmission(unsigned int emission);
+    void sizeUpdated(bool resize);
 private:
     float lastX = 0.0f;
     float lastY = 0.0f;
@@ -118,6 +126,7 @@ private:
     float m_bloomIntensity = 0.25f;
     float m_bloomThreshold = 1.0f;
     bool m_bloom = false;
+    QTimer m_timer;
 };
 
 class Preview3DRenderer: public QQuickFramebufferObject::Renderer, public QOpenGLFunctions_4_4_Core {
@@ -160,9 +169,20 @@ private:
     QVector3D positionV = QVector3D(0.0f, 0.0f, 19.0f);
     float zoom = 35.0f;
     QQuaternion rotQuat;
+    bool transformating = false;
+    int samples = 8;
     int primitive = 0;
     float bloomRadius = 1.0f;
     bool bloom = false;
+    int tilesSize = 1;
+    float heightScale = 0.04f;
+    float emissiveStrength = 1.0f;
+    bool useAlbedoTex = false;
+    bool useMetalTex = false;
+    bool useRoughTex = false;
+    bool useNormalTex = false;
+    bool useHeightTex = false;
+    bool useEmisTex = false;
     unsigned int hdrFBO = 0;
     unsigned int rboDepth = 0;
     unsigned int brightTexture = 0;

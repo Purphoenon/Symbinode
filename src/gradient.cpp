@@ -19,9 +19,9 @@ QString GradientObject::gradientType() {
 }
 
 void GradientObject::setGradientType(QString type) {
+    if(m_gradientType == type) return;
     m_gradientType = type;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::startX() {
@@ -29,9 +29,9 @@ float GradientObject::startX() {
 }
 
 void GradientObject::setStartX(float x) {
+    if(m_startX == x) return;
     m_startX = x;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::startY() {
@@ -39,9 +39,9 @@ float GradientObject::startY() {
 }
 
 void GradientObject::setStartY(float y) {
+    if(m_startY == y) return;
     m_startY = y;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::endX() {
@@ -49,9 +49,9 @@ float GradientObject::endX() {
 }
 
 void GradientObject::setEndX(float x) {
+    if(m_endX == x) return;
     m_endX = x;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::endY() {
@@ -59,9 +59,9 @@ float GradientObject::endY() {
 }
 
 void GradientObject::setEndY(float y) {
+    if(m_endY == y) return;
     m_endY = y;
     generatedGradient = true;
-    update();
 }
 
 float GradientObject::reflectedWidth() {
@@ -69,9 +69,9 @@ float GradientObject::reflectedWidth() {
 }
 
 void GradientObject::setReflectedWidth(float width) {
+    if(m_reflectedWidth == width) return;
     m_reflectedWidth = width;
     generatedGradient = true;
-    update();
 }
 
 bool GradientObject::tiling() {
@@ -79,9 +79,9 @@ bool GradientObject::tiling() {
 }
 
 void GradientObject::setTiling(bool tiling) {
+    if(m_tiling == tiling) return;
     m_tiling = tiling;
     generatedGradient = true;
-    update();
 }
 
 unsigned int GradientObject::maskTexture() {
@@ -124,9 +124,9 @@ GLint GradientObject::bpc() {
 }
 
 void GradientObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 GradientRenderer::GradientRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc){
@@ -148,6 +148,7 @@ GradientRenderer::GradientRenderer(QVector2D res, GLint bpc): m_resolution(res),
 
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
 
     gradientShader->bind();
@@ -196,10 +197,13 @@ GradientRenderer::GradientRenderer(QVector2D res, GLint bpc): m_resolution(res),
     else if(m_bpc == GL_RGBA8) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gradientTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -219,7 +223,6 @@ GradientRenderer::~GradientRenderer() {
 QOpenGLFramebufferObject *GradientRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -235,24 +238,24 @@ void GradientRenderer::synchronize(QQuickFramebufferObject *item) {
             gradientItem->setTexture(gradientTexture);
         }
     }
-    if(gradientItem->bpcUpdated) {
-        gradientItem->bpcUpdated = false;
-        m_bpc = gradientItem->bpc();
-        updateTexResolution();
-        createGradient();
-        gradientItem->setTexture(gradientTexture);
-    }
-    if(gradientItem->generatedGradient) {
-        gradientItem->generatedGradient = false;
-        m_maskTexture = gradientItem->maskTexture();
-        m_gradientType = gradientItem->gradientType();
-        gradientShader->bind();
-        gradientShader->setUniformValue(gradientShader->uniformLocation("startPos"), QVector2D(gradientItem->startX(), gradientItem->startY()));
-        gradientShader->setUniformValue(gradientShader->uniformLocation("endPos"), QVector2D(gradientItem->endX(), gradientItem->endY()));
-        gradientShader->setUniformValue(gradientShader->uniformLocation("whiteWidth"), gradientItem->reflectedWidth());
-        gradientShader->setUniformValue(gradientShader->uniformLocation("tiling"), gradientItem->tiling());
-        gradientShader->setUniformValue(gradientShader->uniformLocation("useMask"), m_maskTexture);
-        gradientShader->release();
+    if(gradientItem->generatedGradient || gradientItem->bpcUpdated) {
+        if(gradientItem->bpcUpdated) {
+            gradientItem->bpcUpdated = false;
+            m_bpc = gradientItem->bpc();
+            updateTexResolution();
+        }
+        if(gradientItem->generatedGradient) {
+            gradientItem->generatedGradient = false;
+            m_maskTexture = gradientItem->maskTexture();
+            m_gradientType = gradientItem->gradientType();
+            gradientShader->bind();
+            gradientShader->setUniformValue(gradientShader->uniformLocation("startPos"), QVector2D(gradientItem->startX(), gradientItem->startY()));
+            gradientShader->setUniformValue(gradientShader->uniformLocation("endPos"), QVector2D(gradientItem->endX(), gradientItem->endY()));
+            gradientShader->setUniformValue(gradientShader->uniformLocation("whiteWidth"), gradientItem->reflectedWidth());
+            gradientShader->setUniformValue(gradientShader->uniformLocation("tiling"), gradientItem->tiling());
+            gradientShader->setUniformValue(gradientShader->uniformLocation("useMask"), m_maskTexture);
+            gradientShader->release();
+        }
         createGradient();
         gradientItem->setTexture(gradientTexture);
         gradientItem->updatePreview(gradientTexture);
@@ -300,12 +303,14 @@ void GradientRenderer::createGradient() {
     glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &index);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     gradientShader->release();
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, gradientTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

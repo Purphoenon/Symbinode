@@ -24,7 +24,6 @@ signals:
     void intensityChanged(float intensity);
     void angleChanged(int angle);
 public slots:
-    void updateScale(float scale);
     void updateIntensity(qreal intensity);
     void updateAngle(int angle);
     void setOutput();

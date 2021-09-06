@@ -36,7 +36,6 @@ unsigned int BevelObject::maskTexture() {
 void BevelObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     beveledTex = true;
-    update();
 }
 
 unsigned int BevelObject::sourceTexture() {
@@ -46,7 +45,6 @@ unsigned int BevelObject::sourceTexture() {
 void BevelObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     beveledTex = true;
-    update();
 }
 
 float BevelObject::distance() {
@@ -54,9 +52,9 @@ float BevelObject::distance() {
 }
 
 void BevelObject::setDistance(float dist) {
+    if(m_dist == dist) return;
     m_dist = dist;
     beveledTex = true;
-    update();
 }
 
 float BevelObject::smooth() {
@@ -64,9 +62,9 @@ float BevelObject::smooth() {
 }
 
 void BevelObject::setSmooth(float smooth) {
+    if(m_smooth == smooth) return;
     m_smooth = smooth;
     beveledTex = true;
-    update();
 }
 
 bool BevelObject::useAlpha() {
@@ -74,9 +72,9 @@ bool BevelObject::useAlpha() {
 }
 
 void BevelObject::setUseAlpha(bool use) {
+    if(m_alpha == use) return;
     m_alpha = use;
     beveledTex = true;
-    update();
 }
 
 QVector2D BevelObject::resolution() {
@@ -94,9 +92,9 @@ GLint BevelObject::bpc() {
 }
 
 void BevelObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 BevelRenderer::BevelRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc)
@@ -128,6 +126,7 @@ BevelRenderer::BevelRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc
     blurShader->link();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     bevelShader->bind();
     bevelShader->setUniformValue(bevelShader->uniformLocation("dfTexture"), 0);
@@ -178,8 +177,8 @@ BevelRenderer::BevelRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glGenFramebuffers(1, &bevelFBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, bevelFBO);
     glGenTextures(1, &m_bevelTexture);
+    glBindFramebuffer(GL_FRAMEBUFFER, bevelFBO);    
     glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
     if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
@@ -187,10 +186,13 @@ BevelRenderer::BevelRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc
     else if(m_bpc == GL_RGBA8) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_bevelTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -264,7 +266,6 @@ BevelRenderer::~BevelRenderer()
 QOpenGLFramebufferObject *BevelRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -275,29 +276,31 @@ void BevelRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = bevelItem->resolution();
         updateTexResolution();
     }
-    if(bevelItem->bpcUpdated) {
-        bevelItem->bpcUpdated = false;
-        m_bpc = bevelItem->bpc();
-        updateTexResolution();
-        jumpFlooding();
-        bevelItem->setTexture(m_bevelTexture);
-    }
-    if(bevelItem->beveledTex) {
-        bevelItem->beveledTex = false;
-        m_sourceTexture = bevelItem->sourceTexture();
+    if(bevelItem->beveledTex || bevelItem->bpcUpdated) {
+        if(bevelItem->bpcUpdated) {
+            bevelItem->bpcUpdated = false;
+            m_bpc = bevelItem->bpc();
+            updateTexResolution();
+        }
+        if(bevelItem->beveledTex) {
+            bevelItem->beveledTex = false;
+            m_sourceTexture = bevelItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = bevelItem->maskTexture();
+                float dist = bevelItem->distance();
+                preparationShader->bind();
+                preparationShader->setUniformValue(preparationShader->uniformLocation("outer"), dist > 0.0f);
+                preparationShader->release();
+                bevelShader->bind();
+                bevelShader->setUniformValue(bevelShader->uniformLocation("dist"), dist);
+                bevelShader->setUniformValue(bevelShader->uniformLocation("useAlpha"), bevelItem->useAlpha());
+                bevelShader->release();
+                blurShader->bind();
+                blurShader->setUniformValue(blurShader->uniformLocation("intensity"), bevelItem->smooth());
+                blurShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = bevelItem->maskTexture();
-            float dist = bevelItem->distance();
-            preparationShader->bind();
-            preparationShader->setUniformValue(preparationShader->uniformLocation("outer"), dist > 0.0f);
-            preparationShader->release();
-            bevelShader->bind();
-            bevelShader->setUniformValue(bevelShader->uniformLocation("dist"), dist);
-            bevelShader->setUniformValue(bevelShader->uniformLocation("useAlpha"), bevelItem->useAlpha());
-            bevelShader->release();
-            blurShader->bind();
-            blurShader->setUniformValue(blurShader->uniformLocation("intensity"), bevelItem->smooth());
-            blurShader->release();
             jumpFlooding();
             bevelItem->setTexture(m_bevelTexture);
             bevelItem->updatePreview(m_bevelTexture);
@@ -325,6 +328,7 @@ void BevelRenderer::render() {
 
     if(m_sourceTexture) {
         textureShader->bind();
+        textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
         glBindVertexArray(textureVAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
@@ -398,6 +402,9 @@ void BevelRenderer::jumpFlooding() {
     glBindTexture(GL_TEXTURE_2D, 0);
     bevelShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     //blur
     first_iteration = true;
@@ -429,15 +436,18 @@ void BevelRenderer::jumpFlooding() {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     textureShader->bind();
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 0.0f);
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_blurTexture[1]);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);      
     textureShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_bevelTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

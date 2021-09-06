@@ -50,7 +50,6 @@ unsigned int WarpObject::maskTexture() {
 void WarpObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     warpedTex = true;
-    update();
 }
 
 unsigned int WarpObject::sourceTexture() {
@@ -60,7 +59,6 @@ unsigned int WarpObject::sourceTexture() {
 void WarpObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     warpedTex = true;
-    update();
 }
 
 unsigned int WarpObject::warpTexture() {
@@ -70,7 +68,6 @@ unsigned int WarpObject::warpTexture() {
 void WarpObject::setWarpTexture(unsigned int texture) {
     m_warpTexture = texture;
     warpedTex = true;
-    update();
 }
 
 void WarpObject::saveTexture(QString fileName) {
@@ -84,9 +81,9 @@ float WarpObject::intensity() {
 }
 
 void WarpObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     warpedTex = true;
-    update();
 }
 
 QVector2D WarpObject::resolution() {
@@ -104,9 +101,9 @@ GLint WarpObject::bpc() {
 }
 
 void WarpObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 WarpRenderer::WarpRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -130,6 +127,7 @@ WarpRenderer::WarpRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(b
     warpShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -157,10 +155,13 @@ WarpRenderer::WarpRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(b
     else if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_warpedTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -178,7 +179,6 @@ WarpRenderer::~WarpRenderer() {
 QOpenGLFramebufferObject *WarpRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -189,25 +189,27 @@ void WarpRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = warpItem->resolution();
         updateTexResolution();
     }
-    if(warpItem->bpcUpdated) {
-        warpItem->bpcUpdated = false;
-        m_bpc = warpItem->bpc();
-        updateTexResolution();
-        createWarp();
-        warpItem->setTexture(m_warpedTexture);
-    }
-    if(warpItem->warpedTex) {
-        warpItem->warpedTex = false;
-        m_sourceTexture = warpItem->sourceTexture();
+    if(warpItem->warpedTex || warpItem->bpcUpdated) {
+        if(warpItem->bpcUpdated) {
+            warpItem->bpcUpdated = false;
+            m_bpc = warpItem->bpc();
+            updateTexResolution();
+        }
+        if(warpItem->warpedTex) {
+            warpItem->warpedTex = false;
+            m_sourceTexture = warpItem->sourceTexture();
+            if(m_sourceTexture) {
+                m_warpTexture = warpItem->warpTexture();
+                maskTexture = warpItem->maskTexture();
+                warpShader->bind();
+                warpShader->setUniformValue(warpShader->uniformLocation("intensity"), warpItem->intensity());
+                warpShader->setUniformValue(warpShader->uniformLocation("useMask"), maskTexture);
+                warpShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            m_warpTexture = warpItem->warpTexture();
-            maskTexture = warpItem->maskTexture();
-            warpShader->bind();
-            warpShader->setUniformValue(warpShader->uniformLocation("intensity"), warpItem->intensity());
-            warpShader->setUniformValue(warpShader->uniformLocation("useMask"), maskTexture);
-            warpShader->release();
             createWarp();
-            warpItem->setTexture(m_warpedTexture);            
+            warpItem->setTexture(m_warpedTexture);
             warpItem->updatePreview(m_warpedTexture);
         }
     }
@@ -257,11 +259,13 @@ void WarpRenderer::createWarp() {
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     warpShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_warpedTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

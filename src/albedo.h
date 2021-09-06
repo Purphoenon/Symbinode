@@ -47,6 +47,7 @@ public:
     bool useAlbedoTex = false;
     bool selectedItem = false;
     bool texSaving = false;
+    bool albedoUpdated = false;
     bool resUpdated = false;
     bool bpcUpdated = false;
     QString saveName = "";

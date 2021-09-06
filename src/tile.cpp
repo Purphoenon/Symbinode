@@ -57,7 +57,6 @@ unsigned int TileObject::maskTexture() {
 void TileObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     tiledTex = true;
-    update();
 }
 
 unsigned int TileObject::sourceTexture() {
@@ -67,7 +66,6 @@ unsigned int TileObject::sourceTexture() {
 void TileObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     tiledTex = true;
-    update();
 }
 
 unsigned int TileObject::tile1() {
@@ -77,7 +75,6 @@ unsigned int TileObject::tile1() {
 void TileObject::setTile1(unsigned int texture) {
     m_tile1 = texture;
     tiledTex = true;
-    update();
 }
 
 unsigned int TileObject::tile2() {
@@ -87,7 +84,6 @@ unsigned int TileObject::tile2() {
 void TileObject::setTile2(unsigned int texture) {
     m_tile2 = texture;
     tiledTex = true;
-    update();
 }
 
 unsigned int TileObject::tile3() {
@@ -97,7 +93,6 @@ unsigned int TileObject::tile3() {
 void TileObject::setTile3(unsigned int texture) {
     m_tile3 = texture;
     tiledTex = true;
-    update();
 }
 
 unsigned int TileObject::tile4() {
@@ -107,7 +102,6 @@ unsigned int TileObject::tile4() {
 void TileObject::setTile4(unsigned int texture) {
     m_tile4 = texture;
     tiledTex = true;
-    update();
 }
 
 unsigned int TileObject::tile5() {
@@ -117,7 +111,6 @@ unsigned int TileObject::tile5() {
 void TileObject::setTile5(unsigned int texture) {
     m_tile5 = texture;
     tiledTex = true;
-    update();
 }
 
 void TileObject::saveTexture(QString fileName) {
@@ -131,9 +124,9 @@ float TileObject::offsetX() {
 }
 
 void TileObject::setOffsetX(float offset) {
+    if(m_offsetX == offset) return;
     m_offsetX = offset;
     tiledTex = true;
-    update();
 }
 
 float TileObject::offsetY() {
@@ -141,9 +134,9 @@ float TileObject::offsetY() {
 }
 
 void TileObject::setOffsetY(float offset) {
+    if(m_offsetY == offset) return;
     m_offsetY = offset;
     tiledTex = true;
-    update();
 }
 
 int TileObject::columns() {
@@ -151,9 +144,9 @@ int TileObject::columns() {
 }
 
 void TileObject::setColumns(int columns) {
+    if(m_columns == columns) return;
     m_columns = columns;
     tiledTex = true;
-    update();
 }
 
 int TileObject::rows() {
@@ -161,9 +154,9 @@ int TileObject::rows() {
 }
 
 void TileObject::setRows(int rows) {
+    if(m_rows == rows) return;
     m_rows = rows;
     tiledTex = true;
-    update();
 }
 
 float TileObject::scaleX() {
@@ -171,9 +164,9 @@ float TileObject::scaleX() {
 }
 
 void TileObject::setScaleX(float scale) {
+    if(m_scaleX == scale) return;
     m_scaleX = scale;
     tiledTex = true;
-    update();
 }
 
 float TileObject::scaleY() {
@@ -181,9 +174,9 @@ float TileObject::scaleY() {
 }
 
 void TileObject::setScaleY(float scale) {
+    if(m_scaleY == scale) return;
     m_scaleY = scale;
     tiledTex = true;
-    update();
 }
 
 int TileObject::rotationAngle() {
@@ -191,9 +184,9 @@ int TileObject::rotationAngle() {
 }
 
 void TileObject::setRotationAngle(int angle) {
+    if(m_rotationAngle == angle) return;
     m_rotationAngle = angle;
     tiledTex = true;
-    update();
 }
 
 float TileObject::randPosition() {
@@ -201,9 +194,9 @@ float TileObject::randPosition() {
 }
 
 void TileObject::setRandPosition(float rand) {
+    if(m_randPosition == rand) return;
     m_randPosition = rand;
     tiledTex = true;
-    update();
 }
 
 float TileObject::randRotation() {
@@ -211,9 +204,9 @@ float TileObject::randRotation() {
 }
 
 void TileObject::setRandRotation(float rand) {
+    if(m_randRotation == rand) return;
     m_randRotation = rand;
     tiledTex = true;
-    update();
 }
 
 float TileObject::randScale() {
@@ -221,9 +214,9 @@ float TileObject::randScale() {
 }
 
 void TileObject::setRandScale(float rand) {
+    if(m_randScale == rand) return;
     m_randScale = rand;
     tiledTex = true;
-    update();
 }
 
 float TileObject::maskStrength() {
@@ -231,9 +224,9 @@ float TileObject::maskStrength() {
 }
 
 void TileObject::setMaskStrength(float mask) {
+    if(m_maskStrength == mask) return;
     m_maskStrength = mask;
     tiledTex = true;
-    update();
 }
 
 int TileObject::inputsCount() {
@@ -241,9 +234,9 @@ int TileObject::inputsCount() {
 }
 
 void TileObject::setInputsCount(int count) {
+    if(m_inputsCount == count) return;
     m_inputsCount = count;
     tiledTex = true;
-    update();
 }
 
 int TileObject::seed() {
@@ -251,9 +244,9 @@ int TileObject::seed() {
 }
 
 void TileObject::setSeed(int seed) {
+    if(m_seed == seed) return;
     m_seed = seed;
     randUpdated = true;
-    update();
 }
 
 float TileObject::tileScale() {
@@ -261,9 +254,9 @@ float TileObject::tileScale() {
 }
 
 void TileObject::setTileScale(float scale) {
+    if(m_scale == scale) return;
     m_scale = scale;
     tiledTex = true;
-    update();
 }
 
 bool TileObject::keepProportion() {
@@ -271,9 +264,9 @@ bool TileObject::keepProportion() {
 }
 
 void TileObject::setKeepProportion(bool keep) {
+    if(m_keepProportion == keep) return;
     m_keepProportion = keep;
     tiledTex = true;
-    update();
 }
 
 bool TileObject::useAlpha() {
@@ -281,9 +274,9 @@ bool TileObject::useAlpha() {
 }
 
 void TileObject::setUseAlpha(bool use) {
+    if(m_useAlpha == use) return;
     m_useAlpha = use;
     tiledTex = true;
-    update();
 }
 
 bool TileObject::depthMask() {
@@ -291,9 +284,9 @@ bool TileObject::depthMask() {
 }
 
 void TileObject::setDepthMask(bool depth) {
+    if(m_depthMask == depth) return;
     m_depthMask = depth;
     tiledTex = true;
-    update();
 }
 
 QVector2D TileObject::resolution() {
@@ -311,9 +304,9 @@ GLint TileObject::bpc() {
 }
 
 void TileObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 TileRenderer::TileRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -356,6 +349,7 @@ TileRenderer::TileRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(b
 
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
 
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
@@ -385,10 +379,13 @@ TileRenderer::TileRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(b
     else if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_tiledTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -422,7 +419,6 @@ TileRenderer::~TileRenderer() {
 QOpenGLFramebufferObject *TileRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -433,48 +429,50 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = tileItem->resolution();
         updateTexResolution();
     }
-    if(tileItem->bpcUpdated) {
-        tileItem->bpcUpdated = false;
-        m_bpc = tileItem->bpc();
-        updateTexResolution();
-        createTile();
-        tileItem->setTexture(m_tiledTexture);
-    }
-    if(tileItem->tiledTex) {
-        tileItem->tiledTex = false;
-        m_sourceTexture = tileItem->sourceTexture();
-        m_tile1 = tileItem->tile1();
-        m_tile2 = tileItem->tile2();
-        m_tile3 = tileItem->tile3();
-        m_tile4 = tileItem->tile4();
-        m_tile5 = tileItem->tile5();
-        if(m_sourceTexture || m_tile1 || m_tile2 || m_tile3 || m_tile4 || m_tile5) {
-            maskTexture = tileItem->maskTexture();
-            tileShader->bind();
-            tileShader->setUniformValue(tileShader->uniformLocation("offsetX"), tileItem->offsetX());
-            tileShader->setUniformValue(tileShader->uniformLocation("offsetY"), tileItem->offsetY());
-            tileShader->setUniformValue(tileShader->uniformLocation("columns"), tileItem->columns());
-            tileShader->setUniformValue(tileShader->uniformLocation("rows"), tileItem->rows());
-            tileShader->setUniformValue(tileShader->uniformLocation("scaleX"), tileItem->scaleX());
-            tileShader->setUniformValue(tileShader->uniformLocation("scaleY"), tileItem->scaleY());
-            tileShader->setUniformValue(tileShader->uniformLocation("scale"), tileItem->tileScale());
-            tileShader->setUniformValue(tileShader->uniformLocation("rotationAngle"), tileItem->rotationAngle());
-            tileShader->setUniformValue(tileShader->uniformLocation("randPosition"), tileItem->randPosition());
-            tileShader->setUniformValue(tileShader->uniformLocation("randRotation"), tileItem->randRotation());
-            tileShader->setUniformValue(tileShader->uniformLocation("randScale"), tileItem->randScale());
-            tileShader->setUniformValue(tileShader->uniformLocation("maskStrength"), tileItem->maskStrength());
-            tileShader->setUniformValue(tileShader->uniformLocation("inputCount"), tileItem->inputsCount());
-            tileShader->setUniformValue(tileShader->uniformLocation("keepProportion"), tileItem->keepProportion());
-            tileShader->setUniformValue(tileShader->uniformLocation("useAlpha"), tileItem->useAlpha());
-            tileShader->setUniformValue(tileShader->uniformLocation("depthMask"), tileItem->depthMask());
-            tileShader->setUniformValue(tileShader->uniformLocation("useMask"), maskTexture);
-            tileShader->release();
-            createTile();
-            tileItem->setTexture(m_tiledTexture);            
-            tileItem->updatePreview(m_tiledTexture);
+    if(tileItem->tiledTex || tileItem->bpcUpdated) {
+        if(tileItem->bpcUpdated) {
+            tileItem->bpcUpdated = false;
+            m_bpc = tileItem->bpc();
+            updateTexResolution();
         }
-        else {
-            tileItem->setTexture(0);
+        if(tileItem->tiledTex) {
+            tileItem->tiledTex = false;
+            m_sourceTexture = tileItem->sourceTexture();
+            m_tile1 = tileItem->tile1();
+            m_tile2 = tileItem->tile2();
+            m_tile3 = tileItem->tile3();
+            m_tile4 = tileItem->tile4();
+            m_tile5 = tileItem->tile5();
+            if(m_sourceTexture || m_tile1 || m_tile2 || m_tile3 || m_tile4 || m_tile5) {
+                maskTexture = tileItem->maskTexture();
+                tileShader->bind();
+                tileShader->setUniformValue(tileShader->uniformLocation("offsetX"), tileItem->offsetX());
+                tileShader->setUniformValue(tileShader->uniformLocation("offsetY"), tileItem->offsetY());
+                tileShader->setUniformValue(tileShader->uniformLocation("columns"), tileItem->columns());
+                tileShader->setUniformValue(tileShader->uniformLocation("rows"), tileItem->rows());
+                tileShader->setUniformValue(tileShader->uniformLocation("scaleX"), tileItem->scaleX());
+                tileShader->setUniformValue(tileShader->uniformLocation("scaleY"), tileItem->scaleY());
+                tileShader->setUniformValue(tileShader->uniformLocation("scale"), tileItem->tileScale());
+                tileShader->setUniformValue(tileShader->uniformLocation("rotationAngle"), tileItem->rotationAngle());
+                tileShader->setUniformValue(tileShader->uniformLocation("randPosition"), tileItem->randPosition());
+                tileShader->setUniformValue(tileShader->uniformLocation("randRotation"), tileItem->randRotation());
+                tileShader->setUniformValue(tileShader->uniformLocation("randScale"), tileItem->randScale());
+                tileShader->setUniformValue(tileShader->uniformLocation("maskStrength"), tileItem->maskStrength());
+                tileShader->setUniformValue(tileShader->uniformLocation("inputCount"), tileItem->inputsCount());
+                tileShader->setUniformValue(tileShader->uniformLocation("keepProportion"), tileItem->keepProportion());
+                tileShader->setUniformValue(tileShader->uniformLocation("useAlpha"), tileItem->useAlpha());
+                tileShader->setUniformValue(tileShader->uniformLocation("depthMask"), tileItem->depthMask());
+                tileShader->setUniformValue(tileShader->uniformLocation("useMask"), maskTexture);
+                tileShader->release();
+            }
+            else {
+                tileItem->setTexture(0);
+            }
+        }
+        if(m_sourceTexture || m_tile1 || m_tile2 || m_tile3 || m_tile4 || m_tile5) {
+            createTile();
+            tileItem->setTexture(m_tiledTexture);
+            tileItem->updatePreview(m_tiledTexture);
         }
     }
     if(tileItem->randUpdated) {
@@ -541,11 +539,13 @@ void TileRenderer::createTile() {
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, m_tile5);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     tileShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_tiledTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

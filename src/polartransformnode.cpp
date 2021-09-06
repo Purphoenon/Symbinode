@@ -16,12 +16,8 @@ PolarTransformNode::PolarTransformNode(QQuickItem *parent, QVector2D resolution,
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &PolarTransformNode::updateScale);
     connect(preview, &PolarTransformObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &PolarTransformObject::textureChanged, this, &PolarTransformNode::setOutput);
-    connect(this, &PolarTransformNode::radiusChanged, preview, &PolarTransformObject::setRadius);
-    connect(this, &PolarTransformNode::clampChanged, preview, &PolarTransformObject::setClamp);
-    connect(this, &PolarTransformNode::angleChanged, preview, &PolarTransformObject::setAngle);
     connect(this, &Node::changeResolution, preview, &PolarTransformObject::setResolution);
     connect(this, &Node::changeBPC, preview, &PolarTransformObject::setBPC);
     propView = new QQuickView();
@@ -47,16 +43,19 @@ void PolarTransformNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
     preview->polaredTex = true;
     preview->update();
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &PolarTransformNode::getPreviewTexture() {
@@ -93,8 +92,15 @@ void PolarTransformNode::deserialize(const QJsonObject &json, QHash<QUuid, Socke
     propertiesPanel->setProperty("startRadius", m_radius);
     propertiesPanel->setProperty("startClamp", m_clamp);
     propertiesPanel->setProperty("startRotation", m_angle);
+
+    preview->setRadius(m_radius);
+    preview->setClamp(m_clamp);
+    preview->setAngle(m_angle);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float PolarTransformNode::radius() {
@@ -102,8 +108,11 @@ float PolarTransformNode::radius() {
 }
 
 void PolarTransformNode::setRadius(float radius) {
+    if(m_radius == radius) return;
     m_radius = radius;
     radiusChanged(radius);
+    preview->setRadius(radius);
+    preview->update();
 }
 
 bool PolarTransformNode::clamp() {
@@ -111,8 +120,11 @@ bool PolarTransformNode::clamp() {
 }
 
 void PolarTransformNode::setClamp(bool clamp) {
+    if(m_clamp == clamp) return;
     m_clamp = clamp;
     clampChanged(clamp);
+    preview->setClamp(clamp);
+    preview->update();
 }
 
 int PolarTransformNode::angle() {
@@ -120,14 +132,11 @@ int PolarTransformNode::angle() {
 }
 
 void PolarTransformNode::setAngle(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     angleChanged(angle);
-}
-
-void PolarTransformNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setAngle(angle);
+    preview->update();
 }
 
 void PolarTransformNode::setOutput() {

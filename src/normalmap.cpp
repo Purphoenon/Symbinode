@@ -54,9 +54,9 @@ float NormalMapObject::strenght() {
 }
 
 void NormalMapObject::setStrenght(float strenght) {
+    if(m_strenght == strenght) return;
     m_strenght = strenght;
     normalGenerated = true;
-    update();
 }
 
 QVector2D NormalMapObject::resolution() {
@@ -74,9 +74,9 @@ GLint NormalMapObject::bpc() {
 }
 
 void NormalMapObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 unsigned int &NormalMapObject::normalTexture() {
@@ -107,6 +107,7 @@ NormalMapRenderer::NormalMapRenderer(QVector2D resolution, GLint bpc): m_resolut
 
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
 
     float vertQuad[] = {-1.0f, -1.0f,
@@ -151,10 +152,13 @@ NormalMapRenderer::NormalMapRenderer(QVector2D resolution, GLint bpc): m_resolut
     else if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, m_resolution.x(), m_resolution.y(), 0, GL_RGB, GL_UNSIGNED_SHORT, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_normalTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -172,7 +176,6 @@ NormalMapRenderer::~NormalMapRenderer() {
 QOpenGLFramebufferObject *NormalMapRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -183,18 +186,20 @@ void NormalMapRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = normalItem->resolution();
         updateTexResolution();
     }
-    if(normalItem->bpcUpdated) {
-        normalItem->bpcUpdated = false;
-        m_bpc = normalItem->bpc();
-        updateTexResolution();
-        createNormalMap();
-        normalItem->setNormalTexture(m_normalTexture);
-    }
-    if(normalItem->normalGenerated) {
-        normalItem->normalGenerated = false;
-        m_grayscaleTexture = normalItem->grayscaleTexture();
+    if(normalItem->normalGenerated || normalItem->bpcUpdated) {
+        if(normalItem->bpcUpdated) {
+            normalItem->bpcUpdated = false;
+            m_bpc = normalItem->bpc();
+            updateTexResolution();
+        }
+        if(normalItem->normalGenerated) {
+            normalItem->normalGenerated = false;
+            m_grayscaleTexture = normalItem->grayscaleTexture();
+            if(m_grayscaleTexture) {
+                strenght = normalItem->strenght();
+            }
+        }
         if(m_grayscaleTexture) {
-            strenght = normalItem->strenght();
             createNormalMap();
             normalItem->setNormalTexture(m_normalTexture);
             normalItem->updatePreview(m_normalTexture);
@@ -238,10 +243,12 @@ void NormalMapRenderer::createNormalMap() {
     normalMap->setUniformValue(normalMap->uniformLocation("res"), m_resolution);
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);    
     normalMap->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_normalTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

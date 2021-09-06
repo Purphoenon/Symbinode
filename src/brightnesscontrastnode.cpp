@@ -33,14 +33,11 @@ BrightnessContrastNode::BrightnessContrastNode(QQuickItem *parent, QVector2D res
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &BrightnessContrastNode::updateScale);
     connect(this, &Node::generatePreview, this, &BrightnessContrastNode::previewGenerated);
     connect(preview, &BrightnessContrastObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &BrightnessContrastObject::textureChanged, this, &BrightnessContrastNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BrightnessContrastObject::setResolution);
     connect(this, &Node::changeBPC, preview, &BrightnessContrastObject::setBPC);
-    connect(this, &BrightnessContrastNode::brightnessChanged, preview, &BrightnessContrastObject::setBrightness);
-    connect(this, &BrightnessContrastNode::contrastChanged, preview, &BrightnessContrastObject::setContrast);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/BrightnessContrastProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -65,9 +62,11 @@ void BrightnessContrastNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode && inputNode->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    deserializing = false;
 }
 
 unsigned int &BrightnessContrastNode::getPreviewTexture() {
@@ -99,8 +98,14 @@ void BrightnessContrastNode::deserialize(const QJsonObject &json, QHash<QUuid, S
         updateContrast(json["contrast"].toVariant().toReal());
         propertiesPanel->setProperty("startContrast", m_contrast);
     }
+
+    preview->setBrightness(m_brightness);
+    preview->setContrast(m_contrast);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float BrightnessContrastNode::brightness() {
@@ -108,8 +113,12 @@ float BrightnessContrastNode::brightness() {
 }
 
 void BrightnessContrastNode::setBrightness(float value) {
+    if(m_brightness == value) return;
     m_brightness = value;
     brightnessChanged(value);
+    preview->setBrightness(m_brightness);
+    preview->setContrast(m_contrast);
+    preview->update();
 }
 
 float BrightnessContrastNode::contrast() {
@@ -117,14 +126,11 @@ float BrightnessContrastNode::contrast() {
 }
 
 void BrightnessContrastNode::setContrast(float value) {
+    if(m_contrast == value) return;
     m_contrast = value;
     contrastChanged(value);
-}
-
-void BrightnessContrastNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setContrast(m_contrast);
+    preview->update();
 }
 
 void BrightnessContrastNode::previewGenerated() {

@@ -9,7 +9,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)

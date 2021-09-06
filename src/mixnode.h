@@ -60,7 +60,6 @@ public slots:
     void updateIncludingAlpha(bool including);
     void updateForegroundOpacity(int opacity);
     void updateBackgroundOpacity(int opacity);
-    void updateScale(float scale);
 private:
     MixObject *preview = nullptr;
     float m_factor = 1.0f;

@@ -32,7 +32,10 @@ Item {
     property real oldValue
     signal changingFinished()
 
-    width: parent.width
+    id: item
+    x: -5 - slider.leftPadding
+    y: -15
+    width: parent.width + 25 + 2*slider.leftPadding
     height: childrenRect.height
     Label {
        id: label
@@ -52,7 +55,7 @@ Item {
         y: 15
         width: parent.width - 25
         height: 25
-        clip: true
+        //clip: true
         stepSize: 0.01
         onValueChanged: {
             valueBox.value = value.toFixed(2)
@@ -68,7 +71,7 @@ Item {
             y: slider.topPadding + slider.availableHeight / 2 - height / 2
             width: slider.availableWidth
             height: 25
-            clip: true
+            //clip: true
             z: 1
             color: "transparent"
             Canvas {
@@ -79,7 +82,7 @@ Item {
                 height: 3
                 onPaint: {
                     var ctx = getContext("2d");
-                    ctx.fillStyle = Qt.rgba(0.84, 0.84, 0.84, 1);
+                    ctx.fillStyle = "#D6D6D6"
                     ctx.lineTo(4, 0)
                     ctx.lineTo(2, 3)
                     ctx.lineTo(0, 0)

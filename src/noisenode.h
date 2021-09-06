@@ -84,7 +84,6 @@ public slots:
     void updateAmplitude(qreal value);
     void updateSeed(int seed);
     void previewGenerated();
-    void updateScale(float scale);
 private:
     NoiseObject *preview = nullptr;
     QString m_noiseType = "perlinNoise";

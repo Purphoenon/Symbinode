@@ -68,9 +68,9 @@ QString VoronoiObject::voronoiType() {
 }
 
 void VoronoiObject::setVoronoiType(QString type) {
+    if(m_voronoiType == type) return;
     m_voronoiType = type;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::voronoiScale() {
@@ -78,9 +78,9 @@ int VoronoiObject::voronoiScale() {
 }
 
 void VoronoiObject::setVoronoiScale(int scale) {
+    if(m_scale == scale) return;
     m_scale = scale;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::scaleX() {
@@ -88,9 +88,9 @@ int VoronoiObject::scaleX() {
 }
 
 void VoronoiObject::setScaleX(int scale) {
+    if(m_scaleX == scale) return;
     m_scaleX = scale;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::scaleY() {
@@ -98,9 +98,9 @@ int VoronoiObject::scaleY() {
 }
 
 void VoronoiObject::setScaleY(int scale) {
+    if(m_scaleY == scale) return;
     m_scaleY = scale;
     generatedVoronoi = true;
-    update();
 }
 
 float VoronoiObject::jitter() {
@@ -108,9 +108,9 @@ float VoronoiObject::jitter() {
 }
 
 void VoronoiObject::setJitter(float jitter) {
+    if(m_jitter == jitter) return;
     m_jitter = jitter;
     generatedVoronoi = true;
-    update();
 }
 
 bool VoronoiObject::inverse() {
@@ -118,9 +118,9 @@ bool VoronoiObject::inverse() {
 }
 
 void VoronoiObject::setInverse(bool inverse) {
+    if(m_inverse == inverse) return;
     m_inverse = inverse;
     generatedVoronoi = true;
-    update();
 }
 
 float VoronoiObject::intensity() {
@@ -128,9 +128,9 @@ float VoronoiObject::intensity() {
 }
 
 void VoronoiObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     generatedVoronoi = true;
-    update();
 }
 
 float VoronoiObject::bordersSize() {
@@ -138,9 +138,9 @@ float VoronoiObject::bordersSize() {
 }
 
 void VoronoiObject::setBordersSize(float size) {
+    if(m_borders == size) return;
     m_borders = size;
     generatedVoronoi = true;
-    update();
 }
 
 int VoronoiObject::seed() {
@@ -148,9 +148,9 @@ int VoronoiObject::seed() {
 }
 
 void VoronoiObject::setSeed(int seed) {
+    if(m_seed == seed) return;
     m_seed = seed;
     generatedVoronoi = true;
-    update();
 }
 
 QVector2D VoronoiObject::resolution() {
@@ -168,9 +168,9 @@ GLint VoronoiObject::bpc() {
 }
 
 void VoronoiObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 VoronoiRenderer::VoronoiRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -192,6 +192,7 @@ VoronoiRenderer::VoronoiRenderer(QVector2D res, GLint bpc): m_resolution(res), m
     generateVoronoi->release();
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
     float vertQuad[] = {-1.0f, -1.0f,
                     -1.0f, 1.0f,
@@ -229,10 +230,13 @@ VoronoiRenderer::VoronoiRenderer(QVector2D res, GLint bpc): m_resolution(res), m
     glBindFramebuffer(GL_FRAMEBUFFER, voronoiFBO);
     glGenTextures(1, &voronoiTexture);
     glBindTexture(GL_TEXTURE_2D, voronoiTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     }
@@ -258,7 +262,6 @@ VoronoiRenderer::~VoronoiRenderer() {
 QOpenGLFramebufferObject *VoronoiRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -273,28 +276,28 @@ void VoronoiRenderer::synchronize(QQuickFramebufferObject *item) {
             voronoiItem->setTexture(voronoiTexture);
         }
     }
-    if(voronoiItem->bpcUpdated) {
-        voronoiItem->bpcUpdated = false;
-        m_bpc = voronoiItem->bpc();
-        updateTexResolution();
-        createVoronoi();
-        voronoiItem->setTexture(voronoiTexture);
-    }
-    if(voronoiItem->generatedVoronoi) {
-        voronoiItem->generatedVoronoi = false;
-        m_voronoiType = voronoiItem->voronoiType();
-        maskTexture = voronoiItem->maskTexture();
-        generateVoronoi->bind();
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scale"), voronoiItem->voronoiScale());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleX"), voronoiItem->scaleX());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleY"), voronoiItem->scaleY());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("jitter"), voronoiItem->jitter());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("inverse"), voronoiItem->inverse());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("intensity"), voronoiItem->intensity());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("bordersSize"), voronoiItem->bordersSize());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("seed"), voronoiItem->seed());
-        generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("useMask"), maskTexture);
-        generateVoronoi->release();
+    if(voronoiItem->generatedVoronoi || voronoiItem->bpcUpdated) {
+        if(voronoiItem->bpcUpdated) {
+            voronoiItem->bpcUpdated = false;
+            m_bpc = voronoiItem->bpc();
+            updateTexResolution();
+        }
+        if(voronoiItem->generatedVoronoi) {
+            voronoiItem->generatedVoronoi = false;
+            m_voronoiType = voronoiItem->voronoiType();
+            maskTexture = voronoiItem->maskTexture();
+            generateVoronoi->bind();
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scale"), voronoiItem->voronoiScale());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleX"), voronoiItem->scaleX());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("scaleY"), voronoiItem->scaleY());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("jitter"), voronoiItem->jitter());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("inverse"), voronoiItem->inverse());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("intensity"), voronoiItem->intensity());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("bordersSize"), voronoiItem->bordersSize());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("seed"), voronoiItem->seed());
+            generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("useMask"), maskTexture);
+            generateVoronoi->release();
+        }
         createVoronoi();
         voronoiItem->setTexture(voronoiTexture);
         voronoiItem->updatePreview(voronoiTexture);
@@ -342,11 +345,13 @@ void VoronoiRenderer::createVoronoi() {
     generateVoronoi->setUniformValue(generateVoronoi->uniformLocation("res"), m_resolution);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     generateVoronoi->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, voronoiTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

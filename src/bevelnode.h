@@ -27,7 +27,6 @@ signals:
     void smoothChanged(float smooth);
     void useAlphaChanged(bool use);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void updateDistance(qreal dist);
     void updateSmooth(qreal smooth);

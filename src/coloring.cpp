@@ -43,7 +43,6 @@ unsigned int ColoringObject::sourceTexture() {
 void ColoringObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     colorizedTex = true;
-    update();
 }
 
 void ColoringObject::saveTexture(QString fileName) {
@@ -57,9 +56,9 @@ QVector3D ColoringObject::color() {
 }
 
 void ColoringObject::setColor(QVector3D color) {
+    if(m_color == color) return;
     m_color = color;
     colorizedTex = true;
-    update();
 }
 
 QVector2D ColoringObject::resolution() {
@@ -77,9 +76,9 @@ GLint ColoringObject::bpc() {
 }
 
 void ColoringObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 QQuickFramebufferObject::Renderer *ColoringObject::createRenderer() const {
@@ -105,6 +104,7 @@ ColoringRenderer::ColoringRenderer(QVector2D res, GLint bpc):m_resolution(res), 
     coloringShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                            -1.0f, 1.0f, 0.0f, 1.0f,
@@ -137,10 +137,13 @@ ColoringRenderer::ColoringRenderer(QVector2D res, GLint bpc):m_resolution(res), 
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -158,7 +161,6 @@ ColoringRenderer::~ColoringRenderer() {
 QOpenGLFramebufferObject *ColoringRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -169,20 +171,22 @@ void ColoringRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = coloringItem->resolution();
         updateTexResolution();
     }
-    if(coloringItem->bpcUpdated) {
-        coloringItem->bpcUpdated = false;
-        m_bpc = coloringItem->bpc();
-        updateTexResolution();
-        colorize();
-        coloringItem->setTexture(m_colorTexture);
-    }
-    if(coloringItem->colorizedTex) {
-        coloringItem->colorizedTex = false;
-        m_sourceTexture = coloringItem->sourceTexture();
+    if(coloringItem->colorizedTex || coloringItem->bpcUpdated) {
+        if(coloringItem->bpcUpdated) {
+            coloringItem->bpcUpdated = false;
+            m_bpc = coloringItem->bpc();
+            updateTexResolution();
+        }
+        if(coloringItem->colorizedTex) {
+            coloringItem->colorizedTex = false;
+            m_sourceTexture = coloringItem->sourceTexture();
+            if(m_sourceTexture) {
+                coloringShader->bind();
+                coloringShader->setUniformValue(coloringShader->uniformLocation("color"), coloringItem->color());
+                coloringShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            coloringShader->bind();
-            coloringShader->setUniformValue(coloringShader->uniformLocation("color"), coloringItem->color());
-            coloringShader->release();
             colorize();
             coloringItem->setTexture(m_colorTexture);
             coloringItem->updatePreview(m_colorTexture);
@@ -229,11 +233,13 @@ void ColoringRenderer::colorize() {
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     glBindVertexArray(0);
     coloringShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

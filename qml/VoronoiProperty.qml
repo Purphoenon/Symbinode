@@ -50,7 +50,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -89,58 +89,105 @@ Item {
         }
     }
 
-    ParamSlider {
-        id: scaleParam
-        y: 76
-        propertyName: "Scale"
-        maximum: 100
-        step: 1
-        onPropertyValueChanged: {
-            voronoiScaleChanged(propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 91
+        clip: true
+        ParamSlider {
+            id: scaleParam
+            propertyName: "Scale"
+            maximum: 100
+            step: 1
+            onPropertyValueChanged: {
+                voronoiScaleChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScale", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startScale", propertyValue, oldValue)
+        ParamSlider {
+            id: scaleXParam
+            y: 18
+            propertyName: "Scale X"
+            maximum: 20
+            minimum: 1
+            step: 1
+            onPropertyValueChanged: {
+                scaleXChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleX", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: scaleYParam
+            y: 51
+            propertyName: "Scale Y"
+            maximum: 20
+            minimum: 1
+            step: 1
+            onPropertyValueChanged: {
+                scaleYChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleY", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: jitterParam
+            y: 84
+            propertyName: "Jitter"
+            onPropertyValueChanged: {
+                jitterChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startJitter", propertyValue, oldValue)
+            }
+        }
+        ParamSlider {
+            id: intensityParam
+            y: 117
+            maximum: 2
+            propertyName: "Intensity"
+            onPropertyValueChanged: {
+                intensityChanged(intensityParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startIntensity", propertyValue, oldValue)
+            }
+        }
+
+        ParamSlider {
+            id: seedParam
+            y: 150
+            minimum: 1
+            maximum: 100
+            step: 1
+            propertyName: "Seed"
+            onPropertyValueChanged: {
+                seedChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSeed", propertyValue, oldValue)
+            }
+        }
+
+        ParamSlider {
+            id: bordersParam
+            y: 183
+            visible: control.currentIndex == 1
+            propertyName: "Width"
+            onPropertyValueChanged: {
+                bordersChanged(bordersParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startBorders", propertyValue, oldValue)
+            }
         }
     }
-    ParamSlider {
-        id: scaleXParam
-        y: 109
-        propertyName: "Scale X"
-        maximum: 20
-        minimum: 1
-        step: 1
-        onPropertyValueChanged: {
-            scaleXChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleX", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: scaleYParam
-        y: 142
-        propertyName: "Scale Y"
-        maximum: 20
-        minimum: 1
-        step: 1
-        onPropertyValueChanged: {
-            scaleYChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleY", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: jitterParam
-        y: 175
-        propertyName: "Jitter"
-        onPropertyValueChanged: {
-            jitterChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startJitter", propertyValue, oldValue)
-        }
-    }
+
     ParamCheckbox{
         id: inverseParam
         y: control.currentIndex == 1 ? 322 : 289
@@ -153,45 +200,5 @@ Item {
             propertyChangingFinished("startInverse", checked, !checked)
             focus = false
         }
-    }
-    ParamSlider {
-        id: intensityParam
-        y: 208
-        maximum: 2
-        propertyName: "Intensity"
-        onPropertyValueChanged: {
-            intensityChanged(intensityParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startIntensity", propertyValue, oldValue)
-        }
-    }
-
-    ParamSlider {
-        id: seedParam
-        y: 241
-        minimum: 1
-        maximum: 100
-        step: 1
-        propertyName: "Seed"
-        onPropertyValueChanged: {
-            seedChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSeed", propertyValue, oldValue)
-        }
-    }
-
-    ParamSlider {
-        id: bordersParam
-        y: 274
-        visible: control.currentIndex == 1
-        propertyName: "Width"
-        onPropertyValueChanged: {
-            bordersChanged(bordersParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startBorders", propertyValue, oldValue)
-        }
-    }
+    }    
 }

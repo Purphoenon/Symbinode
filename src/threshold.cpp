@@ -69,9 +69,9 @@ float ThresholdObject::threshold() {
 }
 
 void ThresholdObject::setThreshold(float value) {
+    if(m_threshold == value) return;
     m_threshold = value;
     created = true;
-    update();
 }
 
 QVector2D ThresholdObject::resolution() {
@@ -89,9 +89,9 @@ GLint ThresholdObject::bpc() {
 }
 
 void ThresholdObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 ThresholdRenderer::ThresholdRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -114,6 +114,7 @@ ThresholdRenderer::ThresholdRenderer(QVector2D res, GLint bpc): m_resolution(res
     thresholdShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                            -1.0f, 1.0f, 0.0f, 1.0f,
@@ -146,10 +147,13 @@ ThresholdRenderer::ThresholdRenderer(QVector2D res, GLint bpc): m_resolution(res
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_thresholdTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -167,7 +171,6 @@ ThresholdRenderer::~ThresholdRenderer() {
 QOpenGLFramebufferObject *ThresholdRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -178,22 +181,24 @@ void ThresholdRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = thresholdItem->resolution();
         updateTexResolution();
     }
-    if(thresholdItem->bpcUpdated) {
-        thresholdItem->bpcUpdated = false;
-        m_bpc = thresholdItem->bpc();
-        updateTexResolution();
-        create();
-        thresholdItem->setTexture(m_thresholdTexture);
-    }
-    if(thresholdItem->created) {
-        thresholdItem->created = false;
-        m_sourceTexture = thresholdItem->sourceTexture();
+    if(thresholdItem->created || thresholdItem->bpcUpdated) {
+        if(thresholdItem->bpcUpdated) {
+            thresholdItem->bpcUpdated = false;
+            m_bpc = thresholdItem->bpc();
+            updateTexResolution();
+        }
+        if(thresholdItem->created) {
+            thresholdItem->created = false;
+            m_sourceTexture = thresholdItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = thresholdItem->maskTexture();
+                thresholdShader->bind();
+                thresholdShader->setUniformValue(thresholdShader->uniformLocation("threshold"), thresholdItem->threshold());
+                thresholdShader->setUniformValue(thresholdShader->uniformLocation("useMask"), maskTexture);
+                thresholdShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = thresholdItem->maskTexture();
-            thresholdShader->bind();
-            thresholdShader->setUniformValue(thresholdShader->uniformLocation("threshold"), thresholdItem->threshold());
-            thresholdShader->setUniformValue(thresholdShader->uniformLocation("useMask"), maskTexture);
-            thresholdShader->release();
             create();
             thresholdItem->setTexture(m_thresholdTexture);
             thresholdItem->updatePreview(m_thresholdTexture);
@@ -242,11 +247,13 @@ void ThresholdRenderer::create() {
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);   
     thresholdShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_thresholdTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

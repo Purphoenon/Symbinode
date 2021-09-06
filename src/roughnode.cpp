@@ -35,7 +35,6 @@ RoughNode::RoughNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(
     preview->setY(30*s);
     preview->setScale(s);
     preview->setValue(0.2f);
-    connect(this, &Node::changeScaleView, this, &RoughNode::updateScale);
     connect(preview, &OneChanelObject::updatePreview, this, &RoughNode::updatePreview);
     connect(preview, &OneChanelObject::updateValue, this, &RoughNode::roughChanged);
     connect(this, &Node::changeResolution, preview, &OneChanelObject::setResolution);
@@ -55,16 +54,20 @@ RoughNode::~RoughNode() {
 }
 
 void RoughNode::operation() {
-    if(m_socketsInput[0]->countEdge() > 0) {
-        preview->setValue(m_socketsInput[0]->value());
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
         preview->useTex = true;
+        preview->setValue(m_socketsInput[0]->value().toUInt());
     }
     else {
-        preview->setValue(m_rough);
         preview->useTex = false;
+        preview->setValue(m_rough);
     }
     preview->selectedItem = selected();
     preview->update();
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &RoughNode::getPreviewTexture() {
@@ -84,7 +87,6 @@ void RoughNode::serialize(QJsonObject &json) const {
 void RoughNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) {
     Node::deserialize(json, hash);
     if(json.contains("rough")) {
-        updateRough(json["rough"].toVariant().toFloat());
         propertiesPanel->setProperty("startRough", m_rough);
     }
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
@@ -92,17 +94,10 @@ void RoughNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash
 }
 
 void RoughNode::updateRough(qreal rough) {
+    if(m_rough == rough) return;
     m_rough = rough;
-    if(m_socketsInput[0]->countEdge() == 0) {
-        operation();
-    }
+    operation();
     dataChanged();
-}
-
-void RoughNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void RoughNode::saveRough(QString dir) {

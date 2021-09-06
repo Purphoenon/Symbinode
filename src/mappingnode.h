@@ -51,7 +51,6 @@ signals:
     void outputMinChanged(float value);
     void outputMaxChanged(float value);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
     void updateInputMin(qreal value);

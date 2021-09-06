@@ -48,7 +48,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -79,94 +79,101 @@ Item {
             propertyChangingFinished("type", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: scaleParam
-        y: 76
-        propertyName: "Scale"
-        maximum: 100
-        step: 1
-        onPropertyValueChanged: {
-            noiseScaleChanged(scaleParam.propertyValue)
+
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 91
+        clip: true
+        ParamSlider {
+            id: scaleParam
+            propertyName: "Scale"
+            maximum: 100
+            step: 1
+            onPropertyValueChanged: {
+                noiseScaleChanged(scaleParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startNoiseScale", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startNoiseScale", propertyValue, oldValue)
+        ParamSlider {
+            id: scaleXParam
+            y: 18
+            propertyName: "Scale X"
+            step: 1
+            minimum: 1
+            maximum: 20
+            onPropertyValueChanged: {
+                scaleXChanged(scaleXParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleX", propertyValue, oldValue)
+            }
         }
-    }
-    ParamSlider {
-        id: scaleXParam
-        y: 109
-        propertyName: "Scale X"
-        step: 1
-        minimum: 1
-        maximum: 20
-        onPropertyValueChanged: {
-            scaleXChanged(scaleXParam.propertyValue)
+        ParamSlider {
+            id: scaleYParam
+            y: 51
+            propertyName: "Scale Y"
+            step: 1
+            minimum: 1
+            maximum: 20
+            onPropertyValueChanged: {
+                scaleYChanged(scaleYParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startScaleY", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleX", propertyValue, oldValue)
+        ParamSlider {
+            id: layersParam
+            y: 84
+            propertyName: "Layers"
+            maximum: 16
+            step: 1
+            onPropertyValueChanged: {
+                layersChanged(layersParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startLayers", propertyValue, oldValue)
+            }
         }
-    }
-    ParamSlider {
-        id: scaleYParam
-        y: 142
-        propertyName: "Scale Y"
-        step: 1
-        minimum: 1
-        maximum: 20
-        onPropertyValueChanged: {
-            scaleYChanged(scaleYParam.propertyValue)
+        ParamSlider {
+            id: persistenceParam
+            y: 117
+            propertyName: "Persistence"
+            onPropertyValueChanged: {
+                persistenceChanged(persistenceParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startPersistence", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startScaleY", propertyValue, oldValue)
+        ParamSlider {
+            id: amplitudeParam
+            y: 150
+            propertyName: "Amplitude"
+            onPropertyValueChanged: {
+                amplitudeChanged(amplitudeParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startAmplitude", propertyValue, oldValue)
+            }
         }
-    }
-    ParamSlider {
-        id: layersParam
-        y: 175
-        propertyName: "Layers"
-        maximum: 16
-        step: 1
-        onPropertyValueChanged: {
-            layersChanged(layersParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startLayers", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: persistenceParam
-        y: 208
-        propertyName: "Persistence"
-        onPropertyValueChanged: {
-            persistenceChanged(persistenceParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startPersistence", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: amplitudeParam
-        y: 241
-        propertyName: "Amplitude"
-        onPropertyValueChanged: {
-            amplitudeChanged(amplitudeParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startAmplitude", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: seedParam
-        y: 274
-        minimum: 1
-        maximum: 100
-        step: 1
-        propertyName: "Seed"
-        onPropertyValueChanged: {
-            seedChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSeed", propertyValue, oldValue)
+        ParamSlider {
+            id: seedParam
+            y: 183
+            minimum: 1
+            maximum: 100
+            step: 1
+            propertyName: "Seed"
+            onPropertyValueChanged: {
+                seedChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSeed", propertyValue, oldValue)
+            }
         }
     }
 }

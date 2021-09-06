@@ -16,7 +16,6 @@ public:
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
-    void updateScale(float scale);
     void emissionSave(QString dir);
 signals:
     void emissionChanged(unsigned int emission);

@@ -51,9 +51,9 @@ float PolarTransformObject::radius() {
 }
 
 void PolarTransformObject::setRadius(float radius) {
+    if(m_radius == radius) return;
     m_radius = radius;
     polaredTex = true;
-    update();
 }
 
 bool PolarTransformObject::clamp() {
@@ -61,9 +61,9 @@ bool PolarTransformObject::clamp() {
 }
 
 void PolarTransformObject::setClamp(bool clamp) {
+    if(m_clamp == clamp) return;
     m_clamp = clamp;
     polaredTex = true;
-    update();
 }
 
 int PolarTransformObject::angle() {
@@ -71,9 +71,9 @@ int PolarTransformObject::angle() {
 }
 
 void PolarTransformObject::setAngle(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     polaredTex = true;
-    update();
 }
 
 QVector2D PolarTransformObject::resolution() {
@@ -91,9 +91,9 @@ GLint PolarTransformObject::bpc() {
 }
 
 void PolarTransformObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 PolarTransformRenderer::PolarTransformRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -117,6 +117,7 @@ PolarTransformRenderer::PolarTransformRenderer(QVector2D res, GLint bpc): m_reso
     polarShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -148,10 +149,13 @@ PolarTransformRenderer::PolarTransformRenderer(QVector2D res, GLint bpc): m_reso
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_polarTexture, 0
     );
@@ -171,23 +175,31 @@ PolarTransformRenderer::~PolarTransformRenderer() {
 QOpenGLFramebufferObject *PolarTransformRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
 void PolarTransformRenderer::synchronize(QQuickFramebufferObject *item) {
     PolarTransformObject *polarItem = static_cast<PolarTransformObject*>(item);
 
-    if(polarItem->polaredTex) {
-        polarItem->polaredTex = false;
-        m_sourceTexture = polarItem->sourceTexture();
+    if(polarItem->polaredTex || polarItem->bpcUpdated) {
+        if(polarItem->bpcUpdated) {
+            polarItem->bpcUpdated = false;
+            m_bpc = polarItem->bpc();
+            updateTexResolution();
+        }
+        if(polarItem->polaredTex) {
+            polarItem->polaredTex = false;
+            m_sourceTexture = polarItem->sourceTexture();
+            if(m_sourceTexture) {
+                m_maskTexture = polarItem->maskTexture();
+                polarShader->bind();
+                polarShader->setUniformValue(polarShader->uniformLocation("radius"), polarItem->radius());
+                polarShader->setUniformValue(polarShader->uniformLocation("useClamp"), polarItem->clamp());
+                polarShader->setUniformValue(polarShader->uniformLocation("angle"), polarItem->angle());
+                polarShader->setUniformValue(polarShader->uniformLocation("useMask"), m_maskTexture);
+            }
+        }
         if(m_sourceTexture) {
-            m_maskTexture = polarItem->maskTexture();
-            polarShader->bind();
-            polarShader->setUniformValue(polarShader->uniformLocation("radius"), polarItem->radius());
-            polarShader->setUniformValue(polarShader->uniformLocation("useClamp"), polarItem->clamp());
-            polarShader->setUniformValue(polarShader->uniformLocation("angle"), polarItem->angle());
-            polarShader->setUniformValue(polarShader->uniformLocation("useMask"), m_maskTexture);
             transformToPolar();
             polarItem->setTexture(m_polarTexture);
             polarItem->updatePreview(m_polarTexture);
@@ -197,13 +209,6 @@ void PolarTransformRenderer::synchronize(QQuickFramebufferObject *item) {
         polarItem->resUpdated = false;
         m_resolution = polarItem->resolution();
         updateTexResolution();
-    }
-    if(polarItem->bpcUpdated) {
-        polarItem->bpcUpdated = false;
-        m_bpc = polarItem->bpc();
-        updateTexResolution();
-        transformToPolar();
-        polarItem->setTexture(m_polarTexture);
     }
     if(polarItem->texSaving) {
         polarItem->texSaving = false;
@@ -253,9 +258,11 @@ void PolarTransformRenderer::transformToPolar() {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     polarShader->release();
     glBindVertexArray(0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_polarTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

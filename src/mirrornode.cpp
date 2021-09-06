@@ -32,13 +32,11 @@ MirrorNode::MirrorNode(QQuickItem *parent, QVector2D resolution, GLint bpc, int 
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &MirrorNode::updateScale);
     connect(this, &Node::generatePreview, this, &MirrorNode::previewGenerated);
     connect(preview, &MirrorObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MirrorObject::textureChanged, this, &MirrorNode::setOutput);
     connect(this, &Node::changeResolution, preview, &MirrorObject::setResolution);
     connect(this, &Node::changeBPC, preview, &MirrorObject::setBPC);
-    connect(this, &MirrorNode::directionChanged, preview, &MirrorObject::setDirection);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/MirrorProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -62,16 +60,19 @@ void MirrorNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
     preview->mirroredTex = true;
     preview->update();
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &MirrorNode::getPreviewTexture() {
@@ -98,8 +99,13 @@ void MirrorNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &ha
         updateDirection(json["direction"].toInt());
         propertiesPanel->setProperty("startDirection", m_direction);
     }
+
+    preview->setDirection(m_direction);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 int MirrorNode::direction() {
@@ -107,14 +113,11 @@ int MirrorNode::direction() {
 }
 
 void MirrorNode::setDirection(int dir) {
+    if(m_direction == dir) return;
     m_direction = dir;
     directionChanged(dir);
-}
-
-void MirrorNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setDirection(dir);
+    preview->update();
 }
 
 void MirrorNode::previewGenerated() {

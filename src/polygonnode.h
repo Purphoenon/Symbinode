@@ -51,7 +51,6 @@ signals:
     void smoothChanged(float smooth);
     void useAlphaChanged(bool use);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void previewGenerated();
     void updateSides(int sides);

@@ -58,7 +58,6 @@ signals:
     void rotationChanged(int angle);
     void clampCoordsChanged(bool clamp);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void updateTranslationX(qreal x);
     void updateTranslationY(qreal y);

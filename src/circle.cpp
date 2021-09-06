@@ -42,7 +42,6 @@ unsigned int CircleObject::maskTexture() {
 void CircleObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     generatedCircle = true;
-    update();
 }
 
 unsigned int &CircleObject::texture() {
@@ -65,9 +64,9 @@ int CircleObject::interpolation() {
 }
 
 void CircleObject::setInterpolation(int interpolation) {
+    if(m_interpolation == interpolation) return;
     m_interpolation = interpolation;
     generatedCircle = true;
-    update();
 }
 
 float CircleObject::radius() {
@@ -75,9 +74,9 @@ float CircleObject::radius() {
 }
 
 void CircleObject::setRadius(float radius) {
+    if(m_radius == radius) return;
     m_radius = radius;
     generatedCircle = true;
-    update();
 }
 
 float CircleObject::smooth() {
@@ -85,9 +84,9 @@ float CircleObject::smooth() {
 }
 
 void CircleObject::setSmooth(float smooth) {
+    if(m_smooth == smooth) return;
     m_smooth = smooth;
     generatedCircle = true;
-    update();
 }
 
 bool CircleObject::useAlpha() {
@@ -95,9 +94,9 @@ bool CircleObject::useAlpha() {
 }
 
 void CircleObject::setUseAlpha(bool use) {
+    if(m_useAlpha == use) return;
     m_useAlpha = use;
     generatedCircle = true;
-    update();
 }
 
 QVector2D CircleObject::resolution() {
@@ -115,9 +114,9 @@ GLint CircleObject::bpc() {
 }
 
 void CircleObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 CircleRenderer::CircleRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
@@ -139,6 +138,7 @@ CircleRenderer::CircleRenderer(QVector2D resolution, GLint bpc): m_resolution(re
     renderTexture->link();
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
     float vertQuad[] = {-1.0f, -1.0f,
                     -1.0f, 1.0f,
@@ -176,10 +176,13 @@ CircleRenderer::CircleRenderer(QVector2D resolution, GLint bpc): m_resolution(re
     glBindFramebuffer(GL_FRAMEBUFFER, circleFBO);
     glGenTextures(1, &circleTexture);
     glBindTexture(GL_TEXTURE_2D, circleTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     }
@@ -205,7 +208,6 @@ CircleRenderer::~CircleRenderer() {
 QOpenGLFramebufferObject *CircleRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -220,23 +222,23 @@ void CircleRenderer::synchronize(QQuickFramebufferObject *item) {
             circleItem->setTexture(circleTexture);
         }
     }
-    if(circleItem->bpcUpdated) {
-        circleItem->bpcUpdated = false;
-        m_bpc = circleItem->bpc();
-        updateTexResolution();
-        createCircle();
-        circleItem->setTexture(circleTexture);
-    }
-    if(circleItem->generatedCircle) {
-        circleItem->generatedCircle = false;
-        maskTexture = circleItem->maskTexture();
-        generateCircle->bind();
-        generateCircle->setUniformValue(generateCircle->uniformLocation("interpolation"), circleItem->interpolation());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("radius"), circleItem->radius());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("smoothValue"), circleItem->smooth());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("useAlpha"), circleItem->useAlpha());
-        generateCircle->setUniformValue(generateCircle->uniformLocation("useMask"), maskTexture);
-        generateCircle->release();
+    if(circleItem->generatedCircle || circleItem->bpcUpdated) {
+        if(circleItem->bpcUpdated) {
+            circleItem->bpcUpdated = false;
+            m_bpc = circleItem->bpc();
+            updateTexResolution();
+        }
+        if(circleItem->generatedCircle) {
+            circleItem->generatedCircle = false;
+            maskTexture = circleItem->maskTexture();
+            generateCircle->bind();
+            generateCircle->setUniformValue(generateCircle->uniformLocation("interpolation"), circleItem->interpolation());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("radius"), circleItem->radius());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("smoothValue"), circleItem->smooth());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("useAlpha"), circleItem->useAlpha());
+            generateCircle->setUniformValue(generateCircle->uniformLocation("useMask"), maskTexture);
+            generateCircle->release();
+        }
         createCircle();
         circleItem->setTexture(circleTexture);
         circleItem->updatePreview(circleTexture);
@@ -281,11 +283,13 @@ void CircleRenderer::createCircle() {
     generateCircle->setUniformValue(generateCircle->uniformLocation("res"), m_resolution);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     generateCircle->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, circleTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

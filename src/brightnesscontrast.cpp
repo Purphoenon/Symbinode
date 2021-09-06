@@ -64,9 +64,9 @@ float BrightnessContrastObject::brightness() {
 }
 
 void BrightnessContrastObject::setBrightness(float value) {
+    if(m_brightness == value) return;
     m_brightness = value;
     created = true;
-    update();
 }
 
 float BrightnessContrastObject::contrast() {
@@ -74,9 +74,9 @@ float BrightnessContrastObject::contrast() {
 }
 
 void BrightnessContrastObject::setContrast(float value) {
+    if(m_contrast == value) return;
     m_contrast = value;
     created = true;
-    update();
 }
 
 QVector2D BrightnessContrastObject::resolution() {
@@ -94,9 +94,9 @@ GLint BrightnessContrastObject::bpc() {
 }
 
 void BrightnessContrastObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res, GLint bpc): m_resolution(res),
@@ -119,6 +119,7 @@ BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res, GLint bpc)
     brightnessContrastShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                            -1.0f, 1.0f, 0.0f, 1.0f,
@@ -151,10 +152,13 @@ BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res, GLint bpc)
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_brightnessContrastTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -172,7 +176,6 @@ BrightnessContrastRenderer::~BrightnessContrastRenderer() {
 QOpenGLFramebufferObject *BrightnessContrastRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -183,21 +186,23 @@ void BrightnessContrastRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = brightnessContrastItem->resolution();
         updateTexResolution();
     }
-    if(brightnessContrastItem->bpcUpdated) {
-        brightnessContrastItem->bpcUpdated = false;
-        m_bpc = brightnessContrastItem->bpc();
-        updateTexResolution();
-        create();
-        brightnessContrastItem->setTexture(m_brightnessContrastTexture);
-    }
-    if(brightnessContrastItem->created) {
-        brightnessContrastItem->created = false;
-        m_sourceTexture = brightnessContrastItem->sourceTexture();
+    if(brightnessContrastItem->created || brightnessContrastItem->bpcUpdated) {
+        if(brightnessContrastItem->bpcUpdated) {
+            brightnessContrastItem->bpcUpdated = false;
+            m_bpc = brightnessContrastItem->bpc();
+            updateTexResolution();
+        }
+        if(brightnessContrastItem->created) {
+            brightnessContrastItem->created = false;
+            m_sourceTexture = brightnessContrastItem->sourceTexture();
+            if(m_sourceTexture) {
+                brightnessContrastShader->bind();
+                brightnessContrastShader->setUniformValue(brightnessContrastShader->uniformLocation("brightness"), brightnessContrastItem->brightness());
+                brightnessContrastShader->setUniformValue(brightnessContrastShader->uniformLocation("contrast"), brightnessContrastItem->contrast());
+                brightnessContrastShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            brightnessContrastShader->bind();
-            brightnessContrastShader->setUniformValue(brightnessContrastShader->uniformLocation("brightness"), brightnessContrastItem->brightness());
-            brightnessContrastShader->setUniformValue(brightnessContrastShader->uniformLocation("contrast"), brightnessContrastItem->contrast());
-            brightnessContrastShader->release();
             create();
             brightnessContrastItem->setTexture(m_brightnessContrastTexture);
             brightnessContrastItem->updatePreview(m_brightnessContrastTexture);
@@ -244,11 +249,13 @@ void BrightnessContrastRenderer::create() {
     brightnessContrastShader->bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     brightnessContrastShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_brightnessContrastTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

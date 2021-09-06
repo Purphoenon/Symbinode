@@ -17,7 +17,6 @@ public:
     void serialize(QJsonObject &json) const override;
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) override;
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
 private:

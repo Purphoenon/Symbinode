@@ -33,12 +33,10 @@ BlurNode::BlurNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float in
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &BlurNode::updateScale);
     connect(this, &Node::generatePreview, this, &BlurNode::previewGenerated);
     connect(preview, &BlurObject::textureChanged, this, &BlurNode::setOutput);
     connect(this, &Node::changeResolution, preview, &BlurObject::setResolution);
     connect(this, &Node::changeBPC, preview, &BlurObject::setBPC);
-    connect(this, &BlurNode::intensityChanged, preview, &BlurObject::setIntensity);
     connect(preview, &BlurObject::updatePreview, this, &BlurNode::updatePreview);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/BlurProperty.qml")));
@@ -64,14 +62,19 @@ void BlurNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        std::cout << "blur socket 0 " << m_socketsInput[0]->value().toUInt() << std::endl;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->update();
+    deserializing = false;
 }
 
 unsigned int &BlurNode::getPreviewTexture() {
@@ -98,8 +101,13 @@ void BlurNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash
         m_intensity = json["intensity"].toVariant().toFloat();
         propertiesPanel->setProperty("startIntensity", m_intensity);
     }
+
+    preview->setIntensity(m_intensity);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float BlurNode::intensity() {
@@ -107,14 +115,11 @@ float BlurNode::intensity() {
 }
 
 void BlurNode::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     intensityChanged(intensity);
-}
-
-void BlurNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setIntensity(intensity);
+    preview->update();
 }
 
 void BlurNode::previewGenerated() {

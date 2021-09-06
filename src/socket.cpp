@@ -29,11 +29,14 @@ Socket::Socket(QQuickItem *parent):QQuickItem (parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
+    setTransformOrigin(TopLeft);
     view = new QQuickView();
     view->setSource(QUrl(QStringLiteral("qrc:/qml/Socket.qml")));
     grSocket = qobject_cast<QQuickItem *>(view->rootObject());
     grSocket->setParentItem(this);
     m_id = QUuid::createUuid();
+    setWidth(16);
+    setHeight(16);
 }
 
 Socket::~Socket() {
@@ -167,6 +170,7 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
             QQuickItem *child = n->childAt(nodePos.x(), nodePos.y());
             Node *parentNode = qobject_cast<Node*>(parentItem());
             connectedNodes = parentNode->checkConnected(n, m_type);
+            std::cout << "node" << std::endl;
             if(qobject_cast<Socket*>(child)) {
                 Socket *s = qobject_cast<Socket*>(child);
                 QPointF globalPos = QPointF(s->globalPos().x(), s->globalPos().y());
@@ -211,6 +215,7 @@ void Socket::mouseReleaseEvent(QMouseEvent *event) {
                             scene->dragEdge->setStartPosition(QVector2D(globalPos.x(), globalPos.y()));
                             scene->dragEdge->setStartSocket(s);
                         }
+                        scene->dragEdge->endSocket()->setValue(scene->dragEdge->startSocket()->value());
                         scene->addEdge(scene->dragEdge);
                         scene->addedEdge(scene->dragEdge);
                     }                   
@@ -293,7 +298,4 @@ void Socket::reset() {
 
 void Socket::updateScale(float scale) {
     m_scale = scale;
-    setWidth(16*scale);
-    setHeight(16*scale);
-    grSocket->setProperty("scaleView", scale);
 }

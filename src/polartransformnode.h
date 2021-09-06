@@ -27,7 +27,6 @@ signals:
     void clampChanged(bool clamp);
     void angleChanged(int angle);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void updateRadius(qreal radius);
     void updateClamp(bool clamp);

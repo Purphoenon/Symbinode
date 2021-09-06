@@ -84,7 +84,6 @@ signals:
     void bordersSizeChanged(float size);
     void seedChanged(int seed);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void previewGenerated();
     void updateVoronoiType(QString type);

@@ -16,15 +16,8 @@ HexagonsNode::HexagonsNode(QQuickItem *parent, QVector2D resolution, GLint bpc, 
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &HexagonsNode::updateScale);
     connect(preview, &HexagonsObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &HexagonsObject::changedTexture, this, &HexagonsNode::setOutput);
-    connect(this, &HexagonsNode::columnsChanged, preview, &HexagonsObject::setColumns);
-    connect(this, &HexagonsNode::rowsChanged, preview, &HexagonsObject::setRows);
-    connect(this, &HexagonsNode::hexSizeChanged, preview, &HexagonsObject::setHexSize);
-    connect(this, &HexagonsNode::hexSmoothChanged, preview, &HexagonsObject::setHexSmooth);
-    connect(this, &HexagonsNode::maskChanged, preview, &HexagonsObject::setMask);
-    connect(this, &HexagonsNode::seedChanged, preview, &HexagonsObject::setSeed);
     connect(this, &Node::changeResolution, preview, &HexagonsObject::setResolution);
     connect(this, &Node::changeBPC, preview, &HexagonsObject::setBPC);
     connect(this, &Node::generatePreview, this, &HexagonsNode::previewGenerated);
@@ -62,7 +55,14 @@ void HexagonsNode::saveTexture(QString fileName) {
 }
 
 void HexagonsNode::operation() {
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && inputNode->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+    preview->update();
+    if(deserializing) deserializing = false;
 }
 
 HexagonsNode *HexagonsNode::clone() {
@@ -107,8 +107,18 @@ void HexagonsNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &
     propertiesPanel->setProperty("startSmooth", m_smooth);
     propertiesPanel->setProperty("startMask", m_mask);
     propertiesPanel->setProperty("startSeed", m_seed);
+
+    preview->setColumns(m_columns);
+    preview->setRows(m_rows);
+    preview->setHexSize(m_size);
+    preview->setHexSmooth(m_smooth);
+    preview->setMask(m_mask);
+    preview->setSeed(m_seed);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 int HexagonsNode::columns() {
@@ -116,8 +126,11 @@ int HexagonsNode::columns() {
 }
 
 void HexagonsNode::setColumns(int columns) {
+    if(m_columns == columns) return;
     m_columns = columns;
     columnsChanged(columns);
+    preview->setColumns(columns);
+    preview->update();
 }
 
 int HexagonsNode::rows() {
@@ -125,8 +138,11 @@ int HexagonsNode::rows() {
 }
 
 void HexagonsNode::setRows(int rows) {
+    if(m_rows == rows) return;
     m_rows = rows;
     rowsChanged(rows);
+    preview->setRows(rows);
+    preview->update();
 }
 
 float HexagonsNode::hexSize() {
@@ -134,8 +150,11 @@ float HexagonsNode::hexSize() {
 }
 
 void HexagonsNode::setHexSize(float size) {
+    if(m_size == size) return;
     m_size = size;
     hexSizeChanged(size);
+    preview->setHexSize(size);
+    preview->update();
 }
 
 float HexagonsNode::hexSmooth() {
@@ -143,8 +162,11 @@ float HexagonsNode::hexSmooth() {
 }
 
 void HexagonsNode::setHexSmooth(float smooth) {
+    if(m_smooth == smooth) return;
     m_smooth = smooth;
     hexSmoothChanged(smooth);
+    preview->setHexSmooth(smooth);
+    preview->update();
 }
 
 float HexagonsNode::mask() {
@@ -152,8 +174,11 @@ float HexagonsNode::mask() {
 }
 
 void HexagonsNode::setMask(float mask) {
+    if(m_mask == mask) return;
     m_mask = mask;
     maskChanged(mask);
+    preview->setMask(mask);
+    preview->update();
 }
 
 int HexagonsNode::seed() {
@@ -161,14 +186,11 @@ int HexagonsNode::seed() {
 }
 
 void HexagonsNode::setSeed(int seed) {
+    if(m_seed == seed) return;
     m_seed = seed;
     seedChanged(seed);
-}
-
-void HexagonsNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setSeed(seed);
+    preview->update();
 }
 
 void HexagonsNode::setOutput() {

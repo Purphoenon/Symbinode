@@ -52,7 +52,6 @@ signals:
     void centerWidthChanged(float width);
     void tilingChanged(bool tiling);
 public slots:
-    void updateScale(float scale);
     void updateGradientType(QString type);
     void updateStartX(qreal x);
     void updateStartY(qreal y);

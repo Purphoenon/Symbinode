@@ -74,6 +74,7 @@ GLint OneChanelObject::bpc() {
 }
 
 void OneChanelObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
 }
 
@@ -133,7 +134,6 @@ OneChanelRenderer::~OneChanelRenderer() {
 QOpenGLFramebufferObject *OneChanelRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 

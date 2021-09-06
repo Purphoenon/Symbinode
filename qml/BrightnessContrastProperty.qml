@@ -36,7 +36,7 @@ Item {
     ParamDropDown {
         id: control
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -50,28 +50,34 @@ Item {
             propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: brightnessParam
-        y: 38
-        propertyName: "Brightness"
-        minimum: -1
-        onPropertyValueChanged: {
-            brightnessChanged(brightnessParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: brightnessParam
+            propertyName: "Brightness"
+            minimum: -1
+            onPropertyValueChanged: {
+                brightnessChanged(brightnessParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startBrightness", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startBrightness", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: contrastParam
-        y: 71
-        propertyName: "Contrast"
-        minimum: -1
-        onPropertyValueChanged: {
-            contrastChanged(contrastParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startContrast", propertyValue, oldValue)
+        ParamSlider {
+            id: contrastParam
+            y: 18
+            propertyName: "Contrast"
+            minimum: -1
+            onPropertyValueChanged: {
+                contrastChanged(contrastParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startContrast", propertyValue, oldValue)
+            }
         }
     }
 }

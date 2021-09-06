@@ -32,10 +32,8 @@ ColorNode::ColorNode(QQuickItem *parent, QVector2D resolution, QVector3D color):
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &ColorNode::updateScale);
     connect(this, &Node::changeResolution, preview, &ColorObject::setResolution);
     connect(this, &ColorNode::generatePreview, this, &ColorNode::previewGenerated);
-    connect(this, &ColorNode::colorChanged, preview, &ColorObject::setColor);
     connect(preview, &ColorObject::updatePreview, this, &ColorNode::updatePreview);
     connect(preview, &ColorObject::textureChanged, this, &ColorNode::operation);
     propView = new QQuickView();
@@ -83,7 +81,6 @@ void ColorNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &has
     if(json.contains("color")) {
         QJsonArray color = json["color"].toVariant().toJsonArray();
         QVector3D colorValue = QVector3D(color[0].toVariant().toFloat(), color[1].toVariant().toFloat(), color[2].toVariant().toFloat());
-        updateColor(colorValue);
         propertiesPanel->setProperty("startColor", colorValue);
     }
 }
@@ -93,14 +90,11 @@ QVector3D ColorNode::color() {
 }
 
 void ColorNode::setColor(QVector3D color) {
+    if(m_color == color) return;
     m_color = color;
     colorChanged(color);
-}
-
-void ColorNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setColor(color);
+    preview->update();
 }
 
 void ColorNode::previewGenerated() {

@@ -30,6 +30,8 @@ Item {
     signal newValueChanged(real value)
     signal mouseMoved(Item area, real x, real y)
 
+    id: box
+
     onValueChanged: {
         text = value
     }
@@ -154,13 +156,15 @@ Item {
 
     MouseArea {
         property bool hovered: false
+        parent: box.parent.parent.parent
         id: upValue
-        x: textValue.x + textValue.width + 20
-        y: 1
+        x: box.x + textValue.x + textValue.width + 20
+        y: box.parent.parent.y + box.parent.y + box.y + 1
         cursorShape: Qt.PointingHandCursor
         hoverEnabled: true
         width: 6
-        height: parent.height/2 - 2
+        height: box.height/2 - 2
+        visible: box.visible
         onEntered: {
             hovered = true
             upCanvas.requestPaint()
@@ -195,13 +199,15 @@ Item {
 
     MouseArea {
         property bool hovered: false
+        parent: box.parent.parent.parent
         id: downValue
-        x: textValue.x + textValue.width + 20
-        y: parent.height - height
+        x: box.x + textValue.x + textValue.width + 20
+        y: box.parent.parent.y + box.parent.y + box.y + box.height - height
         width: 6
-        height: parent.height/2 - 2
+        height: box.height/2 - 2
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        visible: box.visible
         onEntered: {
             hovered = true
             downCanvas.requestPaint()

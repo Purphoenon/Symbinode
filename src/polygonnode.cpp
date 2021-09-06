@@ -34,16 +34,11 @@ PolygonNode::PolygonNode(QQuickItem *parent, QVector2D resolution, GLint bpc, in
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &PolygonNode::updateScale);
     connect(this, &PolygonNode::generatePreview, this, &PolygonNode::previewGenerated);
     connect(preview, &PolygonObject::changedTexture, this, &PolygonNode::setOutput);
     connect(preview, &PolygonObject::updatePreview, this, &PolygonNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &PolygonObject::setResolution);
     connect(this, &Node::changeBPC, preview, &PolygonObject::setBPC);
-    connect(this, &PolygonNode::sidesChanged, preview, &PolygonObject::setSides);
-    connect(this, &PolygonNode::polygonScaleChanged, preview, &PolygonObject::setPolygonScale);
-    connect(this, &PolygonNode::smoothChanged, preview, &PolygonObject::setSmooth);
-    connect(this, &PolygonNode::useAlphaChanged, preview, &PolygonObject::setUseAlpha);
     createSockets(1, 1);
     m_socketsInput[0]->setTip("Mask");
     setTitle("Polygon");
@@ -73,12 +68,13 @@ void PolygonNode::operation() {
     preview->selectedItem = selected();
 
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
         Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode && (inputNode->resolution() == m_resolution)) {
             preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
-        }
+        }        
     }
-
+    deserializing = false;
 }
 
 unsigned int &PolygonNode::getPreviewTexture() {
@@ -122,6 +118,12 @@ void PolygonNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &h
     propertiesPanel->setProperty("startUseAlpha", m_useAlpha);
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->setSides(m_sides);
+    preview->setPolygonScale(m_polygonScale);
+    preview->setSmooth(m_smooth);
+    preview->setUseAlpha(m_useAlpha);
+    preview->update();
 }
 
 int PolygonNode::sides() {
@@ -129,8 +131,11 @@ int PolygonNode::sides() {
 }
 
 void PolygonNode::setSides(int sides) {
+    if(m_sides == sides) return;
     m_sides = sides;
     sidesChanged(sides);
+    preview->setSides(sides);
+    preview->update();
 }
 
 float PolygonNode::polygonScale() {
@@ -138,8 +143,11 @@ float PolygonNode::polygonScale() {
 }
 
 void PolygonNode::setPolygonScale(float scale) {
+    if(m_polygonScale == scale) return;
     m_polygonScale = scale;
     polygonScaleChanged(scale);
+    preview->setPolygonScale(scale);
+    preview->update();
 }
 
 float PolygonNode::smooth() {
@@ -147,8 +155,11 @@ float PolygonNode::smooth() {
 }
 
 void PolygonNode::setSmooth(float smooth) {
+    if(m_smooth == smooth) return;
     m_smooth = smooth;
     smoothChanged(smooth);
+    preview->setSmooth(smooth);
+    preview->update();
 }
 
 bool PolygonNode::useAlpha() {
@@ -156,14 +167,11 @@ bool PolygonNode::useAlpha() {
 }
 
 void PolygonNode::setUseAlpha(bool use) {
+    if(m_useAlpha == use) return;
     m_useAlpha = use;
     useAlphaChanged(use);
-}
-
-void PolygonNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setUseAlpha(use);
+    preview->update();
 }
 
 void PolygonNode::setOutput() {

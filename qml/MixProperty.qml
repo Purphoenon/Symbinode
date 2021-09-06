@@ -41,7 +41,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -116,50 +116,57 @@ Item {
         }
     }
 
-    ParamSlider {
-        id: factorParam
-        y: 76
-        propertyName: "Factor"
-        propertyValue: startFactor
-        onPropertyValueChanged: {
-            factorChanged(factorParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 91
+        clip: true
+        ParamSlider {
+            id: factorParam
+            propertyName: "Factor"
+            propertyValue: startFactor
+            onPropertyValueChanged: {
+                factorChanged(factorParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startFactor", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startFactor", propertyValue, oldValue)
+
+        ParamSlider {
+            id: foregroundOpacityParam
+            y: 18
+            visible: control.currentIndex != 1
+            propertyName: "Foreground opacity"
+            propertyValue: startForegroundOpacity
+            maximum: 100
+            step: 1
+            onPropertyValueChanged: {
+                foregroundOpacityChanged(foregroundOpacityParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startForegroundOpacity", propertyValue, oldValue)
+            }
+        }
+
+        ParamSlider {
+            id: backgroundOpacityParam
+            y: 51
+            visible: control.currentIndex != 1
+            propertyName: "Background opacity"
+            propertyValue: startBackgroundOpacity
+            maximum: 100
+            step: 1
+            onPropertyValueChanged: {
+                backgroundOpacityChanged(backgroundOpacityParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startBackgroundOpacity", propertyValue, oldValue)
+            }
         }
     }
 
-    ParamSlider {
-        id: foregroundOpacityParam
-        y: 109
-        visible: control.currentIndex != 1
-        propertyName: "Foreground opacity"
-        propertyValue: startForegroundOpacity
-        maximum: 100
-        step: 1
-        onPropertyValueChanged: {
-            foregroundOpacityChanged(foregroundOpacityParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startForegroundOpacity", propertyValue, oldValue)
-        }
-    }
-
-    ParamSlider {
-        id: backgroundOpacityParam
-        y: 142
-        visible: control.currentIndex != 1
-        propertyName: "Background opacity"
-        propertyValue: startBackgroundOpacity
-        maximum: 100
-        step: 1
-        onPropertyValueChanged: {
-            backgroundOpacityChanged(backgroundOpacityParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startBackgroundOpacity", propertyValue, oldValue)
-        }
-    }
     ParamCheckbox {
         id: useAlphaParam
         y: control.currentIndex != 1 ? 190 : 126

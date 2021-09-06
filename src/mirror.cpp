@@ -68,9 +68,9 @@ int MirrorObject::direction() {
 }
 
 void MirrorObject::setDirection(int dir) {
+    if(m_direction == dir) return;
     m_direction = dir;
     mirroredTex = true;
-    update();
 }
 
 QVector2D MirrorObject::resolution() {
@@ -88,9 +88,9 @@ GLint MirrorObject::bpc() {
 }
 
 void MirrorObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 MirrorRenderer::MirrorRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -113,6 +113,7 @@ MirrorRenderer::MirrorRenderer(QVector2D res, GLint bpc): m_resolution(res), m_b
     mirrorShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                            -1.0f, 1.0f, 0.0f, 1.0f,
@@ -145,10 +146,13 @@ MirrorRenderer::MirrorRenderer(QVector2D res, GLint bpc): m_resolution(res), m_b
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_mirrorTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -166,7 +170,6 @@ MirrorRenderer::~MirrorRenderer() {
 QOpenGLFramebufferObject *MirrorRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -177,22 +180,24 @@ void MirrorRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = mirrorItem->resolution();
         updateTexResolution();
     }
-    if(mirrorItem->bpcUpdated) {
-        mirrorItem->bpcUpdated = false;
-        m_bpc = mirrorItem->bpc();
-        updateTexResolution();
-        mirror();
-        mirrorItem->setTexture(m_mirrorTexture);
-    }
-    if(mirrorItem->mirroredTex) {
-        mirrorItem->mirroredTex = false;
-        m_sourceTexture = mirrorItem->sourceTexture();
+    if(mirrorItem->mirroredTex || mirrorItem->bpcUpdated) {
+        if(mirrorItem->bpcUpdated) {
+            mirrorItem->bpcUpdated = false;
+            m_bpc = mirrorItem->bpc();
+            updateTexResolution();
+        }
+        if(mirrorItem->mirroredTex) {
+            mirrorItem->mirroredTex = false;
+            m_sourceTexture = mirrorItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = mirrorItem->maskTexture();
+                mirrorShader->bind();
+                mirrorShader->setUniformValue(mirrorShader->uniformLocation("dir"), mirrorItem->direction());
+                mirrorShader->setUniformValue(mirrorShader->uniformLocation("useMask"), maskTexture);
+                mirrorShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = mirrorItem->maskTexture();
-            mirrorShader->bind();
-            mirrorShader->setUniformValue(mirrorShader->uniformLocation("dir"), mirrorItem->direction());
-            mirrorShader->setUniformValue(mirrorShader->uniformLocation("useMask"), maskTexture);
-            mirrorShader->release();
             mirror();
             mirrorItem->setTexture(m_mirrorTexture);
             mirrorItem->updatePreview(m_mirrorTexture);
@@ -241,11 +246,13 @@ void MirrorRenderer::mirror() {
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     mirrorShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_mirrorTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

@@ -16,12 +16,8 @@ SlopeBlurNode::SlopeBlurNode(QQuickItem *parent, QVector2D resolution, GLint bpc
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &SlopeBlurNode::updateScale);
     connect(preview, &SlopeBlurObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &SlopeBlurObject::textureChanged, this, &SlopeBlurNode::setOutput);
-    connect(this, &SlopeBlurNode::modeChanged, preview, &SlopeBlurObject::setMode);
-    connect(this, &SlopeBlurNode::intensityChanged, preview, &SlopeBlurObject::setIntensity);
-    connect(this, &SlopeBlurNode::samplesChanged, preview, &SlopeBlurObject::setSamples);
     connect(this, &Node::changeResolution, preview, &SlopeBlurObject::setResolution);
     connect(this, &Node::changeBPC, preview, &SlopeBlurObject::setBPC);
     propView = new QQuickView();
@@ -47,14 +43,17 @@ void SlopeBlurNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[2]->getEdges().isEmpty()) {
         Node *inputNode2 = static_cast<Node*>(m_socketsInput[2]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode2 && inputNode2->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setSlopeTexture(m_socketsInput[1]->value().toUInt());
@@ -62,6 +61,7 @@ void SlopeBlurNode::operation() {
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
     preview->slopedTex = true;
     preview->update();
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &SlopeBlurNode::getPreviewTexture() {
@@ -98,8 +98,15 @@ void SlopeBlurNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> 
     propertiesPanel->setProperty("mode", m_mode);
     propertiesPanel->setProperty("startIntensity", m_intensity);
     propertiesPanel->setProperty("startSamples", m_samples);
+
+    preview->setMode(m_mode);
+    preview->setIntensity(m_intensity);
+    preview->setSamples(m_samples);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 int SlopeBlurNode::mode() {
@@ -107,8 +114,11 @@ int SlopeBlurNode::mode() {
 }
 
 void SlopeBlurNode::setMode(int mode) {
+    if(m_mode == mode) return;
     m_mode = mode;
     modeChanged(mode);
+    preview->setMode(mode);
+    preview->update();
 }
 
 float SlopeBlurNode::intensity() {
@@ -116,8 +126,11 @@ float SlopeBlurNode::intensity() {
 }
 
 void SlopeBlurNode::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     intensityChanged(intensity);
+    preview->setIntensity(intensity);
+    preview->update();
 }
 
 int SlopeBlurNode::samples() {
@@ -125,14 +138,11 @@ int SlopeBlurNode::samples() {
 }
 
 void SlopeBlurNode::setSamples(int samples) {
+    if(m_samples == samples) return;
     m_samples = samples;
     samplesChanged(samples);
-}
-
-void SlopeBlurNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setSamples(samples);
+    preview->update();
 }
 
 void SlopeBlurNode::setOutput() {

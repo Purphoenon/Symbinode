@@ -15,7 +15,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -29,29 +29,35 @@ Item {
             propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: radiusParam
-        y: 38
-        maximum: 10
-        propertyName: "Radius"
-        onPropertyValueChanged: {
-            radiusChanged(propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: radiusParam
+            maximum: 10
+            propertyName: "Radius"
+            onPropertyValueChanged: {
+                radiusChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRadius", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startRadius", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: rotationParam
-        y: 71
-        maximum: 360
-        step: 1
-        propertyName: "Rotation"
-        onPropertyValueChanged: {
-            angleChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startRotation", propertyValue, oldValue)
+        ParamSlider {
+            id: rotationParam
+            y: 18
+            maximum: 360
+            step: 1
+            propertyName: "Rotation"
+            onPropertyValueChanged: {
+                angleChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRotation", propertyValue, oldValue)
+            }
         }
     }
     ParamCheckbox {

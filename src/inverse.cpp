@@ -48,7 +48,6 @@ unsigned int InverseObject::sourceTexture() {
 void InverseObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     inversedTex = true;
-    update();
 }
 
 void InverseObject::saveTexture(QString fileName) {
@@ -72,9 +71,9 @@ GLint InverseObject::bpc() {
 }
 
 void InverseObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 InverseRenderer::InverseRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -96,6 +95,7 @@ InverseRenderer::InverseRenderer(QVector2D res, GLint bpc): m_resolution(res), m
     inverseShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -127,10 +127,13 @@ InverseRenderer::InverseRenderer(QVector2D res, GLint bpc): m_resolution(res), m
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_inversedTexture, 0
     );
@@ -150,7 +153,6 @@ InverseRenderer::~InverseRenderer() {
 QOpenGLFramebufferObject *InverseRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -161,16 +163,16 @@ void InverseRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = inverseItem->resolution();
         updateTexResolution();
     }
-    if(inverseItem->bpcUpdated) {
-        inverseItem->bpcUpdated = false;
-        m_bpc = inverseItem->bpc();
-        updateTexResolution();
-        inverte();
-        inverseItem->setTexture(m_inversedTexture);
-    }
-    if(inverseItem->inversedTex) {
-        inverseItem->inversedTex = false;
-        m_sourceTexture = inverseItem->sourceTexture();
+    if(inverseItem->inversedTex || inverseItem->bpcUpdated) {
+        if(inverseItem->bpcUpdated) {
+            inverseItem->bpcUpdated = false;
+            m_bpc = inverseItem->bpc();
+            updateTexResolution();
+        }
+        if(inverseItem->inversedTex) {
+            inverseItem->inversedTex = false;
+            m_sourceTexture = inverseItem->sourceTexture();
+        }
         if(m_sourceTexture) {
             inverte();
             inverseItem->setTexture(m_inversedTexture);
@@ -223,7 +225,9 @@ void InverseRenderer::inverte() {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindTexture(GL_TEXTURE_2D, 0);
     inverseShader->release();
-    glBindVertexArray(0);
+    glBindVertexArray(0);    
+    glBindTexture(GL_TEXTURE_2D, m_inversedTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();

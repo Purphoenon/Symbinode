@@ -26,14 +26,19 @@
 
 Node::Node(QQuickItem *parent, QVector2D resolution, GLint bpc): QQuickItem (parent), m_resolution(resolution), m_bpc(bpc)
 {
+    setFlag(ItemHasContents, true);
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
+    setTransformOrigin(TopLeft);
     view = new QQuickView();
     view->setSource(QUrl(QStringLiteral("qrc:/qml/Node.qml")));
     grNode = qobject_cast<QQuickItem *>(view->rootObject());
     grNode->setParentItem(this);
     grNode->setX(8);
     setZ(4);
+    setWidth(196);
+    setHeight(207);
+    grNode->setHeight(207);
 }
 
 Node::Node(const Node &node):Node() {
@@ -70,15 +75,15 @@ void Node::setBaseX(float value) {
     m_baseX = value;
     setX(m_baseX*m_scale - m_pan.x());
     for(auto s: m_socketsInput) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 6, s->y() + 6));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(auto s: m_socketOutput) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 6, s->y() + 6));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(auto s: m_additionalInputs) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     if(m_attachedFrame && !m_attachedFrame->selected()) {
@@ -95,15 +100,15 @@ void Node::setBaseY(float value) {
     m_baseY = value;
     setY(m_baseY*m_scale - m_pan.y());
     for(auto s: m_socketsInput) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(auto s: m_socketOutput) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(auto s: m_additionalInputs) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     if(m_attachedFrame && !m_attachedFrame->selected()) {
@@ -118,18 +123,18 @@ QVector2D Node::pan() {
 
 void Node::setPan(QVector2D pan) {
     m_pan = pan;
-    setX(baseX()*m_scale - m_pan.x());
-    setY(baseY()*m_scale - m_pan.y());
+    setX(m_baseX*m_scale - m_pan.x());
+    setY(m_baseY*m_scale - m_pan.y());
     for(auto s: m_socketsInput) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(auto s: m_socketOutput) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(auto s: m_additionalInputs) {
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*m_scale, s->y() + 8*m_scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     emit changePan(pan);
@@ -149,6 +154,7 @@ GLint Node::bpc() {
 }
 
 void Node::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     emit changeBPC(bpc);
 }
@@ -219,7 +225,7 @@ bool Node::checkConnected(Node *node, socketType type) {
 }
 
 bool Node::isPointInRadius(QVector2D point) {
-    return (x() - 30 < point.x() && x() + width() + 30 > point.x() && y() - 30 < point.y() && y() + height() + 30 > point.y());
+    return (x() - 30 < point.x() && x() + width()*scale() + 30 > point.x() && y() - 30 < point.y() && y() + height()*scale() + 30 > point.y());
 }
 
 Socket *Node::getNearestOutputSocket(QVector2D center, float radius) {
@@ -304,17 +310,18 @@ void Node::setAttachedFrame(Frame *frame) {
 }
 
 void Node::mousePressEvent(QMouseEvent *event) {
-    if(event->pos().x() < 8*m_scale || event->pos().x() > 186*m_scale || event->pos().y() > 207*m_scale) {
+    if(event->pos().x() < 8 || event->pos().x() > 186 || event->pos().y() > 207) {
         event->setAccepted(false);
         return;
     }
     setFocus(true);
     setFocus(false);
     moved = false;
+    m_intersectingEdge = nullptr;
     Scene *scene = reinterpret_cast<Scene*>(parentItem());
     QPointF point = mapToItem(scene, QPointF(event->pos().x(), event->pos().y())); 
-    dragX = event->pos().x();
-    dragY = event->pos().y();
+    dragX = event->pos().x()*scale();
+    dragY = event->pos().y()*scale();
     oldX = m_baseX;
     oldY = m_baseY;
     if(event->button() == Qt::LeftButton && event->modifiers() == Qt::ControlModifier) {
@@ -368,6 +375,27 @@ void Node::mouseMoveEvent(QMouseEvent *event) {
                 f->setBaseY(f->baseY() - offsetBaseY);
             }
         }
+
+        if(scene->countSelected() == 1 && getEdges().count() == 0 && !m_socketsInput.empty() && !m_socketOutput.empty()) {
+            Edge *edge = nullptr;
+            for(auto e: scene->edges()) {
+                bool intersecting = e->intersectWith(x(), y(), width()*m_scale, height()*m_scale);
+                if(intersecting) {
+                    edge = e;
+                    break;
+                }
+            }
+            if(edge) {
+                if(m_intersectingEdge != edge) {
+                    if(m_intersectingEdge) m_intersectingEdge->setSelected(false);
+                    edge->setSelected(true);
+                }
+            }
+            else {
+                 if(m_intersectingEdge) m_intersectingEdge->setSelected(false);
+            }
+            m_intersectingEdge = edge;
+        }
     }
 }
 
@@ -388,32 +416,21 @@ void Node::mouseReleaseEvent(QMouseEvent *event) {
         else {
             QPointF scenePoint = mapToItem(scene, QPointF(width()*0.5f, height()*0.16f));
             Frame *frame = scene->frameAt(scenePoint.x(), scenePoint.y());
-            Edge *edge = nullptr;
-            if(scene->countSelected() == 1 && getEdges().count() == 0) {
-                for(auto e: scene->edges()) {
-                    bool intersecting = e->intersectWith(x(), y(), width(), height());
-                    if(intersecting) {
-                        edge = e;
-                        break;
-                    }
-                }
-            }
+            if(m_intersectingEdge) m_intersectingEdge->setSelected(false);
             frame = attachedFrame() ? nullptr : frame;
-            scene->movedNodes(scene->selectedList(), offset, frame, edge);
-            /*if(!attachedFrame()) scene->movedNodes(scene->selectedList(), offset, frame, edge);
-            else scene->movedNodes(scene->selectedList(), offset, nullptr);*/
+            scene->movedNodes(scene->selectedList(), offset, frame, m_intersectingEdge);
         }
     }
 }
 
 void Node::hoverMoveEvent(QHoverEvent *event) {
-    if(!grNode->property("hovered").toBool() && event->pos().y() < 207*m_scale) {
+    if(!grNode->property("hovered").toBool() && event->pos().y() < 207) {
         grNode->setProperty("hovered", true);
         if(m_attachedFrame) {
             m_attachedFrame->setBubbleVisible(true);
         }
     }
-    else if(grNode->property("hovered").toBool() && event->pos().y() > 207*m_scale) {
+    else if(grNode->property("hovered").toBool() && event->pos().y() > 207) {
         grNode->setProperty("hovered", false);
         if(m_attachedFrame) {
             m_attachedFrame->setBubbleVisible(false);
@@ -461,6 +478,7 @@ void Node::serialize(QJsonObject &json) const {
 }
 
 void Node::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
+    deserializing = true;
     if(json.contains("baseX")) {        
         setBaseX(json["baseX"].toVariant().toFloat());
     }
@@ -497,7 +515,6 @@ void Node::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
             hash[s->id()] = s;
         }
     }
-    operation();
 }
 
 void Node::createSockets(int inputCount, int outputCount) {
@@ -576,36 +593,26 @@ void Node::saveTexture(QString fileName) {
 }
 
 void Node::scaleUpdate(float scale) {
-    setWidth(196*static_cast<qreal>(scale));
-    setHeight(207*static_cast<qreal>(scale));
-    grNode->setHeight(207*scale);
-    grNode->setProperty("scaleView", scale);    
+    setScale(scale);
+    grNode->setProperty("scaleView", scale);
     int inputCount = m_socketsInput.length();
     int outputCount = m_socketOutput.length();
-    float inputStart = (grNode->height() - 30*scale)/2 + 22*scale - 42*scale*(inputCount - 1)/2;
-    float outputStart = (grNode->height() - 30*scale)/2 + 22*scale - 42*scale*(outputCount - 1)/2;
     for(int i = 0; i < inputCount; ++i) {
         Socket *s = m_socketsInput[i];
         s->updateScale(scale);
-        s->setY(inputStart + 42*scale*i);
-        s->setX(2*scale);
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*scale, s->y() + 8*scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(int i = 0; i < outputCount; ++i) {
         Socket *s = m_socketOutput[i];
         s->updateScale(scale);
-        s->setY(outputStart + 42*scale*i);
-        s->setX(178*scale);
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*scale, s->y() + 8*scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     for(int i = 0; i < m_additionalInputs.length(); ++i) {
         Socket *s = m_additionalInputs[i];
         s->updateScale(scale);
-        s->setY(grNode->height() + 12*scale + 28*i*scale);
-        s->setX(2*scale);
-        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8*scale, s->y() + 8*scale));
+        QPointF sPos = mapToItem(parentItem(), QPointF(s->x() + 8, s->y() + 8));
         s->setGlobalPos(QVector2D(sPos.x(), sPos.y()));
     }
     m_scale = scale;

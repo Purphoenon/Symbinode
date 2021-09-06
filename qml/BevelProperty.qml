@@ -15,7 +15,7 @@ Item {
     ParamDropDown {
         id: control
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -29,29 +29,36 @@ Item {
             propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: distanceParam
-        y: 38
-        minimum: -1
-        propertyName: "Distance"
-        onPropertyValueChanged: {
-            distanceChanged(propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: distanceParam
+            minimum: -1
+            propertyName: "Distance"
+            onPropertyValueChanged: {
+                distanceChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startDistance", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startDistance", propertyValue, oldValue)
+        ParamSlider {
+            id: smoothParam
+            y: 18
+            propertyName: "Smooth"
+            onPropertyValueChanged: {
+                bevelSmoothChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSmooth", propertyValue, oldValue)
+            }
         }
     }
-    ParamSlider {
-        id: smoothParam
-        y: 71
-        propertyName: "Smooth"
-        onPropertyValueChanged: {
-            bevelSmoothChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSmooth", propertyValue, oldValue)
-        }
-    }
+
     ParamCheckbox {
         id: useAlphaParam
         y: 119

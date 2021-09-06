@@ -42,7 +42,6 @@ MixNode::MixNode(QQuickItem *parent, QVector2D resolution, GLint bpc, float fact
     m_socketsInput[1]->setTip("Foreground");
     m_socketsInput[2]->setTip("Factor");
     m_socketsInput[3]->setTip("Mask");
-    connect(this, &Node::changeScaleView, this, &MixNode::updateScale);
     connect(preview, &MixObject::textureChanged, this, &MixNode::setOutput);
     connect(this, &MixNode::generatePreview, this, &MixNode::previewGenerated);
     connect(preview, &MixObject::updatePreview, this, &MixNode::updatePreview);
@@ -76,18 +75,22 @@ void MixNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[2]->getEdges().isEmpty()) {
         Node *inputNode2 = static_cast<Node*>(m_socketsInput[2]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode2 && inputNode2->resolution() != m_resolution) return;
+        if(m_socketsInput[2]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[3]->getEdges().isEmpty()) {
         Node *inputNode3 = static_cast<Node*>(m_socketsInput[3]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode3 && inputNode3->resolution() != m_resolution) return;
+        if(m_socketsInput[3]->value() == 0 && deserializing) return;
     }
 
     preview->setFirstTexture((m_socketsInput[0]->value().toUInt()));
@@ -102,13 +105,9 @@ void MixNode::operation() {
         preview->useFactorTexture = false;
         preview->setFactor(m_factor);
     }
-    preview->setMode(m_mode);
-    preview->setIncludingAlpha(m_includingAlpha);
-    preview->setForegroundOpacity(m_fOpacity);
-    preview->setBackgroundOpacity(m_bOpacity);
     preview->mixedTex = true;
-    preview->selectedItem = selected();
     preview->update();
+    deserializing = false;
 
     if(m_socketsInput[0]->countEdge() == 0 && m_socketsInput[1]->countEdge() == 0) m_socketOutput[0]->setValue(0);
 }
@@ -126,8 +125,13 @@ float MixNode::factor() {
 }
 
 void MixNode::setFactor(float f) {
+    if(m_factor == f) return;
     m_factor = f;
     factorChanged(f);
+    if(m_socketsInput[2]->countEdge() == 0) {
+        preview->setFactor(f);
+        preview->update();
+    }
 }
 
 int MixNode::mode() {
@@ -135,8 +139,11 @@ int MixNode::mode() {
 }
 
 void MixNode::setMode(int mode) {
+    if(m_mode == mode) return;
     m_mode = mode;
     modeChanged(mode);
+    preview->setMode(mode);
+    preview->update();
 }
 
 bool MixNode::includingAlpha() {
@@ -144,8 +151,11 @@ bool MixNode::includingAlpha() {
 }
 
 void MixNode::setIncludingAlpha(bool including) {
+    if(m_includingAlpha == including) return;
     m_includingAlpha = including;
     includingAlphaChanged(including);
+    preview->setIncludingAlpha(m_includingAlpha);
+    preview->update();
 }
 
 int MixNode::foregroundOpacity() {
@@ -153,8 +163,11 @@ int MixNode::foregroundOpacity() {
 }
 
 void MixNode::setForegroundOpacity(int opacity) {
+    if(m_fOpacity == opacity) return;
     m_fOpacity = opacity;
     foregroundOpacityChanged(opacity);
+    preview->setForegroundOpacity(opacity);
+    preview->update();
 }
 
 int MixNode::backgroundOpacity() {
@@ -162,8 +175,11 @@ int MixNode::backgroundOpacity() {
 }
 
 void MixNode::setBackgroundOpacity(int opacity) {
+    if(m_bOpacity == opacity) return;
     m_bOpacity = opacity;
     backgroundOpacityChanged(opacity);
+    preview->setBackgroundOpacity(opacity);
+    preview->update();
 }
 
 void MixNode::setOutput() {
@@ -207,46 +223,42 @@ void MixNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash)
         setBackgroundOpacity(json["backgroundOpacity"].toInt());
         propertiesPanel->setProperty("startBackgroundOpacity", m_bOpacity);
     }
+
+    preview->setFactor(m_factor);
+    preview->setMode(m_mode);
+    preview->setIncludingAlpha(m_includingAlpha);
+    preview->setForegroundOpacity(m_fOpacity);
+    preview->setBackgroundOpacity(m_bOpacity);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 void MixNode::updateFactor(qreal f) {
-    setFactor(static_cast<float>(f));
-    if(m_socketsInput[2]->countEdge() == 0) {
-        operation();
-    }
+    setFactor(static_cast<float>(f));    
     dataChanged();
 }
 
 void MixNode::updateMode(int mode) {
     setMode(mode);
-    operation();
     dataChanged();
 }
 
 void MixNode::updateIncludingAlpha(bool including) {
     setIncludingAlpha(including);
-    operation();
     dataChanged();
 }
 
 void MixNode::updateForegroundOpacity(int opacity) {
     setForegroundOpacity(opacity);
-    operation();
     dataChanged();
 }
 
 void MixNode::updateBackgroundOpacity(int opacity) {
     setBackgroundOpacity(opacity);
-    operation();
     dataChanged();
-}
-
-void MixNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void MixNode::previewGenerated() {

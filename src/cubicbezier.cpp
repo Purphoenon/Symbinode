@@ -25,7 +25,7 @@
 #include <iostream>
 
 CubicBezier::CubicBezier(QQuickItem *parent): QQuickItem (parent), m_p1(0, 0), m_p2(1, 0), m_p3(0, 1),
-    m_p4(1, 1), m_segmentCount(64), m_lineWidth(3.0f)
+    m_p4(1, 1), m_segmentCount(64), m_lineWidth(3.0f), m_color(104, 163, 219)
 {
     setFlag(ItemHasContents, true);
 }
@@ -43,7 +43,7 @@ QSGNode *CubicBezier::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         node->setGeometry(geometry);
         node->setFlags(QSGNode::OwnsGeometry);
         QSGFlatColorMaterial *material = new QSGFlatColorMaterial();
-        material->setColor(QColor(104, 163, 219));
+        material->setColor(m_color);
         node->setMaterial(material);
         node->setFlags(QSGNode::OwnsMaterial);
     }
@@ -92,6 +92,10 @@ float CubicBezier::lineWidth() const {
     return m_lineWidth;
 }
 
+QColor CubicBezier::color() const {
+    return m_color;
+}
+
 void CubicBezier::setP1(const QPointF &point) {
     if(point == m_p1) return;
     m_p1 = point;
@@ -131,5 +135,11 @@ void CubicBezier::setLineWidth(float width) {
     if(width == m_lineWidth) return;
     m_lineWidth = width;
     emit lineWidthChanged(width);
+    update();
+}
+
+void CubicBezier::setColor(QColor color) {
+    if(color == m_color) return;
+    m_color = color;
     update();
 }

@@ -34,7 +34,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -48,17 +48,23 @@ Item {
             propertyChangingFinished("startBits", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: strenghtParam
-        y: 38
-        minimum: -1
-        propertyName: "Strength"
-        propertyValue: startStrenght
-        onPropertyValueChanged: {
-            strenghtChanged(strenghtParam.propertyValue*10)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startStrenght", propertyValue, oldValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 53
+        clip: true
+        ParamSlider {
+            id: strenghtParam
+            minimum: -1
+            propertyName: "Strength"
+            propertyValue: startStrenght
+            onPropertyValueChanged: {
+                strenghtChanged(strenghtParam.propertyValue*10)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startStrenght", propertyValue, oldValue)
+            }
         }
     }
 }

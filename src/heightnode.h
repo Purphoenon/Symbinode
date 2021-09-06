@@ -17,7 +17,6 @@ public:
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
-    void updateScale(float scale);
     void heightSave(QString dir);
 signals:
     void heightChanged(unsigned int heightMap);

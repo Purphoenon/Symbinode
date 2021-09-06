@@ -45,7 +45,6 @@ signals:
     void brightnessChanged(float value);
     void contrastChanged(float value);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
     void updateBrightness(qreal value);

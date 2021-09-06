@@ -29,7 +29,6 @@ unsigned int DirectionalWarpObject::sourceTexture() {
 void DirectionalWarpObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     warpedTex = true;
-    update();
 }
 
 unsigned int DirectionalWarpObject::warpTexture() {
@@ -39,7 +38,6 @@ unsigned int DirectionalWarpObject::warpTexture() {
 void DirectionalWarpObject::setWarpTexture(unsigned int texture) {
     m_warpTexture = texture;
     warpedTex = true;
-    update();
 }
 
 void DirectionalWarpObject::saveTexture(QString fileName) {
@@ -55,7 +53,6 @@ unsigned int DirectionalWarpObject::maskTexture() {
 void DirectionalWarpObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     warpedTex = true;
-    update();
 }
 
 float DirectionalWarpObject::intensity() {
@@ -63,9 +60,9 @@ float DirectionalWarpObject::intensity() {
 }
 
 void DirectionalWarpObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     warpedTex = true;
-    update();
 }
 
 int DirectionalWarpObject::angle() {
@@ -73,9 +70,9 @@ int DirectionalWarpObject::angle() {
 }
 
 void DirectionalWarpObject::setAngle(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     warpedTex = true;
-    update();
 }
 
 QVector2D DirectionalWarpObject::resolution() {
@@ -93,9 +90,9 @@ GLint DirectionalWarpObject::bpc() {
 }
 
 void DirectionalWarpObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 DirectionalWarpRenderer::DirectionalWarpRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -119,6 +116,7 @@ DirectionalWarpRenderer::DirectionalWarpRenderer(QVector2D res, GLint bpc): m_re
     dirWarpShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -146,10 +144,13 @@ DirectionalWarpRenderer::DirectionalWarpRenderer(QVector2D res, GLint bpc): m_re
     else if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_warpedTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -168,7 +169,6 @@ DirectionalWarpRenderer::~DirectionalWarpRenderer() {
 QOpenGLFramebufferObject *DirectionalWarpRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -179,25 +179,27 @@ void DirectionalWarpRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = dirWarpItem->resolution();
         updateTexResolution();
     }
-    if(dirWarpItem->bpcUpdated) {
-        dirWarpItem->bpcUpdated = false;
-        m_bpc = dirWarpItem->bpc();
-        updateTexResolution();
-        createDirectionalWarp();
-        dirWarpItem->setTexture(m_warpedTexture);
-    }
-    if(dirWarpItem->warpedTex) {
-        dirWarpItem->warpedTex = false;
-        m_sourceTexture = dirWarpItem->sourceTexture();
-        glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
+    if(dirWarpItem->warpedTex || dirWarpItem->bpcUpdated) {
+        if(dirWarpItem->bpcUpdated) {
+            dirWarpItem->bpcUpdated = false;
+            m_bpc = dirWarpItem->bpc();
+            updateTexResolution();
+        }
+        if(dirWarpItem->warpedTex) {
+            dirWarpItem->warpedTex = false;
+            m_sourceTexture = dirWarpItem->sourceTexture();
+            glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
+            if(m_sourceTexture) {
+                m_warpTexture = dirWarpItem->warpTexture();
+                maskTexture = dirWarpItem->maskTexture();
+                dirWarpShader->bind();
+                dirWarpShader->setUniformValue(dirWarpShader->uniformLocation("useMask"), maskTexture);
+                dirWarpShader->setUniformValue(dirWarpShader->uniformLocation("intensity"), dirWarpItem->intensity());
+                dirWarpShader->setUniformValue(dirWarpShader->uniformLocation("angle"), dirWarpItem->angle());
+                dirWarpShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            m_warpTexture = dirWarpItem->warpTexture();
-            maskTexture = dirWarpItem->maskTexture();
-            dirWarpShader->bind();
-            dirWarpShader->setUniformValue(dirWarpShader->uniformLocation("useMask"), maskTexture);
-            dirWarpShader->setUniformValue(dirWarpShader->uniformLocation("intensity"), dirWarpItem->intensity());
-            dirWarpShader->setUniformValue(dirWarpShader->uniformLocation("angle"), dirWarpItem->angle());
-            dirWarpShader->release();
             createDirectionalWarp();
             dirWarpItem->setTexture(m_warpedTexture);
             dirWarpItem->updatePreview(m_warpedTexture);
@@ -249,11 +251,13 @@ void DirectionalWarpRenderer::createDirectionalWarp() {
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     dirWarpShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_warpedTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

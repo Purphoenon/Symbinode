@@ -40,7 +40,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -71,26 +71,32 @@ Item {
             propertyChangingFinished("startInterpolation", currentIndex, oldIndex)
         }
     }
-    ParamSlider {
-        id: radiusParam
-        y: 76
-        propertyName: "Radius"
-        onPropertyValueChanged: {
-            radiusChanged(radiusParam.propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 91
+        clip: true
+        ParamSlider {
+            id: radiusParam
+            propertyName: "Radius"
+            onPropertyValueChanged: {
+                radiusChanged(radiusParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startRadius", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startRadius", propertyValue, oldValue)
-        }
-    }
-    ParamSlider {
-        id: smoothParam
-        y: 109
-        propertyName: "Smooth"
-        onPropertyValueChanged: {
-            smoothValueChanged(smoothParam.propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startSmooth", propertyValue, oldValue)
+        ParamSlider {
+            id: smoothParam
+            y: 18
+            propertyName: "Smooth"
+            onPropertyValueChanged: {
+                smoothValueChanged(smoothParam.propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startSmooth", propertyValue, oldValue)
+            }
         }
     }
     ParamCheckbox {

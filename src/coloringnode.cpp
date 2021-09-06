@@ -32,13 +32,11 @@ ColoringNode::ColoringNode(QQuickItem *parent, QVector2D resolution, GLint bpc, 
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &ColoringNode::updateScale);
     connect(this, &Node::generatePreview, this, &ColoringNode::previewGenerated);
     connect(preview, &ColoringObject::updatePreview, this, &Node::updatePreview);
     connect(this, &Node::changeResolution, preview, &ColoringObject::setResolution);
     connect(this, &Node::changeBPC, preview, &ColoringObject::setBPC);
     connect(preview, &ColoringObject::textureChanged, this, &ColoringNode::setOutput);
-    connect(this, &ColoringNode::colorChanged, preview, &ColoringObject::setColor);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/AlbedoProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -59,8 +57,15 @@ ColoringNode::~ColoringNode() {
 
 void ColoringNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
+    preview->update();
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &ColoringNode::getPreviewTexture() {
@@ -90,7 +95,6 @@ void ColoringNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &
     if(json.contains("color")) {
         QJsonArray color = json["color"].toArray();
         QVector3D c = QVector3D(color[0].toVariant().toFloat(), color[1].toVariant().toFloat(), color[2].toVariant().toFloat());
-        updateColor(c);
         propertiesPanel->setProperty("startColor", c);
     }
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
@@ -102,14 +106,11 @@ QVector3D ColoringNode::color() {
 }
 
 void ColoringNode::setColor(QVector3D color) {
+    if(m_color == color) return;
     m_color = color;
     colorChanged(color);
-}
-
-void ColoringNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setColor(color);
+    preview->update();
 }
 
 void ColoringNode::previewGenerated() {

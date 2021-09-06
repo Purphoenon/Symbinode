@@ -49,9 +49,9 @@ float DirectionalBlurObject::intensity() {
 }
 
 void DirectionalBlurObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     bluredTex = true;
-    update();
 }
 
 int DirectionalBlurObject::angle() {
@@ -59,9 +59,9 @@ int DirectionalBlurObject::angle() {
 }
 
 void DirectionalBlurObject::setAngle(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     bluredTex = true;
-    update();
 }
 
 QVector2D DirectionalBlurObject::resolution() {
@@ -79,9 +79,9 @@ GLint DirectionalBlurObject::bpc() {
 }
 
 void DirectionalBlurObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 DirectionalBlurRenderer::DirectionalBlurRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -104,6 +104,7 @@ DirectionalBlurRenderer::DirectionalBlurRenderer(QVector2D res, GLint bpc): m_re
     dirBlurShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -137,10 +138,13 @@ DirectionalBlurRenderer::DirectionalBlurRenderer(QVector2D res, GLint bpc): m_re
                 GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
             );
         }
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);        
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
         glFramebufferTexture2D(
             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0
         );
@@ -161,7 +165,6 @@ DirectionalBlurRenderer::~DirectionalBlurRenderer() {
 QOpenGLFramebufferObject *DirectionalBlurRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -172,23 +175,25 @@ void DirectionalBlurRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = dirBlurItem->resolution();
         updateTexResolution();
     }
-    if(dirBlurItem->bpcUpdated) {
-        dirBlurItem->bpcUpdated = false;
-        m_bpc = dirBlurItem->bpc();
-        updateTexResolution();
-        createDirectionalBlur();
-        dirBlurItem->setTexture(pingpongBuffer[1]);
-    }
-    if(dirBlurItem->bluredTex) {
-        dirBlurItem->bluredTex = false;
-        m_sourceTexture = dirBlurItem->sourceTexture();
+    if(dirBlurItem->bluredTex || dirBlurItem->bpcUpdated) {
+        if(dirBlurItem->bpcUpdated) {
+            dirBlurItem->bpcUpdated = false;
+            m_bpc = dirBlurItem->bpc();
+            updateTexResolution();
+        }
+        if(dirBlurItem->bluredTex) {
+            dirBlurItem->bluredTex = false;
+            m_sourceTexture = dirBlurItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = dirBlurItem->maskTexture();
+                dirBlurShader->bind();
+                dirBlurShader->setUniformValue(dirBlurShader->uniformLocation("angle"), dirBlurItem->angle());
+                dirBlurShader->setUniformValue(dirBlurShader->uniformLocation("intensity"), dirBlurItem->intensity());
+                dirBlurShader->release();
+                m_intensity = dirBlurItem->intensity();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = dirBlurItem->maskTexture();
-            dirBlurShader->bind();
-            dirBlurShader->setUniformValue(dirBlurShader->uniformLocation("angle"), dirBlurItem->angle());
-            dirBlurShader->setUniformValue(dirBlurShader->uniformLocation("intensity"), dirBlurItem->intensity());
-            dirBlurShader->release();
-            m_intensity = dirBlurItem->intensity();
             createDirectionalBlur();
             dirBlurItem->setTexture(pingpongBuffer[1]);
             dirBlurItem->updatePreview(pingpongBuffer[1]);
@@ -251,14 +256,16 @@ void DirectionalBlurRenderer::createDirectionalBlur() {
         dirBlurShader->setUniformValue(dirBlurShader->uniformLocation("resolution"), m_resolution);
         if(i == amount - 1) dirBlurShader->setUniformValue(dirBlurShader->uniformLocation("useMask"), maskTexture);
 
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);        
         dirBlurShader->release();
         glBindVertexArray(0);
         if (first_iteration)
             first_iteration = false;
+        glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i%2]);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);    
     glFlush();
     glFinish();
 }

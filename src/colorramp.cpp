@@ -58,7 +58,6 @@ unsigned int ColorRampObject::maskTexture() {
 void ColorRampObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     rampedTex = true;
-    update();
 }
 
 void ColorRampObject::saveTexture(QString fileName) {
@@ -78,7 +77,6 @@ unsigned int ColorRampObject::sourceTexture() {
 void ColorRampObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     rampedTex = true;
-    update();
 }
 
 void ColorRampObject::setGradientsStops(QJsonArray stops) {
@@ -106,9 +104,9 @@ GLint ColorRampObject::bpc() {
 }
 
 void ColorRampObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 void ColorRampObject::gradientAdd(QVector3D color, qreal pos, int index) {
@@ -158,6 +156,7 @@ ColorRampRenderer::ColorRampRenderer(QVector2D res, GLint bpc): m_resolution(res
     colorRampShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -189,10 +188,13 @@ ColorRampRenderer::ColorRampRenderer(QVector2D res, GLint bpc): m_resolution(res
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0
     );
@@ -215,7 +217,6 @@ ColorRampRenderer::~ColorRampRenderer() {
 QOpenGLFramebufferObject *ColorRampRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -226,19 +227,20 @@ void ColorRampRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = colorRampItem->resolution();
         updateTexResolution();
     }
-    if(colorRampItem->bpcUpdated) {
-        colorRampItem->bpcUpdated = false;
-        m_bpc = colorRampItem->bpc();
-        updateTexResolution();
-        colorRamp(colorRampItem->stops());
-        colorRampItem->setTexture(m_colorTexture);
-    }
-    if(colorRampItem->rampedTex) {
-        colorRampItem->rampedTex = false;
-
-        m_sourceTexture = colorRampItem->sourceTexture();
+    if(colorRampItem->rampedTex || colorRampItem->bpcUpdated) {
+        if(colorRampItem->bpcUpdated) {
+            colorRampItem->bpcUpdated = false;
+            m_bpc = colorRampItem->bpc();
+            updateTexResolution();
+        }
+        if(colorRampItem->rampedTex) {
+            colorRampItem->rampedTex = false;
+            m_sourceTexture = colorRampItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = colorRampItem->maskTexture();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = colorRampItem->maskTexture();
             colorRamp(colorRampItem->stops());
             colorRampItem->setTexture(m_colorTexture);
             colorRampItem->updatePreview(m_colorTexture);
@@ -297,11 +299,13 @@ void ColorRampRenderer::colorRamp(const std::vector<QVector4D> &stops) {
     colorRampShader->setUniformValue(colorRampShader->uniformLocation("useMask"), maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     glBindVertexArray(0);
     colorRampShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

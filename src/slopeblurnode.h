@@ -27,7 +27,6 @@ signals:
     void intensityChanged(float intensity);
     void samplesChanged(int samples);
 public slots:
-    void updateScale(float scale);
     void setOutput();
     void updateMode(int mode);
     void updateIntensity(qreal intensity);

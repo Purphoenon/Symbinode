@@ -35,7 +35,6 @@ MetalNode::MetalNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(
     preview->setY(30*s);
     preview->setScale(s);
     connect(preview, &OneChanelObject::updatePreview, this, &MetalNode::updatePreview);
-    connect(this, &Node::changeScaleView, this, &MetalNode::updateScale);
     connect(preview, &OneChanelObject::updateValue, this, &MetalNode::metalChanged);
     connect(this, &Node::changeResolution, preview, &OneChanelObject::setResolution);
     connect(this, &Node::changeBPC, preview, &OneChanelObject::setBPC);
@@ -54,16 +53,20 @@ MetalNode::~MetalNode() {
 }
 
 void MetalNode::operation() {
-    if(m_socketsInput[0]->countEdge() > 0) {
-        preview->setValue(m_socketsInput[0]->value());
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
         preview->useTex = true;
+        preview->setValue(m_socketsInput[0]->value().toUInt());
     }
     else {
-        preview->setValue(m_metal);
         preview->useTex = false;
+        preview->setValue(m_metal);
     }
     preview->selectedItem = selected();
     preview->update();
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &MetalNode::getPreviewTexture() {
@@ -83,7 +86,6 @@ void MetalNode::serialize(QJsonObject &json) const {
 void MetalNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash) {
     Node::deserialize(json, hash);
     if(json.contains("metal")) {
-        updateMetal(json["metal"].toVariant().toFloat());
         propertiesPanel->setProperty("startMetal", m_metal);
     }
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
@@ -91,17 +93,10 @@ void MetalNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash
 }
 
 void MetalNode::updateMetal(qreal metal) {
+    if(m_metal == metal) return;
     m_metal = metal;
-    if(m_socketsInput[0]->countEdge() == 0) {
-        operation();
-    }
+    operation();
     dataChanged();
-}
-
-void MetalNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void MetalNode::saveMetal(QString dir) {

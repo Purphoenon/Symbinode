@@ -39,7 +39,6 @@ signals:
     void albedoChanged(QVariant albedo, bool useTexture);
 public slots:
     void updateAlbedo(QVector3D color);
-    void updateScale(float scale);
     void saveAlbedo(QString dir);
 private:
     AlbedoObject *preview;

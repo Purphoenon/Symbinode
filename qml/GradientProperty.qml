@@ -23,7 +23,7 @@ Item {
     ParamDropDown {
         id: bitsParam
         y: 15
-        model: ["8 bits per channel", "16 bits per channel"]
+        model: ["8 bits", "16 bits"]
         onCurrentIndexChanged: {
             if(currentIndex == 0) {
                 bitsChanged(0)
@@ -62,64 +62,70 @@ Item {
         }
     }
 
-    ParamSlider {
-        id: startXParam
-        y: 76
-        propertyName: "Start X"
-        onPropertyValueChanged: {
-            startXChanged(propertyValue)
+    Item {
+        width: parent.width - 40
+        height: childrenRect.height
+        x: 10
+        y: 91
+        clip: true
+        ParamSlider {
+            id: startXParam
+            propertyName: "Start X"
+            onPropertyValueChanged: {
+                startXChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startStartX", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startStartX", propertyValue, oldValue)
-        }
-    }
 
-    ParamSlider {
-        id: startYParam
-        y: 109
-        propertyName: "Start Y"
-        onPropertyValueChanged: {
-            startYChanged(propertyValue)
+        ParamSlider {
+            id: startYParam
+            y: 18
+            propertyName: "Start Y"
+            onPropertyValueChanged: {
+                startYChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startStartY", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startStartY", propertyValue, oldValue)
-        }
-    }
 
-    ParamSlider {
-        id: endXParam
-        y: 142
-        propertyName: "End X"
-        onPropertyValueChanged: {
-            endXChanged(propertyValue)
+        ParamSlider {
+            id: endXParam
+            y: 51
+            propertyName: "End X"
+            onPropertyValueChanged: {
+                endXChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startEndX", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startEndX", propertyValue, oldValue)
-        }
-    }
 
-    ParamSlider {
-        id: endYParam
-        y: 175
-        propertyName: "End Y"
-        onPropertyValueChanged: {
-            endYChanged(propertyValue)
+        ParamSlider {
+            id: endYParam
+            y: 84
+            propertyName: "End Y"
+            onPropertyValueChanged: {
+                endYChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startEndY", propertyValue, oldValue)
+            }
         }
-        onChangingFinished: {
-            propertyChangingFinished("startEndY", propertyValue, oldValue)
-        }
-    }
 
-    ParamSlider {
-        id: whiteWidthParam
-        visible: control.currentIndex == 1
-        y: 208
-        propertyName: "Center width"
-        onPropertyValueChanged: {
-            centerWidthChanged(propertyValue)
-        }
-        onChangingFinished: {
-            propertyChangingFinished("startCenterWidth", propertyValue, oldValue)
+        ParamSlider {
+            id: whiteWidthParam
+            visible: control.currentIndex == 1
+            y: 117
+            propertyName: "Center width"
+            onPropertyValueChanged: {
+                centerWidthChanged(propertyValue)
+            }
+            onChangingFinished: {
+                propertyChangingFinished("startCenterWidth", propertyValue, oldValue)
+            }
         }
     }
 

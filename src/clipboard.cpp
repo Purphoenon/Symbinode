@@ -97,8 +97,8 @@ void Clipboard::copy(Scene *scene) {
             if(qobject_cast<Node*>(item)) {
                 Node *node = qobject_cast<Node*>(item);
                 if(!node->attachedFrame() || !node->attachedFrame()->selected()) sel_nodes.append(node);
-                maxX = std::max(maxX, (float)(node->x() + node->width()));
-                maxY = std::max(maxY, (float)(node->y() + node->height()));
+                maxX = std::max(maxX, (float)(node->x() + node->width()*node->scale()));
+                maxY = std::max(maxY, (float)(node->y() + node->height()*node->scale()));
                 minX = std::min(minX, (float)node->x());
                 minY = std::min(minY, (float)node->y());
                 QList<Edge*> edges = node->getEdges();
@@ -114,8 +114,8 @@ void Clipboard::copy(Scene *scene) {
             else if(qobject_cast<Frame*>(item)) {
                 Frame *frame = qobject_cast<Frame*>(item);
                 sel_frames.append(frame);
-                maxX = std::max(maxX, (float)(frame->x() + frame->width()));
-                maxY = std::max(maxY, (float)(frame->y() + frame->height()));
+                maxX = std::max(maxX, (float)(frame->x() + frame->width()*frame->scale()));
+                maxY = std::max(maxY, (float)(frame->y() + frame->height()*frame->scale()));
                 minX = std::min(minX, (float)frame->x());
                 minY = std::min(minY, (float)frame->y());
             }
@@ -129,8 +129,8 @@ void Clipboard::copy(Scene *scene) {
         Frame *f = new Frame();
         f->setBaseX(frame->baseX());
         f->setBaseY(frame->baseY());
-        f->setBaseWidth(frame->baseWidth());
-        f->setBaseHeight(frame->baseHeight());
+        f->setWidth(frame->width());
+        f->setHeight(frame->height());
         f->setTitle(frame->title());
         f->setColor(frame->color());
         clipboard_frames.append(f);
@@ -181,8 +181,8 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
         frame->setScaleView(viewScale);
         frame->setBaseX((viewPan.x() + x)/viewScale);
         frame->setBaseY((viewPan.y() + y)/viewScale);
-        frame->setBaseWidth(f->baseWidth());
-        frame->setBaseHeight(f->baseHeight());
+        frame->setWidth(f->width());
+        frame->setHeight(f->height());
         frame->setTitle(f->title());
         frame->setColor(f->color());
         frame->setSelected(true);
@@ -235,11 +235,19 @@ void Clipboard::paste(float posX, float posY, Scene *scene) {
             edge->setStartSocket(startSock);
             startSock->addEdge(edge);
         }
+        else {
+            edge->deleteLater();
+            continue;
+        }
 
         Socket *endSock = edge->findSockets(scene, edge->endPosition().x(), edge->endPosition().y());
         if(endSock) {
             edge->setEndSocket(endSock);
             endSock->addEdge(edge);
+        }
+        else {
+            edge->deleteLater();
+            continue;
         }
         edge->updateScale(scene->background()->viewScale());
         scene->addEdge(edge);
@@ -281,8 +289,8 @@ void Clipboard::duplicate(Scene *scene) {
         Frame *f = new Frame(scene);
         f->setBaseX(frame->baseX() + 50);
         f->setBaseY(frame->baseY() + 50);
-        f->setBaseWidth(frame->baseWidth());
-        f->setBaseHeight(frame->baseHeight());
+        f->setWidth(frame->width());
+        f->setHeight(frame->height());
         f->setTitle(frame->title());
         f->setColor(frame->color());
         scene->addFrame(f);

@@ -16,10 +16,7 @@ DirectionalBlurNode::DirectionalBlurNode(QQuickItem *parent, QVector2D resolutio
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &DirectionalBlurNode::updateScale);
     connect(preview, &DirectionalBlurObject::updatePreview, this, &Node::updatePreview);
-    connect(this, &DirectionalBlurNode::intensityChanged, preview, &DirectionalBlurObject::setIntensity);
-    connect(this, &DirectionalBlurNode::angleChanged, preview, &DirectionalBlurObject::setAngle);
     connect(preview, &DirectionalBlurObject::textureChanged, this, &DirectionalBlurNode::setOutput);
     connect(this, &DirectionalBlurNode::changeResolution, preview, &DirectionalBlurObject::setResolution);
     connect(this, &Node::changeBPC, preview, &DirectionalBlurObject::setBPC);
@@ -44,16 +41,19 @@ void DirectionalBlurNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
     preview->bluredTex = true;
     preview->update();
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &DirectionalBlurNode::getPreviewTexture() {
@@ -85,8 +85,14 @@ void DirectionalBlurNode::deserialize(const QJsonObject &json, QHash<QUuid, Sock
     }
     propertiesPanel->setProperty("startIntensity", m_intensity);
     propertiesPanel->setProperty("startAngle", m_angle);
+
+    preview->setIntensity(m_intensity);
+    preview->setAngle(m_angle);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float DirectionalBlurNode::intensity() {
@@ -94,8 +100,11 @@ float DirectionalBlurNode::intensity() {
 }
 
 void DirectionalBlurNode::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     intensityChanged(intensity);
+    preview->setIntensity(intensity);
+    preview->update();
 }
 
 int DirectionalBlurNode::angle() {
@@ -103,14 +112,11 @@ int DirectionalBlurNode::angle() {
 }
 
 void DirectionalBlurNode::setAngle(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     angleChanged(angle);
-}
-
-void DirectionalBlurNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setAngle(angle);
+    preview->update();
 }
 
 void DirectionalBlurNode::updateIntensity(qreal intensity) {

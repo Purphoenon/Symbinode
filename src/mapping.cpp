@@ -50,7 +50,6 @@ unsigned int MappingObject::maskTexture() {
 void MappingObject::setMaskTexture(unsigned int texture) {
     m_maskTexture = texture;
     mappedTex = true;
-    update();
 }
 
 unsigned int MappingObject::sourceTexture() {
@@ -60,7 +59,6 @@ unsigned int MappingObject::sourceTexture() {
 void MappingObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     mappedTex = true;
-    update();
 }
 
 void MappingObject::saveTexture(QString fileName) {
@@ -74,9 +72,9 @@ float MappingObject::inputMin() {
 }
 
 void MappingObject::setInputMin(float value) {
+    if(m_inputMin == value) return;
     m_inputMin = value;
     mappedTex = true;
-    update();
 }
 
 float MappingObject::inputMax() {
@@ -84,9 +82,9 @@ float MappingObject::inputMax() {
 }
 
 void MappingObject::setInputMax(float value) {
+    if(m_inputMax == value) return;
     m_inputMax = value;
     mappedTex = true;
-    update();
 }
 
 float MappingObject::outputMin() {
@@ -94,9 +92,9 @@ float MappingObject::outputMin() {
 }
 
 void MappingObject::setOutputMin(float value) {
+    if(m_outputMin == value) return;
     m_outputMin = value;
     mappedTex = true;
-    update();
 }
 
 float MappingObject::outputMax() {
@@ -104,9 +102,9 @@ float MappingObject::outputMax() {
 }
 
 void MappingObject::setOutputMax(float value) {
+    if(m_outputMax == value) return;
     m_outputMax = value;
     mappedTex = true;
-    update();
 }
 
 QVector2D MappingObject::resolution() {
@@ -124,9 +122,9 @@ GLint MappingObject::bpc() {
 }
 
 void MappingObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 MappingRenderer::~MappingRenderer() {
@@ -158,6 +156,7 @@ MappingRenderer::MappingRenderer(QVector2D res, GLint bpc): m_resolution(res), m
     mappingShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                            -1.0f, 1.0f, 0.0f, 1.0f,
@@ -190,10 +189,13 @@ MappingRenderer::MappingRenderer(QVector2D res, GLint bpc): m_resolution(res), m
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_mappingTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -202,7 +204,6 @@ MappingRenderer::MappingRenderer(QVector2D res, GLint bpc): m_resolution(res), m
 QOpenGLFramebufferObject *MappingRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -213,25 +214,27 @@ void MappingRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = mappingItem->resolution();
         updateTexResolution();
     }
-    if(mappingItem->bpcUpdated) {
-        mappingItem->bpcUpdated = false;
-        m_bpc = mappingItem->bpc();
-        updateTexResolution();
-        map();
-        mappingItem->setTexture(m_mappingTexture);
-    }
-    if(mappingItem->mappedTex) {
-        mappingItem->mappedTex = false;
-        m_sourceTexture = mappingItem->sourceTexture();
+    if(mappingItem->mappedTex || mappingItem->bpcUpdated) {
+        if(mappingItem->bpcUpdated) {
+            mappingItem->bpcUpdated = false;
+            m_bpc = mappingItem->bpc();
+            updateTexResolution();
+        }
+        if(mappingItem->mappedTex) {
+            mappingItem->mappedTex = false;
+            m_sourceTexture = mappingItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = mappingItem->maskTexture();
+                mappingShader->bind();
+                mappingShader->setUniformValue(mappingShader->uniformLocation("inputMin"), mappingItem->inputMin());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("inputMax"), mappingItem->inputMax());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("outputMin"), mappingItem->outputMin());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("outputMax"), mappingItem->outputMax());
+                mappingShader->setUniformValue(mappingShader->uniformLocation("useMask"), maskTexture);
+                mappingShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = mappingItem->maskTexture();
-            mappingShader->bind();
-            mappingShader->setUniformValue(mappingShader->uniformLocation("inputMin"), mappingItem->inputMin());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("inputMax"), mappingItem->inputMax());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("outputMin"), mappingItem->outputMin());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("outputMax"), mappingItem->outputMax());
-            mappingShader->setUniformValue(mappingShader->uniformLocation("useMask"), maskTexture);
-            mappingShader->release();
             map();
             mappingItem->setTexture(m_mappingTexture);
             mappingItem->updatePreview(m_mappingTexture);
@@ -281,11 +284,13 @@ void MappingRenderer::map() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     mappingShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_mappingTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

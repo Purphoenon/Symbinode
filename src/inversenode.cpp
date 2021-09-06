@@ -31,7 +31,6 @@ InverseNode::InverseNode(QQuickItem *parent, QVector2D resolution, GLint bpc): N
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &InverseNode::updateScale);
     connect(this, &Node::generatePreview, this, &InverseNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &InverseObject::setResolution);
     connect(this, &Node::changeBPC, preview, &InverseObject::setBPC);
@@ -55,8 +54,15 @@ InverseNode::~InverseNode() {
 
 void InverseNode::operation() {
     preview->selectedItem = selected();
+    if(!m_socketsInput[0]->getEdges().isEmpty()) {
+        Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
+        if(inputNode && inputNode->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
+    }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
+    preview->update();
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    if(deserializing) deserializing = false;
 }
 
 unsigned int &InverseNode::getPreviewTexture() {
@@ -80,12 +86,6 @@ void InverseNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &h
     Node::deserialize(json, hash);
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
-}
-
-void InverseNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void InverseNode::previewGenerated() {

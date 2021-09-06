@@ -37,7 +37,6 @@ public:
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &hash);
 public slots:
-    void updateScale(float scale);
     void saveNormal(QString dir);
 signals:
     void normalChanged(unsigned int normalMap);

@@ -27,6 +27,7 @@ Rectangle {
     property real limit: 255
     property real dockX: position === "right" ? parent.width - offset : offset
     property alias container: flowContainer
+    signal resized(bool resized)
     id: dock
     x: position === "right" ? dockX : 0
     width: position === "right" ? parent.width - x : dockX
@@ -210,8 +211,12 @@ Rectangle {
         cursorShape: Qt.SizeHorCursor
         visible: flowContainer.contain
         onPositionChanged: {
+            resized(true)
             dock.offset += position === "right" ? -mouse.x : mouse.x
             dock.offset = Math.min(Math.max(dock.offset, 255), dock.parent.width - limit)
+        }
+        onReleased: {
+            resized(false)
         }
 
         Rectangle {

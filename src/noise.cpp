@@ -57,9 +57,9 @@ QString NoiseObject::noiseType() {
 }
 
 void NoiseObject::setNoiseType(QString type) {
+    if(m_noiseType == type) return;
     m_noiseType = type;
     generatedNoise = true;
-    update();
 }
 
 float NoiseObject::noiseScale() {
@@ -67,9 +67,9 @@ float NoiseObject::noiseScale() {
 }
 
 void NoiseObject::setNoiseScale(float scale) {
+    if(m_noiseScale == scale) return;
     m_noiseScale = scale;
     generatedNoise = true;
-    update();
 }
 
 float NoiseObject::scaleX() {
@@ -77,9 +77,9 @@ float NoiseObject::scaleX() {
 }
 
 void NoiseObject::setScaleX(float scale) {
+    if(m_scaleX == scale) return;
     m_scaleX = scale;
     generatedNoise = true;
-    update();
 }
 
 float NoiseObject::scaleY() {
@@ -87,9 +87,9 @@ float NoiseObject::scaleY() {
 }
 
 void NoiseObject::setScaleY(float scale) {
+    if(m_scaleY == scale) return;
     m_scaleY = scale;
     generatedNoise = true;
-    update();
 }
 
 int NoiseObject::layers() {
@@ -97,9 +97,9 @@ int NoiseObject::layers() {
 }
 
 void NoiseObject::setLayers(int num) {
+    if(m_layers == num) return;
     m_layers = num;
     generatedNoise = true;
-    update();
 }
 
 float NoiseObject::persistence() {
@@ -107,9 +107,9 @@ float NoiseObject::persistence() {
 }
 
 void NoiseObject::setPersistence(float value) {
+    if(m_persistence == value) return;
     m_persistence = value;
     generatedNoise = true;
-    update();
 }
 
 float NoiseObject::amplitude() {
@@ -117,9 +117,9 @@ float NoiseObject::amplitude() {
 }
 
 void NoiseObject::setAmplitude(float value) {
+    if(m_amplitude == value) return;
     m_amplitude = value;
     generatedNoise = true;
-    update();
 }
 
 int NoiseObject::seed() {
@@ -127,9 +127,9 @@ int NoiseObject::seed() {
 }
 
 void NoiseObject::setSeed(int seed) {
+    if(m_seed == seed) return;
     m_seed = seed;
     generatedNoise = true;
-    update();
 }
 
 QVector2D NoiseObject::resolution() {
@@ -147,9 +147,9 @@ GLint NoiseObject::bpc() {
 }
 
 void NoiseObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 unsigned int &NoiseObject::texture() {
@@ -184,7 +184,8 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution, GLint bpc): m_resolution(reso
     generateNoise->release();
 
     renderTexture->bind();
-    renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("textureSample"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
 
     float vertQuad[] = {-1.0f, -1.0f,
@@ -229,15 +230,16 @@ NoiseRenderer::NoiseRenderer(QVector2D resolution, GLint bpc): m_resolution(reso
     else if(m_bpc == GL_RGBA8) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, noiseTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    //createNoise();
 }
 
 NoiseRenderer::~NoiseRenderer() {
@@ -253,7 +255,6 @@ NoiseRenderer::~NoiseRenderer() {
 QOpenGLFramebufferObject *NoiseRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -268,27 +269,27 @@ void NoiseRenderer::synchronize(QQuickFramebufferObject *item) {
             noiseItem->setTexture(noiseTexture);
         }
     }
-    if(noiseItem->bpcUpdated) {
-        noiseItem->bpcUpdated = false;
-        m_bpc = noiseItem->bpc();
-        updateTexResolution();
-        createNoise();
-        noiseItem->setTexture(noiseTexture);
-    }
-    if(noiseItem->generatedNoise) {
-        noiseItem->generatedNoise = false;
-        m_noiseType = noiseItem->noiseType();
-        m_maskTexture = noiseItem->maskTexture();
-        generateNoise->bind();
-        generateNoise->setUniformValue(generateNoise->uniformLocation("scale"), noiseItem->noiseScale());
-        generateNoise->setUniformValue(generateNoise->uniformLocation("scaleX"), noiseItem->scaleX());
-        generateNoise->setUniformValue(generateNoise->uniformLocation("scaleY"), noiseItem->scaleY());
-        generateNoise->setUniformValue(generateNoise->uniformLocation("octaves"), noiseItem->layers());
-        generateNoise->setUniformValue(generateNoise->uniformLocation("persistence"), noiseItem->persistence());
-        generateNoise->setUniformValue(generateNoise->uniformLocation("amplitude"), noiseItem->amplitude());
-        generateNoise->setUniformValue(generateNoise->uniformLocation("seed"), noiseItem->seed());
-        generateNoise->setUniformValue(generateNoise->uniformLocation("res"), m_resolution);
-        generateNoise->setUniformValue(generateNoise->uniformLocation("useMask"), m_maskTexture);
+    if(noiseItem->generatedNoise || noiseItem->bpcUpdated) {
+        if(noiseItem->bpcUpdated) {
+            noiseItem->bpcUpdated = false;
+            m_bpc = noiseItem->bpc();
+            updateTexResolution();
+        }
+        if(noiseItem->generatedNoise) {
+            noiseItem->generatedNoise = false;
+            m_noiseType = noiseItem->noiseType();
+            m_maskTexture = noiseItem->maskTexture();
+            generateNoise->bind();
+            generateNoise->setUniformValue(generateNoise->uniformLocation("scale"), noiseItem->noiseScale());
+            generateNoise->setUniformValue(generateNoise->uniformLocation("scaleX"), noiseItem->scaleX());
+            generateNoise->setUniformValue(generateNoise->uniformLocation("scaleY"), noiseItem->scaleY());
+            generateNoise->setUniformValue(generateNoise->uniformLocation("octaves"), noiseItem->layers());
+            generateNoise->setUniformValue(generateNoise->uniformLocation("persistence"), noiseItem->persistence());
+            generateNoise->setUniformValue(generateNoise->uniformLocation("amplitude"), noiseItem->amplitude());
+            generateNoise->setUniformValue(generateNoise->uniformLocation("seed"), noiseItem->seed());
+            generateNoise->setUniformValue(generateNoise->uniformLocation("res"), m_resolution);
+            generateNoise->setUniformValue(generateNoise->uniformLocation("useMask"), m_maskTexture);
+        }
         createNoise();
         noiseItem->setTexture(noiseTexture);
         noiseItem->updatePreview(noiseTexture);
@@ -338,12 +339,14 @@ void NoiseRenderer::createNoise() {
     glBindVertexArray(noiseVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     glBindVertexArray(0);    
     generateNoise->release();
+    glBindTexture(GL_TEXTURE_2D, noiseTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
-    glFinish();
+    glFinish();    
 }
 
 void NoiseRenderer::updateTexResolution() {

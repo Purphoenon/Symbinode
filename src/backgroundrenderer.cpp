@@ -77,6 +77,7 @@ void BackgroundRenderer::synchronize(QQuickFramebufferObject *item) {
 
 void BackgroundRenderer::render() {
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
     glClearColor(0.33f, 0.35f, 0.36f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     backgroundGrid->bind();

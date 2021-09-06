@@ -102,9 +102,11 @@ protected:
     QVector<Socket *> m_additionalInputs;
     QVector2D m_resolution;
     GLint m_bpc;
+    bool deserializing = false;
 private:
     QQuickView *view;
     Frame *m_attachedFrame = nullptr;
+    Edge *m_intersectingEdge = nullptr;
     float m_baseX = 0;
     float m_baseY = 0;
     float m_scale = 1.0f;

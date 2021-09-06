@@ -33,16 +33,11 @@ MappingNode::MappingNode(QQuickItem *parent, QVector2D resolution, GLint bpc, fl
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &MappingNode::updateScale);
     connect(this, &Node::generatePreview, this, &MappingNode::previewGenerated);
     connect(this, &Node::changeResolution, preview, &MappingObject::setResolution);
     connect(this, &Node::changeBPC, preview, &MappingObject::setBPC);
     connect(preview, &MappingObject::updatePreview, this, &Node::updatePreview);
     connect(preview, &MappingObject::textureChanged, this, &MappingNode::setOutput);
-    connect(this, &MappingNode::inputMinChanged, preview, &MappingObject::setInputMin);
-    connect(this, &MappingNode::inputMaxChanged, preview, &MappingObject::setInputMax);
-    connect(this, &MappingNode::outputMinChanged, preview, &MappingObject::setOutputMin);
-    connect(this, &MappingNode::outputMaxChanged, preview, &MappingObject::setOutputMax);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/MappingProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -73,14 +68,18 @@ void MappingNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->update();
+    deserializing = false;
 }
 
 unsigned int &MappingNode::getPreviewTexture() {
@@ -123,8 +122,16 @@ void MappingNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket*> &ha
         updateOutputMax(json["outputMax"].toVariant().toReal());
         propertiesPanel->setProperty("startOutputMax", m_outputMax);
     }
+
+    preview->setInputMin(m_inputMin);
+    preview->setInputMax(m_inputMax);
+    preview->setOutputMin(m_outputMin);
+    preview->setOutputMax(m_outputMax);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 float MappingNode::inputMin() {
@@ -132,8 +139,11 @@ float MappingNode::inputMin() {
 }
 
 void MappingNode::setInputMin(float value) {
+    if(m_inputMin == value) return;
     m_inputMin = value;
     inputMinChanged(value);
+    preview->setInputMin(value);
+    preview->update();
 }
 
 float MappingNode::inputMax() {
@@ -141,8 +151,11 @@ float MappingNode::inputMax() {
 }
 
 void MappingNode::setInputMax(float value) {
+    if(m_inputMax == value) return;
     m_inputMax = value;
     inputMaxChanged(value);
+    preview->setInputMax(value);
+    preview->update();
 }
 
 float MappingNode::outputMin() {
@@ -150,8 +163,11 @@ float MappingNode::outputMin() {
 }
 
 void MappingNode::setOutputMin(float value) {
+    if(m_outputMin == value) return;
     m_outputMin = value;
     outputMinChanged(value);
+    preview->setOutputMin(value);
+    preview->update();
 }
 
 float MappingNode::outputMax() {
@@ -159,14 +175,11 @@ float MappingNode::outputMax() {
 }
 
 void MappingNode::setOutputMax(float value) {
+    if(m_outputMax == value) return;
     m_outputMax = value;
     outputMaxChanged(value);
-}
-
-void MappingNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    preview->setOutputMax(value);
+    preview->update();
 }
 
 void MappingNode::previewGenerated() {

@@ -42,7 +42,6 @@ public:
 public slots:
     void updateStrenght(qreal strenght);
     void previewGenerated();
-    void updateScale(float scale);
 signals:
     void strenghtChanged(float strenght);
 private:

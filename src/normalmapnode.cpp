@@ -38,8 +38,6 @@ NormalMapNode::NormalMapNode(QQuickItem *parent, QVector2D resolution, GLint bpc
     propView = new QQuickView();
     connect(preview, &NormalMapObject::textureChanged, this, &NormalMapNode::setOutput);
     connect(this, &NormalMapNode::generatePreview, this, &NormalMapNode::previewGenerated);
-    connect(this, &NormalMapNode::strenghtChanged, preview, &NormalMapObject::setStrenght);
-    connect(this, &Node::changeScaleView, this, &NormalMapNode::updateScale);
     connect(preview, &NormalMapObject::updatePreview, this, &NormalMapNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &NormalMapObject::setResolution);
     connect(this, &Node::changeBPC, preview, &NormalMapObject::setBPC);
@@ -61,10 +59,12 @@ void NormalMapNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode && inputNode->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     preview->setGrayscaleTexture(m_socketsInput[0]->value().toUInt());
     preview->selectedItem = selected();
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    deserializing = false;
 }
 
 unsigned int &NormalMapNode::getPreviewTexture() {
@@ -95,14 +95,21 @@ void NormalMapNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> 
         updateStrenght(json["strength"].toVariant().toFloat());
         propertiesPanel->setProperty("startStrenght", m_strenght/10.0f);
     }
+
+    preview->setStrenght(m_strenght);
+
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->update();
 }
 
 void NormalMapNode::updateStrenght(qreal strenght) {
+    if(m_strenght == static_cast<float>(strenght)) return;
     m_strenght = static_cast<float>(strenght);
     strenghtChanged(m_strenght);
-    operation();
+    preview->setStrenght(m_strenght);
+    preview->update();
     dataChanged();
 }
 
@@ -113,10 +120,4 @@ void NormalMapNode::setOutput() {
 void NormalMapNode::previewGenerated() {
     preview->normalGenerated = true;
     preview->update();
-}
-
-void NormalMapNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }

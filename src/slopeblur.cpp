@@ -58,9 +58,9 @@ int SlopeBlurObject::mode() {
 }
 
 void SlopeBlurObject::setMode(int mode) {
+    if(m_mode == mode) return;
     m_mode = mode;
     slopedTex = true;
-    update();
 }
 
 float SlopeBlurObject::intensity() {
@@ -68,9 +68,9 @@ float SlopeBlurObject::intensity() {
 }
 
 void SlopeBlurObject::setIntensity(float intensity) {
+    if(m_intensity == intensity) return;
     m_intensity = intensity;
     slopedTex = true;
-    update();
 }
 
 int SlopeBlurObject::samples() {
@@ -78,9 +78,9 @@ int SlopeBlurObject::samples() {
 }
 
 void SlopeBlurObject::setSamples(int samples) {
+    if(m_samples == samples) return;
     m_samples = samples;
     slopedTex = true;
-    update();
 }
 
 QVector2D SlopeBlurObject::resolution() {
@@ -98,9 +98,9 @@ GLint SlopeBlurObject::bpc() {
 }
 
 void SlopeBlurObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc)
@@ -125,6 +125,7 @@ SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res, GLint bpc): m_resolution(res
     slopeBlurShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -152,10 +153,13 @@ SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res, GLint bpc): m_resolution(res
     else if(m_bpc == GL_RGBA8) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_slopedTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -174,24 +178,32 @@ SlopeBlurRenderer::~SlopeBlurRenderer()
 QOpenGLFramebufferObject *SlopeBlurRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
 void SlopeBlurRenderer::synchronize(QQuickFramebufferObject *item) {
     SlopeBlurObject *slopeBlurItem = static_cast<SlopeBlurObject*>(item);
-    if(slopeBlurItem->slopedTex) {
-        slopeBlurItem->slopedTex = false;
-        m_sourceTexture = slopeBlurItem->sourceTexture();
+    if(slopeBlurItem->slopedTex || slopeBlurItem->bpcUpdated) {
+        if(slopeBlurItem->bpcUpdated) {
+            slopeBlurItem->bpcUpdated = false;
+            m_bpc = slopeBlurItem->bpc();
+            updateTexResolution();
+        }
+        if(slopeBlurItem->slopedTex) {
+            slopeBlurItem->slopedTex = false;
+            m_sourceTexture = slopeBlurItem->sourceTexture();
+            if(m_sourceTexture) {
+                maskTexture = slopeBlurItem->maskTexture();
+                m_slopeTexture = slopeBlurItem->slopeTexture();
+                slopeBlurShader->bind();
+                slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("mode"), slopeBlurItem->mode());
+                slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("intensity"), slopeBlurItem->intensity());
+                slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("samples"), slopeBlurItem->samples());
+                slopeBlurShader->release();
+            }
+        }
         if(m_sourceTexture) {
-            maskTexture = slopeBlurItem->maskTexture();
-            m_slopeTexture = slopeBlurItem->slopeTexture();
-            slopeBlurShader->bind();
-            slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("mode"), slopeBlurItem->mode());
-            slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("intensity"), slopeBlurItem->intensity());
-            slopeBlurShader->setUniformValue(slopeBlurShader->uniformLocation("samples"), slopeBlurItem->samples());
             createSlopeBlur();
-            slopeBlurShader->release();
             slopeBlurItem->setTexture(m_slopedTexture);
             slopeBlurItem->updatePreview(m_slopedTexture);
         }
@@ -200,13 +212,6 @@ void SlopeBlurRenderer::synchronize(QQuickFramebufferObject *item) {
         slopeBlurItem->resUpdated = false;
         m_resolution = slopeBlurItem->resolution();
         updateTexResolution();
-    }
-    if(slopeBlurItem->bpcUpdated) {
-        slopeBlurItem->bpcUpdated = false;
-        m_bpc = slopeBlurItem->bpc();
-        updateTexResolution();
-        createSlopeBlur();
-        slopeBlurItem->setTexture(m_slopedTexture);
     }
     if(slopeBlurItem->texSaving) {
         slopeBlurItem->texSaving = false;
@@ -255,11 +260,13 @@ void SlopeBlurRenderer::createSlopeBlur() {
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);    
     slopeBlurShader->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, m_slopedTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

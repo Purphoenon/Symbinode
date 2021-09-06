@@ -51,7 +51,9 @@ QVector3D AlbedoObject::albedoValue() {
 }
 
 void AlbedoObject::setAlbedoValue(QVector3D albedo) {
+    if(m_albedo == albedo) return;
     m_albedo = albedo;
+    albedoUpdated = true;
 }
 
 void AlbedoObject::setColorTexture(unsigned int texture) {
@@ -81,9 +83,9 @@ GLint AlbedoObject::bpc() {
 }
 
 void AlbedoObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 AlbedoRenderer::AlbedoRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
@@ -128,6 +130,9 @@ AlbedoRenderer::AlbedoRenderer(QVector2D resolution, GLint bpc): m_resolution(re
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, albedoTexture, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -159,7 +164,6 @@ AlbedoRenderer::~AlbedoRenderer() {
 QOpenGLFramebufferObject *AlbedoRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -169,28 +173,32 @@ void AlbedoRenderer::synchronize(QQuickFramebufferObject *item) {
     renderAlbedo->setUniformValue(renderAlbedo->uniformLocation("useAlbedoTex"), albedoItem->useAlbedoTex);
     renderAlbedo->release();
     m_resolution = albedoItem->resolution();
-    m_sourceTexture = albedoItem->albedoTexture();
-    albedoVal = albedoItem->albedoValue();
     if(albedoItem->resUpdated) {
         updateTextureRes();
     }
-    if(albedoItem->bpcUpdated) {
-        albedoItem->bpcUpdated = false;
-        m_bpc = albedoItem->bpc();
-        updateTextureRes();
-        createAlbedoTexture();
-    }
-    if(albedoItem->useAlbedoTex) {        
-        createAlbedoTexture();
-        albedoItem->setTexture(albedoTexture);
-        albedoItem->updateAlbedo(albedoTexture, true);
-        albedoItem->updatePreview(albedoTexture);
-    }
-    else {           
-        createColor();
-        albedoItem->setTexture(colorTexture);
-        albedoItem->updateAlbedo(albedoVal, false);
-        albedoItem->updatePreview(colorTexture);
+    if(albedoItem->albedoUpdated || albedoItem->bpcUpdated) {
+        if(albedoItem->bpcUpdated) {
+            albedoItem->bpcUpdated = false;
+            m_bpc = albedoItem->bpc();
+            updateTextureRes();
+        }
+        if(albedoItem->albedoUpdated) {
+            albedoItem->albedoUpdated = false;
+            m_sourceTexture = albedoItem->albedoTexture();
+            albedoVal = albedoItem->albedoValue();
+        }
+        if(albedoItem->useAlbedoTex) {
+            createAlbedoTexture();
+            albedoItem->setTexture(albedoTexture);
+            albedoItem->updateAlbedo(albedoTexture, true);
+            albedoItem->updatePreview(albedoTexture);
+        }
+        else {
+            createColor();
+            albedoItem->setTexture(colorTexture);
+            albedoItem->updateAlbedo(albedoVal, false);
+            albedoItem->updatePreview(colorTexture);
+        }
     }
     if(albedoItem->texSaving) {
         albedoItem->texSaving = false;
@@ -322,10 +330,12 @@ void AlbedoRenderer::createAlbedoTexture() {
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);    
     renderAlbedo->release();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, albedoTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

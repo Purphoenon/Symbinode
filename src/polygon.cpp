@@ -66,9 +66,9 @@ int PolygonObject::sides() {
 }
 
 void PolygonObject::setSides(int sides) {
+    if(m_sides == sides) return;
     m_sides = sides;
     generatedPolygon = true;
-    update();
 }
 
 float PolygonObject::polygonScale() {
@@ -76,9 +76,9 @@ float PolygonObject::polygonScale() {
 }
 
 void PolygonObject::setPolygonScale(float scale) {
+    if(m_scale == scale) return;
     m_scale = scale;
     generatedPolygon = true;
-    update();
 }
 
 float PolygonObject::smooth() {
@@ -86,9 +86,9 @@ float PolygonObject::smooth() {
 }
 
 void PolygonObject::setSmooth(float smooth) {
+    if(m_smooth == smooth) return;
     m_smooth = smooth;
     generatedPolygon = true;
-    update();
 }
 
 bool PolygonObject::useAlpha() {
@@ -96,9 +96,9 @@ bool PolygonObject::useAlpha() {
 }
 
 void PolygonObject::setUseAlpha(bool use) {
+    if(m_useAlpha == use) return;
     m_useAlpha = use;
     generatedPolygon = true;
-    update();
 }
 
 QVector2D PolygonObject::resolution() {
@@ -116,9 +116,9 @@ GLint PolygonObject::bpc() {
 }
 
 void PolygonObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 PolygonRenderer::PolygonRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {
@@ -140,6 +140,7 @@ PolygonRenderer::PolygonRenderer(QVector2D resolution, GLint bpc): m_resolution(
     generatePolygon->release();
     renderTexture->bind();
     renderTexture->setUniformValue(renderTexture->uniformLocation("texture"), 0);
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 2.0f);
     renderTexture->release();
     float vertQuad[] = {-1.0f, -1.0f,
                     -1.0f, 1.0f,
@@ -177,10 +178,13 @@ PolygonRenderer::PolygonRenderer(QVector2D resolution, GLint bpc): m_resolution(
     glBindFramebuffer(GL_FRAMEBUFFER, polygonFBO);
     glGenTextures(1, &polygonTexture);
     glBindTexture(GL_TEXTURE_2D, polygonTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     if(m_bpc == GL_RGBA16) {
         glTexImage2D(GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr);
     }
@@ -206,7 +210,6 @@ PolygonRenderer::~PolygonRenderer() {
 QOpenGLFramebufferObject *PolygonRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -221,23 +224,23 @@ void PolygonRenderer::synchronize(QQuickFramebufferObject *item) {
             polygonItem->setTexture(polygonTexture);
         }
     }
-    if(polygonItem->bpcUpdated) {
-        polygonItem->bpcUpdated = false;
-        m_bpc = polygonItem->bpc();
-        updateTexResolution();
-        createPolygon();
-        polygonItem->setTexture(polygonTexture);
-    }
-    if(polygonItem->generatedPolygon) {
-        polygonItem->generatedPolygon = false;
-        maskTexture = polygonItem->maskTexture();        
-        generatePolygon->bind();
-        generatePolygon->setUniformValue(generatePolygon->uniformLocation("sides"), polygonItem->sides());
-        generatePolygon->setUniformValue(generatePolygon->uniformLocation("scale"), polygonItem->polygonScale());
-        generatePolygon->setUniformValue(generatePolygon->uniformLocation("smoothValue"), polygonItem->smooth());
-        generatePolygon->setUniformValue(generatePolygon->uniformLocation("useAlpha"), polygonItem->useAlpha());
-        generatePolygon->setUniformValue(generatePolygon->uniformLocation("useMask"), maskTexture);
-        generatePolygon->release();
+    if(polygonItem->generatedPolygon || polygonItem->bpcUpdated) {
+        if(polygonItem->bpcUpdated) {
+            polygonItem->bpcUpdated = false;
+            m_bpc = polygonItem->bpc();
+            updateTexResolution();
+        }
+        if(polygonItem->generatedPolygon) {
+            polygonItem->generatedPolygon = false;
+            maskTexture = polygonItem->maskTexture();
+            generatePolygon->bind();
+            generatePolygon->setUniformValue(generatePolygon->uniformLocation("sides"), polygonItem->sides());
+            generatePolygon->setUniformValue(generatePolygon->uniformLocation("scale"), polygonItem->polygonScale());
+            generatePolygon->setUniformValue(generatePolygon->uniformLocation("smoothValue"), polygonItem->smooth());
+            generatePolygon->setUniformValue(generatePolygon->uniformLocation("useAlpha"), polygonItem->useAlpha());
+            generatePolygon->setUniformValue(generatePolygon->uniformLocation("useMask"), maskTexture);
+            generatePolygon->release();
+        }
         createPolygon();
         polygonItem->setTexture(polygonTexture);
         polygonItem->updatePreview(polygonTexture);
@@ -282,11 +285,13 @@ void PolygonRenderer::createPolygon() {
     generatePolygon->setUniformValue(generatePolygon->uniformLocation("res"), m_resolution);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, maskTexture);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);    
     generatePolygon->release();
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, polygonTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }

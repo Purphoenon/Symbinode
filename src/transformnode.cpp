@@ -35,18 +35,11 @@ TransformNode::TransformNode(QQuickItem *parent, QVector2D resolution, GLint bpc
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &TransformNode::updateScale);
     connect(this, &Node::generatePreview, this, &TransformNode::previewGenerated);
     connect(preview, &TransformObject::textureChanged, this, &TransformNode::setOutput);
     connect(preview, &TransformObject::updatePreview, this, &TransformNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &TransformObject::setResolution);
     connect(this, &Node::changeBPC, preview, &TransformObject::setBPC);
-    connect(this, &TransformNode::translationXChanged, preview, &TransformObject::setTranslateX);
-    connect(this, &TransformNode::translationYChanged, preview, &TransformObject::setTranslateY);
-    connect(this, &TransformNode::scaleXChanged, preview, &TransformObject::setScaleX);
-    connect(this, &TransformNode::scaleYChanged, preview, &TransformObject::setScaleY);
-    connect(this, &TransformNode::rotationChanged, preview, &TransformObject::setRotation);
-    connect(this, &TransformNode::clampCoordsChanged, preview, &TransformObject::setClampCoords);
     propView = new QQuickView();
     propView->setSource(QUrl(QStringLiteral("qrc:/qml/TransformProperty.qml")));
     propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
@@ -81,14 +74,18 @@ void TransformNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode1 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode1 && inputNode1->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {
         Node *inputNode2 = static_cast<Node*>(m_socketsInput[1]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode2 && inputNode2->resolution() != m_resolution) return;
+        if(m_socketsInput[1]->value() == 0 && deserializing) return;
     }
     preview->setSourceTexture(m_socketsInput[0]->value().toUInt());
     preview->setMaskTexture(m_socketsInput[1]->value().toUInt());
     if(m_socketsInput[0]->countEdge() == 0) m_socketOutput[0]->setValue(0);
+    preview->update();
+    deserializing = false;
 }
 
 unsigned int &TransformNode::getPreviewTexture() {
@@ -143,6 +140,14 @@ void TransformNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> 
     propertiesPanel->setProperty("startClamp", m_clamp);
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+
+    preview->setTranslateX(m_transX);
+    preview->setTranslateY(m_transY);
+    preview->setScaleX(m_scaleX);
+    preview->setScaleY(m_scaleY);
+    preview->setRotation(m_angle);
+    preview->setClampCoords(m_clamp);
+    preview->update();
 }
 
 float TransformNode::translationX() {
@@ -150,8 +155,11 @@ float TransformNode::translationX() {
 }
 
 void TransformNode::setTranslationX(float x) {
+    if(m_transX == x) return;
     m_transX = x;
     translationXChanged(x);
+    preview->setTranslateX(x);
+    preview->update();
 }
 
 float TransformNode::translationY() {
@@ -159,8 +167,11 @@ float TransformNode::translationY() {
 }
 
 void TransformNode::setTranslationY(float y) {
+    if(m_transY == y) return;
     m_transY = y;
     translationYChanged(y);
+    preview->setTranslateY(y);
+    preview->update();
 }
 
 float TransformNode::scaleX() {
@@ -168,8 +179,11 @@ float TransformNode::scaleX() {
 }
 
 void TransformNode::setScaleX(float x) {
+    if(m_scaleX == x) return;
     m_scaleX = x;
     scaleXChanged(x);
+    preview->setScaleX(x);
+    preview->update();
 }
 
 float TransformNode::scaleY() {
@@ -177,8 +191,11 @@ float TransformNode::scaleY() {
 }
 
 void TransformNode::setScaleY(float y) {
+    if(m_scaleY == y) return;
     m_scaleY = y;
     scaleYChanged(y);
+    preview->setScaleY(y);
+    preview->update();
 }
 
 int TransformNode::rotation() {
@@ -186,8 +203,11 @@ int TransformNode::rotation() {
 }
 
 void TransformNode::setRotation(int angle) {
+    if(m_angle == angle) return;
     m_angle = angle;
     rotationChanged(angle);
+    preview->setRotation(angle);
+    preview->update();
 }
 
 bool TransformNode::clampCoords() {
@@ -195,18 +215,15 @@ bool TransformNode::clampCoords() {
 }
 
 void TransformNode::setClampCoords(bool clamp) {
+    if(m_clamp == clamp) return;
     m_clamp = clamp;
     clampCoordsChanged(clamp);
+    preview->setClampCoords(clamp);
+    preview->update();
 }
 
 void TransformNode::setOutput() {
     m_socketOutput[0]->setValue(preview->texture());
-}
-
-void TransformNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
 }
 
 void TransformNode::previewGenerated() {

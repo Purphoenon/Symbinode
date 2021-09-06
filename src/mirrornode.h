@@ -41,7 +41,6 @@ public:
 signals:
     void directionChanged(int dir);
 public slots:
-    void updateScale(float scale);
     void previewGenerated();
     void setOutput();
     void updateDirection(int dir);

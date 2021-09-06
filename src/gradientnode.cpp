@@ -17,15 +17,8 @@ GradientNode::GradientNode(QQuickItem *parent, QVector2D resolution, GLint bpc, 
     preview->setX(3*s);
     preview->setY(30*s);
     preview->setScale(s);
-    connect(this, &Node::changeScaleView, this, &GradientNode::updateScale);
     connect(this, &Node::generatePreview, this, &GradientNode::previewGenerated);
     connect(this, &GradientNode::gradientTypeChanged, preview, &GradientObject::setGradientType);
-    connect(this, &GradientNode::startXChanged, preview, &GradientObject::setStartX);
-    connect(this, &GradientNode::startYChanged, preview, &GradientObject::setStartY);
-    connect(this, &GradientNode::endXChanged, preview, &GradientObject::setEndX);
-    connect(this, &GradientNode::endYChanged, preview, &GradientObject::setEndY);
-    connect(this, &GradientNode::centerWidthChanged, preview, &GradientObject::setReflectedWidth);
-    connect(this, &GradientNode::tilingChanged, preview, &GradientObject::setTiling);
     connect(preview, &GradientObject::changedTexture, this, &GradientNode::setOutput);
     connect(preview, &GradientObject::updatePreview, this, &GradientNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &GradientObject::setResolution);
@@ -65,8 +58,10 @@ void GradientNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode && inputNode->resolution() != m_resolution) return;
+        if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     preview->setMaskTexture(m_socketsInput[0]->value().toUInt());
+    deserializing = false;
 }
 
 GradientNode *GradientNode::clone() {
@@ -192,9 +187,17 @@ void GradientNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &
         propertiesPanel->setProperty("startEndY", endY());
         propertiesPanel->setProperty("startCenterWidth", centerWidth());
         propertiesPanel->setProperty("startTiling", tiling());
+
+        preview->setStartX(startX());
+        preview->setStartY(startY());
+        preview->setEndX(endX());
+        preview->setEndY(endY());
+        preview->setReflectedWidth(centerWidth());
+        preview->setTiling(tiling());
     }
     if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
     else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
+    preview->update();
 }
 
 unsigned int &GradientNode::getPreviewTexture() {
@@ -234,6 +237,14 @@ void GradientNode::setGradientType(QString type) {
     propertiesPanel->setProperty("startCenterWidth", centerWidth());
     propertiesPanel->setProperty("startTiling", tiling());
     gradientTypeChanged(type);
+
+    preview->setStartX(startX());
+    preview->setStartY(startY());
+    preview->setEndX(endX());
+    preview->setEndY(endY());
+    preview->setReflectedWidth(centerWidth());
+    preview->setTiling(tiling());
+    preview->update();
 }
 
 float GradientNode::startX() {
@@ -245,11 +256,25 @@ float GradientNode::startX() {
 }
 
 void GradientNode::setStartX(float x) {
-    if(m_gradientType == "linear") m_linear.startX = x;
-    else if(m_gradientType == "reflected") m_reflected.startX = x;
-    else if(m_gradientType == "angular") m_angular.startX = x;
-    else if(m_gradientType == "radial") m_radial.startX = x;
+    if(m_gradientType == "linear") {
+        if(m_linear.startX == x) return;
+        m_linear.startX = x;
+    }
+    else if(m_gradientType == "reflected") {
+        if(m_reflected.startX == x) return;
+        m_reflected.startX = x;
+    }
+    else if(m_gradientType == "angular") {
+        if(m_angular.startX == x) return;
+        m_angular.startX = x;
+    }
+    else if(m_gradientType == "radial") {
+        if(m_radial.startX == x) return;
+        m_radial.startX = x;
+    }
     startXChanged(x);
+    preview->setStartX(x);
+    preview->update();
 }
 
 float GradientNode::startY() {
@@ -261,11 +286,25 @@ float GradientNode::startY() {
 }
 
 void GradientNode::setStartY(float y) {
-    if(m_gradientType == "linear") m_linear.startY = y;
-    else if(m_gradientType == "reflected") m_reflected.startY = y;
-    else if(m_gradientType == "angular") m_angular.startY = y;
-    else if(m_gradientType == "radial") m_radial.startY = y;
+    if(m_gradientType == "linear") {
+        if(m_linear.startY == y) return;
+        m_linear.startY = y;
+    }
+    else if(m_gradientType == "reflected") {
+        if(m_reflected.startY == y) return;
+        m_reflected.startY = y;
+    }
+    else if(m_gradientType == "angular") {
+        if(m_angular.startY == y) return;
+        m_angular.startY = y;
+    }
+    else if(m_gradientType == "radial") {
+        if(m_radial.startY == y) return;
+        m_radial.startY = y;
+    }
     startYChanged(y);
+    preview->setStartY(y);
+    preview->update();
 }
 
 float GradientNode::endX() {
@@ -277,11 +316,25 @@ float GradientNode::endX() {
 }
 
 void GradientNode::setEndX(float x) {
-    if(m_gradientType == "linear") m_linear.endX = x;
-    else if(m_gradientType == "reflected") m_reflected.endX = x;
-    else if(m_gradientType == "angular") m_angular.endX = x;
-    else if(m_gradientType == "radial") m_radial.endX = x;
+    if(m_gradientType == "linear") {
+        if(m_linear.endX == x) return;
+        m_linear.endX = x;
+    }
+    else if(m_gradientType == "reflected") {
+        if(m_reflected.endX == x) return;
+        m_reflected.endX = x;
+    }
+    else if(m_gradientType == "angular") {
+        if(m_angular.endX == x) return;
+        m_angular.endX = x;
+    }
+    else if(m_gradientType == "radial") {
+        if(m_radial.endX == x) return;
+        m_radial.endX = x;
+    }
     endXChanged(x);
+    preview->setEndX(x);
+    preview->update();
 }
 
 float GradientNode::endY() {
@@ -293,11 +346,25 @@ float GradientNode::endY() {
 }
 
 void GradientNode::setEndY(float y) {
-    if(m_gradientType == "linear") m_linear.endY = y;
-    else if(m_gradientType == "reflected") m_reflected.endY = y;
-    else if(m_gradientType == "angular") m_angular.endY = y;
-    else if(m_gradientType == "radial") m_radial.endY = y;
+    if(m_gradientType == "linear") {
+        if(m_linear.endY == y) return;
+        m_linear.endY = y;
+    }
+    else if(m_gradientType == "reflected") {
+        if(m_reflected.endY == y) return;
+        m_reflected.endY = y;
+    }
+    else if(m_gradientType == "angular") {
+        if(m_angular.endY == y) return;
+        m_angular.endY = y;
+    }
+    else if(m_gradientType == "radial") {
+        if(m_radial.endY == y) return;
+        m_radial.endY = y;
+    }
     endYChanged(y);
+    preview->setEndY(y);
+    preview->update();
 }
 
 float GradientNode::centerWidth() {
@@ -307,8 +374,11 @@ float GradientNode::centerWidth() {
 
 void GradientNode::setCenterWidth(float width) {
     if(m_gradientType == "reflected") {
+        if(m_reflected.centerWidth == width) return;
         m_reflected.centerWidth = width;
         centerWidthChanged(width);
+        preview->setReflectedWidth(width);
+        preview->update();
     }
 }
 
@@ -320,19 +390,16 @@ bool GradientNode::tiling() {
 
 void GradientNode::setTiling(bool tiling) {
     if(m_gradientType == "linear") {
+        if(m_linear.tiling == tiling) return;
         m_linear.tiling = tiling;
-        tilingChanged(tiling);
     }
     else if(m_gradientType == "reflected") {
-        m_reflected.tiling = tiling;
-        tilingChanged(tiling);
+        if(m_reflected.tiling == tiling) return;
+        m_reflected.tiling = tiling;        
     }
-}
-
-void GradientNode::updateScale(float scale) {
-    preview->setX(3*scale);
-    preview->setY(30*scale);
-    preview->setScale(scale);
+    tilingChanged(tiling);
+    preview->setTiling(tiling);
+    preview->update();
 }
 
 void GradientNode::updateGradientType(QString type) {

@@ -41,8 +41,8 @@ QUndoCommand(parent), m_nodes(nodes), m_movVector(movVector), m_frame(frame), m_
     if(m_frame) {
         m_oldFrameX = m_frame->baseX();
         m_oldFrameY = m_frame->baseY();
-        m_oldFrameWidth = m_frame->baseWidth();
-        m_oldFrameHeight = m_frame->baseHeight();
+        m_oldFrameWidth = m_frame->width();
+        m_oldFrameHeight = m_frame->height();
     }
     if(m_intersectingEdge) {
         m_oldEndSocket = m_intersectingEdge->endSocket();
@@ -57,7 +57,10 @@ void MoveCommand::undo() {
     for(auto item: m_nodes) {
         if(qobject_cast<Node*>(item)) {
             Node *node = qobject_cast<Node*>(item);
-            if(m_frame && node->attachedFrame() == m_frame) m_frame->removeItem(node);
+            if(m_frame && node->attachedFrame() == m_frame) {
+                m_frame->removeItem(node);
+                node->setAttachedFrame(nullptr);
+            }
             node->setBaseX(node->baseX() - m_movVector.x());
             node->setBaseY(node->baseY() - m_movVector.y());
         }
@@ -70,8 +73,8 @@ void MoveCommand::undo() {
     if(m_frame) {
         m_frame->setBaseX(m_oldFrameX);
         m_frame->setBaseY(m_oldFrameY);
-        m_frame->setBaseWidth(m_oldFrameWidth);
-        m_frame->setBaseHeight(m_oldFrameHeight);
+        m_frame->setWidth(m_oldFrameWidth);
+        m_frame->setHeight(m_oldFrameHeight);
     }
     if(m_intersectingEdge) {
         Node *node = qobject_cast<Node*>(m_nodes[0]);
@@ -83,6 +86,7 @@ void MoveCommand::undo() {
         m_intersectingEdge->setEndSocket(m_oldEndSocket);
         m_oldEndSocket->addEdge(m_intersectingEdge);
         m_intersectingEdge->setEndPosition(m_oldEndSocket->globalPos());
+        m_intersectingEdge->endSocket()->setValue(m_intersectingEdge->startSocket()->value());
     }
 }
 
@@ -110,7 +114,10 @@ void MoveCommand::redo() {
         Node *node = qobject_cast<Node*>(m_nodes[0]);
         Socket *newEndSocket = node->getInputSocket(0);
         m_intersectingEdge->setEndSocket(newEndSocket);
-        if(newEndSocket) newEndSocket->addEdge(m_intersectingEdge);
+        if(newEndSocket) {
+            newEndSocket->addEdge(m_intersectingEdge);
+            newEndSocket->setValue(m_intersectingEdge->startSocket()->value());
+        }
         m_intersectingEdge->setEndPosition(newEndSocket->globalPos());
         Scene *scene = qobject_cast<Scene*>(node->parentItem());
         if(!m_newEdge) {
@@ -122,6 +129,7 @@ void MoveCommand::redo() {
             m_oldEndSocket->addEdge(m_newEdge);
             m_newEdge->setStartPosition(startSocket->globalPos());
             m_newEdge->setEndPosition(m_oldEndSocket->globalPos());
+            m_oldEndSocket->setValue(m_newEdge->startSocket()->value());
         }
         else {
             m_newEdge->startSocket()->addEdge(m_newEdge);
@@ -287,6 +295,7 @@ void DeleteCommand::deleteWithSaveConnection() {
                             Edge *newEdge = new Edge(m_scene);
                             newEdge->setEndSocket(edge->endSocket());
                             newEdge->setStartSocket(inNode->getOutputSocket(0));
+                            newEdge->endSocket()->setValue(newEdge->startSocket()->value());
                             m_newEdges.push_back(newEdge);
                         }
                     }
@@ -591,15 +600,15 @@ ResizeFrameCommand::~ResizeFrameCommand() {
 void ResizeFrameCommand::undo() {
     m_frame->setBaseX(m_frame->baseX() - m_offsetX);
     m_frame->setBaseY(m_frame->baseY() - m_offsetY);
-    m_frame->setBaseWidth(m_frame->baseWidth() - m_offsetWidth);
-    m_frame->setBaseHeight(m_frame->baseHeight() - m_offsetHeight);
+    m_frame->setWidth(m_frame->width() - m_offsetWidth);
+    m_frame->setHeight(m_frame->height() - m_offsetHeight);
 }
 
 void ResizeFrameCommand::redo() {
     m_frame->setBaseX(m_frame->baseX() + m_offsetX);
     m_frame->setBaseY(m_frame->baseY() + m_offsetY);
-    m_frame->setBaseWidth(m_frame->baseWidth() + m_offsetWidth);
-    m_frame->setBaseHeight(m_frame->baseHeight() + m_offsetHeight);
+    m_frame->setWidth(m_frame->width() + m_offsetWidth);
+    m_frame->setHeight(m_frame->height() + m_offsetHeight);
 }
 
 bool ResizeFrameCommand::mergeWith(const QUndoCommand *command) {

@@ -27,7 +27,6 @@ unsigned int GrayscaleObject::sourceTexture() {
 void GrayscaleObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
     grayscaledTex = true;
-    update();
 }
 
 void GrayscaleObject::saveTexture(QString fileName) {
@@ -51,9 +50,9 @@ GLint GrayscaleObject::bpc() {
 }
 
 void GrayscaleObject::setBPC(GLint bpc) {
+    if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
-    update();
 }
 
 GrayscaleRenderer::GrayscaleRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc) {
@@ -75,6 +74,7 @@ GrayscaleRenderer::GrayscaleRenderer(QVector2D res, GLint bpc): m_resolution(res
     grayscaleShader->release();
     textureShader->bind();
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
     textureShader->release();
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -106,10 +106,13 @@ GrayscaleRenderer::GrayscaleRenderer(QVector2D res, GLint bpc): m_resolution(res
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_SHORT, nullptr
         );
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_grayscaleTexture, 0
     );
@@ -129,7 +132,6 @@ GrayscaleRenderer::~GrayscaleRenderer() {
 QOpenGLFramebufferObject *GrayscaleRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(8);
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -141,16 +143,16 @@ void GrayscaleRenderer::synchronize(QQuickFramebufferObject *item) {
         m_resolution = grayscaleItem->resolution();
         updateTexResolution();
     }
-    if(grayscaleItem->bpcUpdated) {
-        grayscaleItem->bpcUpdated = false;
-        m_bpc = grayscaleItem->bpc();
-        updateTexResolution();
-        toGrayscale();
-        grayscaleItem->setTexture(m_grayscaleTexture);
-    }
-    if(grayscaleItem->grayscaledTex) {
-        grayscaleItem->grayscaledTex = false;
-        m_sourceTexture = grayscaleItem->sourceTexture();
+    if(grayscaleItem->grayscaledTex || grayscaleItem->bpcUpdated) {
+        if(grayscaleItem->bpcUpdated) {
+            grayscaleItem->bpcUpdated = false;
+            m_bpc = grayscaleItem->bpc();
+            updateTexResolution();
+        }
+        if(grayscaleItem->grayscaledTex) {
+            grayscaleItem->grayscaledTex = false;
+            m_sourceTexture = grayscaleItem->sourceTexture();
+        }
         if(m_sourceTexture) {
             toGrayscale();
             grayscaleItem->setTexture(m_grayscaleTexture);
@@ -202,7 +204,9 @@ void GrayscaleRenderer::toGrayscale() {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindTexture(GL_TEXTURE_2D, 0);
     grayscaleShader->release();
-    glBindVertexArray(0);
+    glBindVertexArray(0);    
+    glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
