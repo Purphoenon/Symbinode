@@ -133,6 +133,7 @@ void MixObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 unsigned int &MixObject::texture() {
@@ -336,6 +337,7 @@ void MixRenderer::render() {
 }
 
 void MixRenderer::mix() {
+    std::cout << "mix" << std::endl;
     glDisable(GL_DEPTH_TEST);
     glBindFramebuffer(GL_FRAMEBUFFER, mixFBO);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);

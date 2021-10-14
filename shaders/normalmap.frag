@@ -57,5 +57,6 @@ void main() {
     if(strength > 0) {
        norm.y = 1.0 - norm.y;
     }
+
     FragColor = vec4(norm, 1.0);
 }

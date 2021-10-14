@@ -77,6 +77,7 @@ void NormalMapObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 unsigned int &NormalMapObject::normalTexture() {

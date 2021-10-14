@@ -101,6 +101,7 @@ void SlopeBlurObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 SlopeBlurRenderer::SlopeBlurRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(bpc)

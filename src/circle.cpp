@@ -117,6 +117,7 @@ void CircleObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 CircleRenderer::CircleRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {

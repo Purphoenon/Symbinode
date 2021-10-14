@@ -86,6 +86,7 @@ void AlbedoObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 AlbedoRenderer::AlbedoRenderer(QVector2D resolution, GLint bpc): m_resolution(resolution), m_bpc(bpc) {

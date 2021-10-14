@@ -62,7 +62,6 @@ void BlurNode::operation() {
     if(!m_socketsInput[0]->getEdges().isEmpty()) {
         Node *inputNode0 = static_cast<Node*>(m_socketsInput[0]->getEdges()[0]->startSocket()->parentItem());
         if(inputNode0 && inputNode0->resolution() != m_resolution) return;
-        std::cout << "blur socket 0 " << m_socketsInput[0]->value().toUInt() << std::endl;
         if(m_socketsInput[0]->value() == 0 && deserializing) return;
     }
     if(!m_socketsInput[1]->getEdges().isEmpty()) {

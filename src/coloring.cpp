@@ -79,6 +79,7 @@ void ColoringObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 QQuickFramebufferObject::Renderer *ColoringObject::createRenderer() const {

@@ -107,6 +107,7 @@ void ColorRampObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 void ColorRampObject::gradientAdd(QVector3D color, qreal pos, int index) {

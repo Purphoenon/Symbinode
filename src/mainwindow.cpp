@@ -149,6 +149,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 32:
                 n = new HexagonsNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 33:
+                n = new FloodFillNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

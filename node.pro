@@ -102,7 +102,9 @@ SOURCES += \
     src/bricksnode.cpp \
     src/bricks.cpp \
     src/hexagonsnode.cpp \
-    src/hexagons.cpp
+    src/hexagons.cpp \
+    src/floodfillnode.cpp \
+    src/floodfill.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -195,7 +197,9 @@ HEADERS += \
     src/bricksnode.h \
     src/bricks.h \
     src/hexagonsnode.h \
-    src/hexagons.h
+    src/hexagons.h \
+    src/floodfillnode.h \
+    src/floodfill.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -267,4 +271,8 @@ DISTFILES += \
     qml/BricksProperty.qml \
     shaders/hexagons.frag \
     qml/HexagonsProperty.qml \
-    qml/BitsProperty.qml
+    qml/BitsProperty.qml \
+    shaders/prefloodfill.frag \
+    shaders/fill.frag \
+    shaders/finalfill.frag \
+    shaders/mask.frag

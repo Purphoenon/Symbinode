@@ -122,5 +122,9 @@
         <file>../shaders/hexagons.frag</file>
         <file>../qml/HexagonsProperty.qml</file>
         <file>../qml/BitsProperty.qml</file>
+        <file>../shaders/prefloodfill.frag</file>
+        <file>../shaders/fill.frag</file>
+        <file>../shaders/finalfill.frag</file>
+        <file>../shaders/mask.frag</file>
     </qresource>
 </RCC>

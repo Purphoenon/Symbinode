@@ -554,6 +554,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 29)
                 }
             }
+            Action {
+                text: "Flood Fill"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 33)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30

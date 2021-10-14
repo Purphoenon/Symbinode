@@ -97,6 +97,7 @@ void BrightnessContrastObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
+    update();
 }
 
 BrightnessContrastRenderer::BrightnessContrastRenderer(QVector2D res, GLint bpc): m_resolution(res),

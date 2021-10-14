@@ -54,6 +54,7 @@
 #include "polartransformnode.h"
 #include "bricksnode.h"
 #include "hexagonsnode.h"
+#include "floodfillnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -676,6 +677,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 32:
         node = new HexagonsNode(this, m_resolution);
+        break;
+    case 33:
+        node = new FloodFillNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;
