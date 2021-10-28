@@ -330,6 +330,7 @@ void HexagonsRenderer::saveTexture(QString fileName) {
     glClear(GL_COLOR_BUFFER_BIT);
     glBindVertexArray(textureVAO);
     textureShader->bind();
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 0.0f);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_hexagonsTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

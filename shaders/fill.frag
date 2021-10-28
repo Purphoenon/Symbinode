@@ -5,8 +5,8 @@ uniform sampler2D sourceTexture;
 out vec4 FragColor;
 
 vec2 offset[4] = vec2[](vec2(-1.0, 0.0),
-                        vec2(0.0, -1.0),
                         vec2(0.0, 1.0),
+                        vec2(0.0, -1.0),                        
                         vec2(1.0, 0.0));
 
 void main()
@@ -20,6 +20,7 @@ void main()
         FragColor = vec4(0.0);
         return;
     }
+
     for(int o = 0; o < 4; ++o) {
         vec2 uv2 = uv;
         vec2 off = offset[o]/texSize;
@@ -27,8 +28,8 @@ void main()
             uv2 += off;
             vec4 c2 = texture(sourceTexture, uv2);
             if(c2.z + c2.w == 0.0) break;
-            vec2 startPoint = vec2(min(c.x, c2.x + floor(uv2.x)), min(c.y, c2.y + floor(uv2.y)));
-            vec2 rect = vec2(max(c.x + c.z, c2.x + floor(uv2.x) + c2.z), max(c.y + c.w, c2.y + floor(uv2.y) + c2.w)) - startPoint;
+            vec2 startPoint = min(c.xy, c2.xy + floor(uv2));
+            vec2 rect = max(c.xy + c.zw, c2.xy + floor(uv2) + c2.zw) - startPoint;
             c = vec4(startPoint, rect);
         }
     }

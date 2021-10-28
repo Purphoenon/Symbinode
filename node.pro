@@ -104,7 +104,9 @@ SOURCES += \
     src/hexagonsnode.cpp \
     src/hexagons.cpp \
     src/floodfillnode.cpp \
-    src/floodfill.cpp
+    src/floodfill.cpp \
+    src/floodfilltogradient.cpp \
+    src/floodfilltogradientnode.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -199,7 +201,9 @@ HEADERS += \
     src/hexagonsnode.h \
     src/hexagons.h \
     src/floodfillnode.h \
-    src/floodfill.h
+    src/floodfill.h \
+    src/floodfilltogradient.h \
+    src/floodfilltogradientnode.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -275,4 +279,5 @@ DISTFILES += \
     shaders/prefloodfill.frag \
     shaders/fill.frag \
     shaders/finalfill.frag \
-    shaders/mask.frag
+    shaders/floodfilltogradient.frag \
+    qml/FloodFillToGradientProperty.qml

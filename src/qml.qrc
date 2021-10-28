@@ -125,6 +125,7 @@
         <file>../shaders/prefloodfill.frag</file>
         <file>../shaders/fill.frag</file>
         <file>../shaders/finalfill.frag</file>
-        <file>../shaders/mask.frag</file>
+        <file>../shaders/floodfilltogradient.frag</file>
+        <file>../qml/FloodFillToGradientProperty.qml</file>
     </qresource>
 </RCC>

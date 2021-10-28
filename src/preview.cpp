@@ -288,6 +288,7 @@ void PreviewRenderer::synchronize(QQuickFramebufferObject *item) {
 void PreviewRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
+    //glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.227f, 0.235f, 0.243f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);

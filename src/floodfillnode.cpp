@@ -1,11 +1,11 @@
 #include "floodfillnode.h"
 
-FloodFillNode::FloodFillNode(QQuickItem *parent, QVector2D resolution, GLint bpc): Node(parent, resolution, bpc)
+FloodFillNode::FloodFillNode(QQuickItem *parent, QVector2D resolution): Node(parent, resolution)
 {
     createSockets(1, 1);
     setTitle("Flood Fill");
     m_socketsInput[0]->setTip("Texture");
-    preview = new FloodFillObject(grNode, m_resolution, m_bpc);
+    preview = new FloodFillObject(grNode, m_resolution);
     float s = scaleView();
     preview->setTransformOrigin(TopLeft);
     preview->setWidth(174);
@@ -16,14 +16,6 @@ FloodFillNode::FloodFillNode(QQuickItem *parent, QVector2D resolution, GLint bpc
     connect(preview, &FloodFillObject::updatePreview, this, &FloodFillNode::updatePreview);
     connect(this, &Node::changeResolution, preview, &FloodFillObject::setResolution);
     connect(preview, &FloodFillObject::textureChanged, this, &FloodFillNode::setOutput);
-    connect(this, &Node::changeBPC, preview, &FloodFillObject::setBPC);
-    propView = new QQuickView();
-    propView->setSource(QUrl(QStringLiteral("qrc:/qml/BitsProperty.qml")));
-    propertiesPanel = qobject_cast<QQuickItem*>(propView->rootObject());
-    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
-    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
-    connect(propertiesPanel, SIGNAL(bitsChanged(int)), this, SLOT(bpcUpdate(int)));
-    connect(propertiesPanel, SIGNAL(propertyChangingFinished(QString, QVariant, QVariant)), this, SLOT(propertyChanged(QString, QVariant, QVariant)));
 }
 
 FloodFillNode::~FloodFillNode() {
@@ -51,14 +43,8 @@ void FloodFillNode::serialize(QJsonObject &json) const{
     json["type"] = 33;
 }
 
-void FloodFillNode::deserialize(const QJsonObject &json, QHash<QUuid, Socket *> &hash) {
-    Node::deserialize(json, hash);
-    if(m_bpc == GL_RGBA8) propertiesPanel->setProperty("startBits", 0);
-    else if(m_bpc == GL_RGBA16) propertiesPanel->setProperty("startBits", 1);
-}
-
 FloodFillNode *FloodFillNode::clone() {
-    return new FloodFillNode(parentItem(), m_resolution, m_bpc);
+    return new FloodFillNode(parentItem(), m_resolution);
 }
 
 void FloodFillNode::saveTexture(QString fileName) {

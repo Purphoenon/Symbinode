@@ -354,6 +354,7 @@ void GradientRenderer::saveTexture(QString fileName) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     renderTexture->bind();
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 0.0f);
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gradientTexture);

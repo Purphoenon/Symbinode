@@ -405,6 +405,7 @@ void MixRenderer::saveTexture(QString fileName) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     renderTexture->bind();
+    renderTexture->setUniformValue(renderTexture->uniformLocation("lod"), 0.0f);
     glBindVertexArray(VAO);
     glActiveTexture(GL_TEXTURE0);
     if(firstTexture && secondTexture) glBindTexture(GL_TEXTURE_2D, mixTexture);

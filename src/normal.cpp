@@ -161,6 +161,7 @@ void NormalRenderer::saveTexture(QString name) {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     renderNormal->bind();
+    renderNormal->setUniformValue(renderNormal->uniformLocation("lod"), 0.0f);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_normalTexture);
     glBindVertexArray(VAO);

@@ -354,9 +354,9 @@ TileRenderer::TileRenderer(QVector2D res, GLint bpc): m_resolution(res), m_bpc(b
     textureShader->release();
 
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
-                    -1.0f, 1.0f, 0.0f, 1.0f,
-                    1.0f, -1.0f, 1.0f, 0.0f,
-                    1.0f, 1.0f, 1.0f, 1.0f};
+                           -1.0f, 1.0f, 0.0f, 1.0f,
+                           1.0f, -1.0f, 1.0f, 0.0f,
+                           1.0f, 1.0f, 1.0f, 1.0f};
     unsigned int VBO;
     glGenVertexArrays(1, &textureVAO);
     glBindVertexArray(textureVAO);
@@ -436,7 +436,7 @@ void TileRenderer::synchronize(QQuickFramebufferObject *item) {
             m_bpc = tileItem->bpc();
             updateTexResolution();
         }
-        if(tileItem->tiledTex) {
+        if(tileItem->tiledTex)  {
             tileItem->tiledTex = false;
             m_sourceTexture = tileItem->sourceTexture();
             m_tile1 = tileItem->tile1();
@@ -599,6 +599,7 @@ void TileRenderer::saveTexture(QString fileName) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     textureShader->bind();
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 0.0f);
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_tiledTexture);

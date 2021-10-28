@@ -300,6 +300,7 @@ void MirrorRenderer::saveTexture(QString fileName) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     textureShader->bind();
+    textureShader->setUniformValue(textureShader->uniformLocation("lod"), 0.0f);
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_mirrorTexture);

@@ -152,6 +152,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 33:
                 n = new FloodFillNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 34:
+                n = new FloodFillToGradientNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }
