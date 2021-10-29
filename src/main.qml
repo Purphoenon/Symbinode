@@ -566,6 +566,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 34)
                 }
             }
+            Action {
+                text: "Flood Fill to Grayscale"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 35)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30

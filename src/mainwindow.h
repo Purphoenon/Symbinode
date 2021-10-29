@@ -59,6 +59,7 @@
 #include "hexagonsnode.h"
 #include "floodfillnode.h"
 #include "floodfilltogradientnode.h"
+#include "floodfilltograyscalenode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow

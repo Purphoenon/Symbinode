@@ -127,5 +127,7 @@
         <file>../shaders/finalfill.frag</file>
         <file>../shaders/floodfilltogradient.frag</file>
         <file>../qml/FloodFillToGradientProperty.qml</file>
+        <file>../shaders/floodfilltograyscale.frag</file>
+        <file>../qml/FloodFillToGrayscaleProperty.qml</file>
     </qresource>
 </RCC>

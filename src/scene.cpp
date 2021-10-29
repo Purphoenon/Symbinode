@@ -56,6 +56,7 @@
 #include "hexagonsnode.h"
 #include "floodfillnode.h"
 #include "floodfilltogradientnode.h"
+#include "floodfilltograyscalenode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -684,6 +685,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 34:
         node = new FloodFillToGradientNode(this, m_resolution);
+        break;
+    case 35:
+        node = new FloodFillToGrayscaleNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

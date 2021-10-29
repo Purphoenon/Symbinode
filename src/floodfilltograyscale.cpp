@@ -1,97 +1,77 @@
-#include "floodfilltogradient.h"
+#include "floodfilltograyscale.h"
 #include <QOpenGLFramebufferObjectFormat>
 #include "FreeImage.h"
 
-FloodFillToGradientObject::FloodFillToGradientObject(QQuickItem *parent, QVector2D resolution, GLint bpc,
-                                                     int rotation, float randomizing, int seed):
-    QQuickFramebufferObject (parent), m_resolution(resolution), m_bpc(bpc), m_rotation(rotation),
-    m_randomizing(randomizing), m_seed(seed)
+FloodFillToGrayscaleObject::FloodFillToGrayscaleObject(QQuickItem *parent, QVector2D resolution, GLint bpc,
+                                                       int seed): QQuickFramebufferObject (parent),
+    m_resolution(resolution), m_bpc(bpc), m_seed(seed)
 {
 
 }
 
-QQuickFramebufferObject::Renderer *FloodFillToGradientObject::createRenderer() const {
-    return new FloodFillToGradientRenderer(m_resolution, m_bpc);
+QQuickFramebufferObject::Renderer *FloodFillToGrayscaleObject::createRenderer() const {
+    return new FloodFillToGrayscaleRenderer(m_resolution, m_bpc);
 }
 
-unsigned int &FloodFillToGradientObject::texture() {
+unsigned int &FloodFillToGrayscaleObject::texture() {
     return m_texture;
 }
 
-void FloodFillToGradientObject::setTexture(unsigned int texture) {
+void FloodFillToGrayscaleObject::setTexture(unsigned int texture) {
     m_texture = texture;
     textureChanged();
 }
 
-unsigned int FloodFillToGradientObject::sourceTexture() {
+unsigned int FloodFillToGrayscaleObject::sourceTexture() {
     return m_sourceTexture;
 }
 
-void FloodFillToGradientObject::setSourceTexture(unsigned int texture) {
+void FloodFillToGrayscaleObject::setSourceTexture(unsigned int texture) {
     m_sourceTexture = texture;
-    toGradientTex = true;
+    toGrayscaleTex = true;
 }
 
-void FloodFillToGradientObject::saveTexture(QString fileName) {
-    texSaving = true;
+void FloodFillToGrayscaleObject::saveTexture(QString fileName) {
     saveName = fileName;
+    texSaving = true;
     update();
 }
 
-int FloodFillToGradientObject::rotation() {
-    return m_rotation;
-}
-
-void FloodFillToGradientObject::setRotation(int angle) {
-    if(m_rotation == angle) return;
-    m_rotation = angle;
-    toGradientTex = true;
-}
-
-float FloodFillToGradientObject::randomizing() {
-    return m_randomizing;
-}
-
-void FloodFillToGradientObject::setRandomizing(float rand) {
-    if(m_randomizing == rand) return;
-    m_randomizing = rand;
-    toGradientTex = true;
-}
-
-int FloodFillToGradientObject::seed() {
+int FloodFillToGrayscaleObject::seed() {
     return m_seed;
 }
 
-void FloodFillToGradientObject::setSeed(int seed) {
+void FloodFillToGrayscaleObject::setSeed(int seed) {
     if(m_seed == seed) return;
     m_seed = seed;
     randUpdate = true;
 }
 
-QVector2D FloodFillToGradientObject::resolution() {
+QVector2D FloodFillToGrayscaleObject::resolution() {
     return m_resolution;
 }
 
-void FloodFillToGradientObject::setResolution(QVector2D res) {
+void FloodFillToGrayscaleObject::setResolution(QVector2D res) {
     if(m_resolution == res) return;
     m_resolution = res;
     resUpdate = true;
     update();
 }
 
-GLint FloodFillToGradientObject::bpc() {
+GLint FloodFillToGrayscaleObject::bpc() {
     return m_bpc;
 }
 
-void FloodFillToGradientObject::setBPC(GLint bpc) {
+void FloodFillToGrayscaleObject::setBPC(GLint bpc) {
     if(m_bpc == bpc) return;
     m_bpc = bpc;
     bpcUpdated = true;
     update();
 }
 
-FloodFillToGradientRenderer::FloodFillToGradientRenderer(QVector2D res, GLint bpc): m_resolution(res),
-                                                                                    m_bpc(bpc) {
+FloodFillToGrayscaleRenderer::FloodFillToGrayscaleRenderer(QVector2D resolution, GLint bpc):
+    m_resolution(resolution), m_bpc(bpc)
+{
     initializeOpenGLFunctions();
 
     textureShader = new QOpenGLShaderProgram();
@@ -99,10 +79,10 @@ FloodFillToGradientRenderer::FloodFillToGradientRenderer(QVector2D res, GLint bp
     textureShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/texture.frag");
     textureShader->link();
 
-    gradientShader = new QOpenGLShaderProgram();
-    gradientShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
-    gradientShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/floodfilltogradient.frag");
-    gradientShader->link();
+    grayscaleShader = new QOpenGLShaderProgram();
+    grayscaleShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
+    grayscaleShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/floodfilltograyscale.frag");
+    grayscaleShader->link();
 
     randomShader = new QOpenGLShaderProgram();
     randomShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/noise.vert");
@@ -113,10 +93,10 @@ FloodFillToGradientRenderer::FloodFillToGradientRenderer(QVector2D res, GLint bp
     textureShader->setUniformValue(textureShader->uniformLocation("textureSample"), 0);
     textureShader->release();
 
-    gradientShader->bind();
-    gradientShader->setUniformValue(gradientShader->uniformLocation("floodFillTexture"), 0);
-    gradientShader->setUniformValue(gradientShader->uniformLocation("randomTexture"), 1);
-    gradientShader->release();
+    grayscaleShader->bind();
+    grayscaleShader->setUniformValue(grayscaleShader->uniformLocation("floodFillTexture"), 0);
+    grayscaleShader->setUniformValue(grayscaleShader->uniformLocation("randomTexture"), 1);
+    grayscaleShader->release();
 
     float vertQuadTex[] = {-1.0f, -1.0f, 0.0f, 0.0f,
                     -1.0f, 1.0f, 0.0f, 1.0f,
@@ -136,9 +116,9 @@ FloodFillToGradientRenderer::FloodFillToGradientRenderer(QVector2D res, GLint bp
     glBindVertexArray(0);
 
     glGenFramebuffers(1, &FBO);
-    glGenTextures(1, &m_gradientTexture);
+    glGenTextures(1, &m_grayscaleTexture);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-    glBindTexture(GL_TEXTURE_2D, m_gradientTexture);
+    glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
     if(m_bpc == GL_RGBA8) {
         glTexImage2D(
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
@@ -157,7 +137,7 @@ FloodFillToGradientRenderer::FloodFillToGradientRenderer(QVector2D res, GLint bp
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 2);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2);
     glFramebufferTexture2D(
-        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_gradientTexture, 0
+        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_grayscaleTexture, 0
     );
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -178,82 +158,75 @@ FloodFillToGradientRenderer::FloodFillToGradientRenderer(QVector2D res, GLint bp
     createRandom();
 }
 
-FloodFillToGradientRenderer::~FloodFillToGradientRenderer() {
+FloodFillToGrayscaleRenderer::~FloodFillToGrayscaleRenderer() {
     delete textureShader;
     delete randomShader;
-    delete gradientShader;
+    delete grayscaleShader;
     glDeleteVertexArrays(1, &textureVAO);
-    glDeleteTextures(1, &m_gradientTexture);
     glDeleteTextures(1, &m_randomTexture);
+    glDeleteTextures(1, &m_grayscaleTexture);
     glDeleteFramebuffers(1, &FBO);
     glDeleteFramebuffers(1, &randomFBO);
 }
 
-QOpenGLFramebufferObject *FloodFillToGradientRenderer::createFramebufferObject(const QSize &size) {
+QOpenGLFramebufferObject *FloodFillToGrayscaleRenderer::createFramebufferObject(const QSize &size) {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
     return new QOpenGLFramebufferObject(size, format);
 }
 
-void FloodFillToGradientRenderer::synchronize(QQuickFramebufferObject *item) {
-    FloodFillToGradientObject *ffToGradientItem = static_cast<FloodFillToGradientObject*>(item);
+void FloodFillToGrayscaleRenderer::synchronize(QQuickFramebufferObject *item) {
+    FloodFillToGrayscaleObject *ffToGrayscaleItem = static_cast<FloodFillToGrayscaleObject*>(item);
 
-    if(ffToGradientItem->resUpdate) {
-        ffToGradientItem->resUpdate = false;
-        m_resolution = ffToGradientItem->resolution();
+    if(ffToGrayscaleItem->resUpdate) {
+        ffToGrayscaleItem->resUpdate = false;
+        m_resolution = ffToGrayscaleItem->resolution();
         updateTexResolution();
     }
-    if(ffToGradientItem->toGradientTex || ffToGradientItem->bpcUpdated) {
-        if(ffToGradientItem->bpcUpdated) {
-            ffToGradientItem->bpcUpdated = false;
-            m_bpc = ffToGradientItem->bpc();
+    if(ffToGrayscaleItem->toGrayscaleTex || ffToGrayscaleItem->bpcUpdated) {
+        if(ffToGrayscaleItem->bpcUpdated) {
+            ffToGrayscaleItem->bpcUpdated = false;
+            m_bpc = ffToGrayscaleItem->bpc();
             updateTexResolution();
         }
-        if(ffToGradientItem->toGradientTex) {
-            ffToGradientItem->toGradientTex = false;
-            m_sourceTexture = ffToGradientItem->sourceTexture();
-            if(m_sourceTexture) {
-                gradientShader->bind();
-                gradientShader->setUniformValue(gradientShader->uniformLocation("rotation"), ffToGradientItem->rotation());
-                gradientShader->setUniformValue(gradientShader->uniformLocation("randomizing"), ffToGradientItem->randomizing());
-                gradientShader->release();
-            }
+        if(ffToGrayscaleItem->toGrayscaleTex) {
+            ffToGrayscaleItem->toGrayscaleTex = false;
+            m_sourceTexture = ffToGrayscaleItem->sourceTexture();
         }
         if(m_sourceTexture) {
-            toGradient();
-            ffToGradientItem->setTexture(m_gradientTexture);
-            ffToGradientItem->updatePreview(m_gradientTexture);
+            toGrayscale();
+            ffToGrayscaleItem->updatePreview(m_grayscaleTexture);
+            ffToGrayscaleItem->setTexture(m_grayscaleTexture);
         }
     }
-    if(ffToGradientItem->randUpdate) {
-        ffToGradientItem->randUpdate = false;
+    if(ffToGrayscaleItem->randUpdate) {
+        ffToGrayscaleItem->randUpdate = false;
         randomShader->bind();
-        randomShader->setUniformValue(randomShader->uniformLocation("seed"), ffToGradientItem->seed());
+        randomShader->setUniformValue(randomShader->uniformLocation("seed"), ffToGrayscaleItem->seed());
         randomShader->release();
         createRandom();
-        toGradient();
-        ffToGradientItem->setTexture(m_gradientTexture);
-        ffToGradientItem->updatePreview(m_gradientTexture);
+        toGrayscale();
+        ffToGrayscaleItem->updatePreview(m_grayscaleTexture);
+        ffToGrayscaleItem->setTexture(m_grayscaleTexture);
     }
-    if(ffToGradientItem->texSaving) {
-        ffToGradientItem->texSaving = false;
-        saveTexture(ffToGradientItem->saveName);
+    if(ffToGrayscaleItem->texSaving) {
+        ffToGrayscaleItem->texSaving = false;
+        saveTexture(ffToGrayscaleItem->saveName);
     }
 }
 
-void FloodFillToGradientRenderer::render() {
+void FloodFillToGrayscaleRenderer::render() {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-
     if(m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();
         textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_gradientTexture);
+        glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindTexture(GL_TEXTURE_2D, 0);
         textureShader->release();
@@ -262,14 +235,14 @@ void FloodFillToGradientRenderer::render() {
     glFlush();
 }
 
-void FloodFillToGradientRenderer::toGradient() {
+void FloodFillToGrayscaleRenderer::toGrayscale() {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glViewport(0, 0, m_resolution.x(), m_resolution.y());
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    gradientShader->bind();
+    grayscaleShader->bind();
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_sourceTexture);
@@ -279,17 +252,17 @@ void FloodFillToGradientRenderer::toGradient() {
     glBindVertexArray(0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    gradientShader->release();
+    grayscaleShader->release();
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    glBindTexture(GL_TEXTURE_2D, m_gradientTexture);
+    glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
     glFinish();
 }
 
-void FloodFillToGradientRenderer::createRandom() {
+void FloodFillToGrayscaleRenderer::createRandom() {
     glBindFramebuffer(GL_FRAMEBUFFER, randomFBO);
     glViewport(0, 0, 512, 512);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -302,8 +275,8 @@ void FloodFillToGradientRenderer::createRandom() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void FloodFillToGradientRenderer::updateTexResolution() {
-    glBindTexture(GL_TEXTURE_2D, m_gradientTexture);
+void FloodFillToGrayscaleRenderer::updateTexResolution() {
+    glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
     if(m_bpc == GL_RGBA8) {
         glTexImage2D(
             GL_TEXTURE_2D, 0, m_bpc, m_resolution.x(), m_resolution.y(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
@@ -316,7 +289,7 @@ void FloodFillToGradientRenderer::updateTexResolution() {
     }
 }
 
-void FloodFillToGradientRenderer::saveTexture(QString fileName) {
+void FloodFillToGrayscaleRenderer::saveTexture(QString fileName) {
     unsigned int fbo;
     unsigned int texture;
     glGenFramebuffers(1, &fbo);
@@ -345,7 +318,7 @@ void FloodFillToGradientRenderer::saveTexture(QString fileName) {
     textureShader->setUniformValue(textureShader->uniformLocation("lod"), 0.0f);
     glBindVertexArray(textureVAO);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_gradientTexture);
+    glBindTexture(GL_TEXTURE_2D, m_grayscaleTexture);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
