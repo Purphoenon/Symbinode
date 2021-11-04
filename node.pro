@@ -108,7 +108,9 @@ SOURCES += \
     src/floodfilltogradient.cpp \
     src/floodfilltogradientnode.cpp \
     src/floodfilltograyscalenode.cpp \
-    src/floodfilltograyscale.cpp
+    src/floodfilltograyscale.cpp \
+    src/highpassnode.cpp \
+    src/highpass.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -207,7 +209,9 @@ HEADERS += \
     src/floodfilltogradient.h \
     src/floodfilltogradientnode.h \
     src/floodfilltograyscalenode.h \
-    src/floodfilltograyscale.h
+    src/floodfilltograyscale.h \
+    src/highpassnode.h \
+    src/highpass.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -286,4 +290,7 @@ DISTFILES += \
     shaders/floodfilltogradient.frag \
     qml/FloodFillToGradientProperty.qml \
     shaders/floodfilltograyscale.frag \
-    qml/FloodFillToGrayscaleProperty.qml
+    qml/FloodFillToGrayscaleProperty.qml \
+    shaders/blurgauss.frag \
+    shaders/highpass.frag \
+    qml/HighPassProperty.qml

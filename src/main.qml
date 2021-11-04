@@ -572,6 +572,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 35)
                 }
             }
+            Action {
+                text: "High Pass"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 36)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30

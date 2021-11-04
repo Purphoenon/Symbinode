@@ -158,6 +158,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 35:
                 n = new FloodFillToGrayscaleNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 36:
+                n = new HighPassNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

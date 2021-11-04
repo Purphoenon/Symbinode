@@ -129,5 +129,8 @@
         <file>../qml/FloodFillToGradientProperty.qml</file>
         <file>../shaders/floodfilltograyscale.frag</file>
         <file>../qml/FloodFillToGrayscaleProperty.qml</file>
+        <file>../shaders/blurgauss.frag</file>
+        <file>../shaders/highpass.frag</file>
+        <file>../qml/HighPassProperty.qml</file>
     </qresource>
 </RCC>

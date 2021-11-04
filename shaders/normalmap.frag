@@ -31,10 +31,11 @@ out vec4 FragColor;
 void main() {
     vec2 st = gl_FragCoord.xy/res;
     st.x *= res.x/res.y;
-    vec2 offset = vec2(1.0)/res*size;
+    vec2 offset = vec2(1.0)/res;
 
     float dx = 0.0;
     float dy = 0.0;
+
     float tl = texture(grayscaleTexture, st + vec2(-offset.x, offset.y)).x;
     float t = texture(grayscaleTexture, st + vec2(0.0, offset.y)).x;
     float tr = texture(grayscaleTexture, st + vec2(offset.x, offset.y)).x;
@@ -44,6 +45,7 @@ void main() {
     float l = texture(grayscaleTexture, st + vec2(-offset.x, 0.0)).x;
     float r = texture(grayscaleTexture, st + vec2(offset.x, 0.0)).x;
     float c = texture(grayscaleTexture, st + vec2(0.0, 0.0)).x;
+
 
     float top_side = tl + 2.0*t + tr;
     float bottom_side = bl + 2.0*b + br;
