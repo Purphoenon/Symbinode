@@ -110,7 +110,9 @@ SOURCES += \
     src/floodfilltograyscalenode.cpp \
     src/floodfilltograyscale.cpp \
     src/highpassnode.cpp \
-    src/highpass.cpp
+    src/highpass.cpp \
+    src/curvaturenode.cpp \
+    src/curvature.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -211,7 +213,9 @@ HEADERS += \
     src/floodfilltograyscalenode.h \
     src/floodfilltograyscale.h \
     src/highpassnode.h \
-    src/highpass.h
+    src/highpass.h \
+    src/curvaturenode.h \
+    src/curvature.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -293,4 +297,6 @@ DISTFILES += \
     qml/FloodFillToGrayscaleProperty.qml \
     shaders/blurgauss.frag \
     shaders/highpass.frag \
-    qml/HighPassProperty.qml
+    qml/HighPassProperty.qml \
+    shaders/curvature.frag \
+    qml/CurvatureProperty.qml

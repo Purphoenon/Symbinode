@@ -25,13 +25,12 @@ uniform vec2 res;
 uniform sampler2D grayscaleTexture;
 uniform float strength;
 
-vec2 size = 0.001*res;
 out vec4 FragColor;
 
 void main() {
     vec2 st = gl_FragCoord.xy/res;
     st.x *= res.x/res.y;
-    vec2 offset = vec2(1.0)/res;
+    vec2 offset = vec2(1.0)/1024.0;
 
     float dx = 0.0;
     float dy = 0.0;
@@ -57,7 +56,7 @@ void main() {
     float s = strength == 0 ? 0.05 : strength;
     vec3 norm = normalize(vec3(dx, dy, 1.0/abs(s))) * 0.5 + 0.5;
     if(strength > 0) {
-       norm.y = 1.0 - norm.y;
+       norm.xy = 1.0 - norm.xy;
     }
 
     FragColor = vec4(norm, 1.0);

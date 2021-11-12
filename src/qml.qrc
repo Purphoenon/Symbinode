@@ -132,5 +132,7 @@
         <file>../shaders/blurgauss.frag</file>
         <file>../shaders/highpass.frag</file>
         <file>../qml/HighPassProperty.qml</file>
+        <file>../shaders/curvature.frag</file>
+        <file>../qml/CurvatureProperty.qml</file>
     </qresource>
 </RCC>

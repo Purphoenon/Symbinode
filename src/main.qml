@@ -578,6 +578,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 36)
                 }
             }
+            Action {
+                text: "Curvature"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 37)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30

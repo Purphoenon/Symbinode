@@ -58,6 +58,7 @@
 #include "floodfilltogradientnode.h"
 #include "floodfilltograyscalenode.h"
 #include "highpassnode.h"
+#include "curvaturenode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -692,6 +693,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 36:
         node = new HighPassNode(this, m_resolution);
+        break;
+    case 37:
+        node = new CurvatureNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

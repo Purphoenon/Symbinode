@@ -45,20 +45,6 @@ float gauss (float x, float sigma)
 void main()
 {
     vec4 color = vec4(0.0);
-    /*float sum = 0.0;
-    float sigma = max(0.001, radius);
-    float g = gauss(0.0, sigma);
-    color = texture(sourceTexture, vec2(gl_FragCoord) / resolution)*g;
-    sum += g;
-
-    for (int i=1; i<64; i++) {
-        g = gauss(i, sigma);
-        color += texture(sourceTexture, (gl_FragCoord.xy + i*direction) / resolution )*g;
-        color += texture(sourceTexture, (gl_FragCoord.xy - i*direction) / resolution )*g;
-        sum += g + g;
-    }
-
-    color /= sum;*/
 
     color = texture(sourceTexture, vec2(gl_FragCoord) / resolution) * weight[0];
     for (int i=1; i<3; i++) {

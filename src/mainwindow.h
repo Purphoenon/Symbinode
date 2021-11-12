@@ -61,6 +61,7 @@
 #include "floodfilltogradientnode.h"
 #include "floodfilltograyscalenode.h"
 #include "highpassnode.h"
+#include "curvaturenode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow
