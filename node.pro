@@ -112,7 +112,9 @@ SOURCES += \
     src/highpassnode.cpp \
     src/highpass.cpp \
     src/curvaturenode.cpp \
-    src/curvature.cpp
+    src/curvature.cpp \
+    src/imagenode.cpp \
+    src/image.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -215,7 +217,9 @@ HEADERS += \
     src/highpassnode.h \
     src/highpass.h \
     src/curvaturenode.h \
-    src/curvature.h
+    src/curvature.h \
+    src/imagenode.h \
+    src/image.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -299,4 +303,6 @@ DISTFILES += \
     shaders/highpass.frag \
     qml/HighPassProperty.qml \
     shaders/curvature.frag \
-    qml/CurvatureProperty.qml
+    qml/CurvatureProperty.qml \
+    qml/ImageProperty.qml \
+    shaders/layer.frag

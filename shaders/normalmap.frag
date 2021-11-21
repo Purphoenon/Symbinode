@@ -45,6 +45,12 @@ void main() {
     float r = texture(grayscaleTexture, st + vec2(offset.x, 0.0)).x;
     float c = texture(grayscaleTexture, st + vec2(0.0, 0.0)).x;
 
+    float s = strength == 0 ? 0.05 : strength;
+    if(texture(grayscaleTexture, st).a == 0.0) {
+        vec3 norm = normalize(vec3(0.0, 0.0, 1.0/abs(s))) * 0.5 + 0.5;
+        FragColor = vec4(norm, 1.0);
+        return;
+    }
 
     float top_side = tl + 2.0*t + tr;
     float bottom_side = bl + 2.0*b + br;
@@ -53,7 +59,6 @@ void main() {
     dx = right_side - left_side;
     dy = bottom_side - top_side;
 
-    float s = strength == 0 ? 0.05 : strength;
     vec3 norm = normalize(vec3(dx, dy, 1.0/abs(s))) * 0.5 + 0.5;
     if(strength > 0) {
        norm.xy = 1.0 - norm.xy;

@@ -134,5 +134,7 @@
         <file>../qml/HighPassProperty.qml</file>
         <file>../shaders/curvature.frag</file>
         <file>../qml/CurvatureProperty.qml</file>
+        <file>../qml/ImageProperty.qml</file>
+        <file>../shaders/layer.frag</file>
     </qresource>
 </RCC>

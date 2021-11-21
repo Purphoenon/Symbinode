@@ -71,6 +71,8 @@ public:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dropEvent(QDropEvent *event);
     void serialize(QJsonObject &json) const;
     void deserialize(const QJsonObject &json);
     Node *deserializeNode(const QJsonObject &json);

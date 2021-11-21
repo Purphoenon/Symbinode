@@ -422,6 +422,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 32)
                 }
             }
+            Action {
+                text: "Image"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 38)
+                }
+            }
 
             background: Rectangle {
                             implicitWidth: 100

@@ -21,6 +21,7 @@
 
 #include "scene.h"
 #include <iostream>
+#include <QMimeData>
 #include "albedonode.h"
 #include "metalnode.h"
 #include "roughnode.h"
@@ -59,11 +60,13 @@
 #include "floodfilltograyscalenode.h"
 #include "highpassnode.h"
 #include "curvaturenode.h"
+#include "imagenode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
 {
     setFlag(ItemHasContents, true);
+    setFlag(ItemAcceptsDrops, true);
     setAcceptedMouseButtons(Qt::AllButtons);    
     m_background = new BackgroundObject(this);
     m_preview3d = new Preview3DObject();
@@ -503,6 +506,32 @@ void Scene::mouseReleaseEvent(QMouseEvent *event) {
     }
 }
 
+void Scene::dragEnterEvent(QDragEnterEvent *event) {
+    if(event->mimeData()->hasUrls()) {
+        QString path = event->mimeData()->urls()[0].path();
+        if(path.endsWith("png")) {
+            event->acceptProposedAction();
+        }
+    }
+}
+
+void Scene::dropEvent(QDropEvent *event) {
+    if(event->mimeData()->hasUrls()) {
+        QString path = event->mimeData()->urls()[0].path();
+        if(path.endsWith("png")) {
+            ImageNode *node = new ImageNode(this, m_resolution, path.right(path.length() - 1));
+            addNode(node);
+            QVector2D pan = m_background->viewPan();
+            float scale = m_background->viewScale();
+            node->setBaseX((event->pos().x() + pan.x())/scale);
+            node->setBaseY((event->pos().y() + pan.y())/scale);
+            node->setPan(pan);
+            addedNode(node);
+            event->acceptProposedAction();
+        }
+    }
+}
+
 void Scene::serialize(QJsonObject &json) const {
     QJsonArray framesArray;
     for(auto f: m_frames) {
@@ -696,6 +725,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 37:
         node = new CurvatureNode(this, m_resolution);
+        break;
+    case 38:
+        node = new ImageNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

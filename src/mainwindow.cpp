@@ -164,6 +164,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 37:
                 n = new CurvatureNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 38:
+                n = new ImageNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

@@ -227,7 +227,7 @@ void CurvatureRenderer::render() {
     if(m_sourceTexture) {
         glBindVertexArray(textureVAO);
         textureShader->bind();
-        textureShader->setUniformValue(textureShader->uniformLocation("lod"), 0.0f);
+        textureShader->setUniformValue(textureShader->uniformLocation("lod"), 2.0f);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, m_curvatureTexture);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
