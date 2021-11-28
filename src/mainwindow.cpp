@@ -167,6 +167,9 @@ void MainWindow::createNode(float x, float y, int nodeType) {
             case 38:
                 n = new ImageNode(activeTab->scene(), activeTab->scene()->resolution());
                 break;
+            case 39:
+                n = new AmbientOcclusionNode(activeTab->scene(), activeTab->scene()->resolution());
+                break;
             default:
                 break;
         }

@@ -136,5 +136,7 @@
         <file>../qml/CurvatureProperty.qml</file>
         <file>../qml/ImageProperty.qml</file>
         <file>../shaders/layer.frag</file>
+        <file>../shaders/ambientocclusion.frag</file>
+        <file>../qml/AmbientOcclusionProperty.qml</file>
     </qresource>
 </RCC>

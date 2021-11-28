@@ -1,9 +1,11 @@
 #version 440 core
 
 uniform sampler2D sourceTexture;
+uniform sampler2D maskTexture;
 uniform float radius = 2.0;
 uniform vec2 resolution;
 uniform vec2 direction;
+uniform bool useMask = false;
 
 in vec2 texCoords;
 
@@ -33,5 +35,11 @@ void main()
 
     color /= sum;
 
-    FragColor = color;
+    float alpha = color.a;
+    if(useMask) {
+        vec4 maskColor = texture(maskTexture, texCoords);
+        alpha = 0.33333*(maskColor.r + maskColor.g + maskColor.b);
+    }
+
+    FragColor = vec4(color.rgb, alpha);
 }

@@ -114,7 +114,9 @@ SOURCES += \
     src/curvaturenode.cpp \
     src/curvature.cpp \
     src/imagenode.cpp \
-    src/image.cpp
+    src/image.cpp \
+    src/ambientocclusionnode.cpp \
+    src/ambientocclusion.cpp
 
 RESOURCES += src/qml.qrc
 
@@ -219,7 +221,9 @@ HEADERS += \
     src/curvaturenode.h \
     src/curvature.h \
     src/imagenode.h \
-    src/image.h
+    src/image.h \
+    src/ambientocclusionnode.h \
+    src/ambientocclusion.h
 
 DISTFILES += \
     shaders/noise.vert \
@@ -305,4 +309,6 @@ DISTFILES += \
     shaders/curvature.frag \
     qml/CurvatureProperty.qml \
     qml/ImageProperty.qml \
-    shaders/layer.frag
+    shaders/layer.frag \
+    shaders/ambientocclusion.frag \
+    qml/AmbientOcclusionProperty.qml

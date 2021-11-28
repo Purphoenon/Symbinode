@@ -63,6 +63,7 @@
 #include "highpassnode.h"
 #include "curvaturenode.h"
 #include "imagenode.h"
+#include "ambientocclusionnode.h"
 #include "frame.h"
 
 class MainWindow: public QQuickWindow

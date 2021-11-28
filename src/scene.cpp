@@ -61,6 +61,7 @@
 #include "highpassnode.h"
 #include "curvaturenode.h"
 #include "imagenode.h"
+#include "ambientocclusionnode.h"
 #include <QtWidgets/QFileDialog>
 
 Scene::Scene(QQuickItem *parent, QVector2D resolution): QQuickItem (parent), m_resolution(resolution)
@@ -728,6 +729,9 @@ Node *Scene::deserializeNode(const QJsonObject &json) {
         break;
     case 38:
         node = new ImageNode(this, m_resolution);
+        break;
+    case 39:
+        node = new AmbientOcclusionNode(this, m_resolution);
         break;
     default:
         std::cout << "nonexistent type" << std::endl;

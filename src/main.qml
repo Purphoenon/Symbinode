@@ -590,6 +590,12 @@ MainWindow {
                     mainWindow.createNode(addNode.x, addNode.y, 37)
                 }
             }
+            Action {
+                text: "Ambient Occlusion"
+                onTriggered: {
+                    mainWindow.createNode(addNode.x, addNode.y, 39)
+                }
+            }
             background: Rectangle {
                             implicitWidth: 100
                             implicitHeight: 30
