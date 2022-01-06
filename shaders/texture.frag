@@ -9,5 +9,8 @@ out vec4 FragColor;
 
 void main()
 {
-    FragColor = textureLod(textureSample, texCoords, lod);
+    /*vec3 color = textureLod(textureSample, texCoords, lod).rgb;
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0/2.2));*/
+    FragColor = textureLod(textureSample, texCoords, lod);//vec4(color, 1.0);
 }

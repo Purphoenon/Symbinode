@@ -138,5 +138,9 @@
         <file>../shaders/layer.frag</file>
         <file>../shaders/ambientocclusion.frag</file>
         <file>../qml/AmbientOcclusionProperty.qml</file>
+        <file>../shaders/toequirectangular.frag</file>
+        <file>../shaders/model.vert</file>
+        <file>../shaders/hdrpreview.frag</file>
+        <file>../icons/AddImg.svg</file>
     </qresource>
 </RCC>

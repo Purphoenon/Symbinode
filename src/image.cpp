@@ -259,18 +259,23 @@ void ImageRenderer::loadTexture(QString file) {
     height = FreeImage_GetHeight(dib);
     bpp = FreeImage_GetBPP(dib);
 
+    bool inverse = true;
     unsigned long long sizeType = 0;
     if(fit == FIT_BITMAP) {
+        std::cout << "unsigned byte" << std::endl;
         sizeType = sizeof (BYTE)*CHAR_BIT;
         type = GL_UNSIGNED_BYTE;
     }
     else if(fit == FIT_UINT16 ||fit == FIT_INT16 || fit == FIT_RGB16 || fit == FIT_RGBA16) {
+        std::cout << "unsigned short" << std::endl;
+        inverse = false;
         sizeType = sizeof(WORD) * CHAR_BIT;
         if(fit == FIT_UINT16) type = GL_UNSIGNED_INT;
         else if(fit == FIT_INT16) type = GL_INT;
         else type = GL_UNSIGNED_SHORT;
     }
     else if(fit == FIT_UINT32 || fit == FIT_INT32 || fit == FIT_FLOAT || fit == FIT_RGBF || fit == FIT_RGBAF) {
+        std::cout << "float" << std::endl;
         sizeType = sizeof(FLOAT) * CHAR_BIT;
         if(fit == FIT_UINT32) type = GL_UNSIGNED_INT;
         else if(fit == FIT_INT32) type = GL_INT;
@@ -279,15 +284,18 @@ void ImageRenderer::loadTexture(QString file) {
 
     uint numChannels = bpp/sizeType;
     if(numChannels == 1) {
+        std::cout << "1 channel" << std::endl;
         format = GL_RED;
         internalFormat = GL_RED;
     }
     else if(numChannels == 3) {
-        format = GL_BGR;
+        std::cout << "3 channel" << std::endl;
+        format = inverse ? GL_BGR : GL_RGB;
         internalFormat = GL_RGB;
     }
     else {
-        format = GL_BGRA;
+        std::cout << "4 channel" << std::endl;
+        format = inverse ? GL_BGRA : GL_RGBA;
         internalFormat = GL_RGBA;
     }
 

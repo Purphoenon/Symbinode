@@ -94,7 +94,7 @@ ComboBox {
         height: 25
         color: "#484C51"
         border.width: 1
-        border.color: "#2C2D2F"
+        border.color: "#242526"
         radius: 3
     }
 

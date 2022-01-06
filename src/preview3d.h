@@ -34,12 +34,14 @@ class Preview3DObject: public QQuickFramebufferObject
     Q_OBJECT
     Q_PROPERTY(int primitivesType READ primitivesType)
     Q_PROPERTY(int tilesSize READ tilesSize)
+    Q_PROPERTY(int environmentRotation READ environmentRotation)
     Q_PROPERTY(float heightScale READ heightScale)
     Q_PROPERTY(float emissiveStrenght READ emissiveStrenght)
     Q_PROPERTY(float bloomRadius READ bloomRadius)
     Q_PROPERTY(float bloomIntensity READ bloomIntensity)
     Q_PROPERTY(float bloomThreshold READ bloomThreshold)
     Q_PROPERTY(bool bloom READ bloom)
+    Q_PROPERTY(int hdrIndex READ hdrIndex)
 public:
     Preview3DObject(QQuickItem *parent = nullptr);
     QQuickFramebufferObject::Renderer *createRenderer() const override;
@@ -50,6 +52,8 @@ public:
     void keyPressEvent(QKeyEvent *event) override;
     void hoverEnterEvent(QHoverEvent *event) override;
     void hoverLeaveEvent(QHoverEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
     QVector3D posCam();
     float zoomCam();
     QQuaternion rotQuat();
@@ -57,6 +61,8 @@ public:
     void setPrimitivesType(int type);
     int tilesSize();
     void setTilesSize(int id);
+    int environmentRotation();
+    void setEnvironmentRotation(int angle);
     float heightScale();
     void setHeightScale(float scale);
     float emissiveStrenght();
@@ -78,12 +84,20 @@ public:
     unsigned int emission();
     QVector2D texResolution();
     void setTexResolution(QVector2D res);
+    QString hdrPath();
+    void setHDRPath(QString path);
+    int hdrIndex();
+    void setHDRIndex(int index);
+    std::vector<FIBITMAP*> &hdrSet();
+    void setCurrentHDR(std::vector<FIBITMAP*> &set);
     bool translationView = false;
     bool zoomView = false;
     bool rotationObject = false;
     bool resized = false;
     bool transformView = false;
     bool updateRes = false;
+    bool changedHDR = false;
+    bool newHDR = false;
     bool useAlbedoTex = false;
     bool useMetalTex = false;
     bool useRoughTex = false;
@@ -94,6 +108,9 @@ public:
     bool changedNormal = false;
     bool changedHeight = false;
     bool changedEmission = false;
+signals:
+    void addNewHDR(QString path);
+    void hdrPreviewCreated(QString path);
 public slots:
     void updateAlbedo(QVariant albedo, bool useTexture);
     void updateMetal(QVariant metal, bool useTexture);
@@ -118,8 +135,12 @@ private:
     unsigned int m_height = 0;
     unsigned int m_emission = 0;
     QVector2D m_texResolution = QVector2D(1024, 1024);
+    QString currentHDR;
+    int currentIndexHDR = 0;
+    std::vector<FIBITMAP*> *currentWorld;
     int m_primitive = 0;
     int m_tile = 1;
+    int m_environmentRotation = 0;
     float m_heightScale = 0.04f;
     float m_emissiveStrenght = 1.0f;
     float m_bloomRadius = 1.0f;
@@ -140,12 +161,15 @@ private:
     QOpenGLShaderProgram *pbrShader;
     //QOpenGLShaderProgram *pbrTessShader;
     QOpenGLShaderProgram *equirectangularShader;
+    QOpenGLShaderProgram *toEquirectangularShader;
     QOpenGLShaderProgram *irradianceShader;
     QOpenGLShaderProgram *prefilteredShader;
     QOpenGLShaderProgram *brdfShader;
+    QOpenGLShaderProgram *hdrPreviewShader;
     QOpenGLShaderProgram *backgroundShader;
     QOpenGLShaderProgram *textureShader;
     QOpenGLShaderProgram *blurShader;
+    QOpenGLShaderProgram *blurEquirectangular;
     QOpenGLShaderProgram *bloomShader;
     QOpenGLShaderProgram *brightShader;
     QMatrix4x4 projection;
@@ -154,6 +178,7 @@ private:
     QMatrix4x4 viewport;
     QQuaternion rotZ;
     QVector2D m_texResolution = QVector2D(1024, 1024);
+    QString hdrPath;
     unsigned int hdrTexture = 0;
     unsigned int envCubemap = 0;
     unsigned int irradianceMap = 0;
@@ -175,6 +200,7 @@ private:
     float bloomRadius = 1.0f;
     bool bloom = false;
     int tilesSize = 1;
+    int environmentRotation = 0;
     float heightScale = 0.04f;
     float emissiveStrength = 1.0f;
     bool useAlbedoTex = false;
@@ -183,6 +209,8 @@ private:
     bool useNormalTex = false;
     bool useHeightTex = false;
     bool useEmisTex = false;
+    unsigned int blurTexture[2];
+    unsigned int blurFBO[2];
     unsigned int hdrFBO = 0;
     unsigned int rboDepth = 0;
     unsigned int brightTexture = 0;
@@ -202,6 +230,12 @@ private:
     unsigned int heightTexture = 0;
     unsigned int emissionTexture = 0;
 
+    void createEnvironment(std::vector<FIBITMAP *> &world);
+    void loadHDR(FIBITMAP *dib);
+    void createEnvironmentCubemap(unsigned int &fbo);
+    void createIrradianceCubemap(std::vector<FIBITMAP *> &maps, unsigned int &fbo, unsigned int &rbo);
+    void createPrefilteredCubemap(std::vector<FIBITMAP *> &maps, unsigned int &fbo, unsigned int &rbo);
+    void createHDRPreview();
     void renderCube();
     void renderQuad();
     void renderSphere();

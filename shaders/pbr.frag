@@ -45,6 +45,7 @@ uniform int tilesSize = 1;
 uniform float heightScale = 0.04;
 uniform float emissiveStrenght = 1.0;
 uniform bool bloom = false;
+uniform int rotationAngle = 0;
 
 uniform bool transformating = false;
 uniform vec2 resolution;
@@ -242,11 +243,18 @@ void main()
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;
 
-    vec3 irradiance = texture(irradianceMap, N).rgb;
+
+    float angle = (rotationAngle*PI/180.0);
+    mat2 rot = mat2(cos(angle),-sin(angle),
+                    sin(angle),cos(angle));
+    vec2 rotYN = N.xz*rot;
+
+    vec3 irradiance = texture(irradianceMap, vec3(rotYN.x, N.y, rotYN.y)).rgb;
     vec3 diffuse = irradiance * albedo;
 
     const float MAX_REFLECTION_LOD = 4.0;
-    vec3 prefilteredColor = textureLod(prefilterMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
+    vec2 rotYR = R.xz*rot;
+    vec3 prefilteredColor = textureLod(prefilterMap, vec3(rotYR.x, R.y, rotYR.y),  roughness * MAX_REFLECTION_LOD).rgb;
     vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 specular = prefilteredColor * (F0 * brdf.x + brdf.y);
 

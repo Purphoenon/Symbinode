@@ -23,6 +23,7 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.5
 import QtQuick.Dialogs 1.2
+import QtQml.Models 2.12
 import QtGraphicalEffects 1.0
 import "qml"
 import backgroundobject 1.0
@@ -38,6 +39,10 @@ MainWindow {
     minimumWidth: 400
     minimumHeight: 200
     title: qsTr("Symbinode")
+
+    Component.onCompleted: {
+        loadHDRSet()
+    }
 
     MenuBar {
         id: menuBar
@@ -747,8 +752,10 @@ MainWindow {
             newPreview.width = Qt.binding(function(){return newPreview.parent.width})
             newPreview.height = Qt.binding(function(){return newPreview.parent.height - 27})
             dragPreview3D.resized.connect(newPreview.sizeUpdated)
+            hdrSet.positionViewAtIndex(newPreview.hdrIndex, ListView.SnapPosition)
             primitivesType.currentIndex = newPreview.primitivesType
             tilesType.currentIndex = newPreview.tilesSize - 1
+            rotationEnvironment.propertyValue = newPreview.environmentRotation
             heightScale.propertyValue = 10*newPreview.heightScale
             emissiveStrenght.propertyValue = newPreview.emissiveStrenght
             bloomRadius.propertyValue = newPreview.bloomRadius
@@ -771,6 +778,12 @@ MainWindow {
         else if(res == Qt.vector2d(4096, 4096)) {
             resGroup.checkedAction = res4096
         }
+    }
+
+    onAddHDR: {
+        console.log("add hdr")
+        hdrPreview.append({"fileName": "file:///" + icon})
+        hdrSet.positionViewAtIndex(hdrPreview.count - 1, ListView.SnapPosition)
     }
 
     onTabClosing: {
@@ -1039,7 +1052,7 @@ MainWindow {
 
                     contentItem: Item {
                         width: 200
-                        implicitHeight: bloom.checked ? 330 : 230
+                        implicitHeight: bloom.checked ? 475 : 375
                         Text {
                             x: 15
                             y: 26
@@ -1085,9 +1098,19 @@ MainWindow {
                             y: 105
                             clip: true
                             ParamSlider {
+                                id: rotationEnvironment
+                                minimum: -180
+                                maximum: 180
+                                step: 1
+                                propertyName: "Environment rotation"
+                                onPropertyValueChanged: {
+                                    changeEnvironmentRotation(propertyValue)
+                                }
+                            }
+
+                            ParamSlider {
                                 id: heightScale
-                                //x: 5
-                                //width: parent.width - 10
+                                y: 18
                                 maximum: 1
                                 propertyName: "Height scale"
                                 onPropertyValueChanged: {
@@ -1098,7 +1121,7 @@ MainWindow {
                             ParamSlider {
                                 id: emissiveStrenght
                                 //x: 5
-                                y: 18
+                                y: 51
                                 //width: parent.width - 10
                                 maximum: 10
                                 propertyName: "Emissive strength"
@@ -1111,7 +1134,7 @@ MainWindow {
                                 id: bloomThreshold
                                 visible: bloom.checked
                                 //x: 5
-                                y: 88
+                                y: 251
                                 //width: parent.width - 10
                                 maximum: 5
                                 propertyName: "Bloom threshold"
@@ -1124,7 +1147,7 @@ MainWindow {
                                 id: bloomRadius
                                 visible: bloom.checked
                                 //x: 5
-                                y: 121
+                                y: 284
                                 //width: parent.width - 10
                                 minimum: 1
                                 maximum: 10
@@ -1138,7 +1161,7 @@ MainWindow {
                                 id: bloomIntensity
                                 visible: bloom.checked
                                 //x: 5
-                                y: 154
+                                y: 317
                                 //width: parent.width - 10
                                 maximum: 1
                                 propertyName: "Bloom intensity"
@@ -1148,10 +1171,178 @@ MainWindow {
                             }
                         }
 
+                        Text {
+                            x: 15
+                            y: 216
+                            text: qsTr("Environment")
+                            color: "#A2A2A2"
+                        }
+
+                        ListModel {
+                            id: hdrPreview
+                        }
+
+                        ListView {
+                            id: hdrSet
+                            x: 10
+                            y: 241
+                            width: parent.width - 20
+                            height: 80
+                            clip: true
+                            orientation: Qt.Horizontal
+                            layoutDirection: Qt.LeftToRight
+                            snapMode: ListView.SnapOneItem
+                            highlightRangeMode: ListView.StrictlyEnforceRange
+                            currentIndex: 0
+                            model: hdrPreview
+                            delegate: Item {
+                                width: 180
+                                height: 80
+                                Image {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    source: fileName
+                                }
+                            }
+                            onCurrentIndexChanged: {
+                                console.log("current index")
+                                changeEnvironment(currentIndex)
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                z: -1
+                                radius: 2
+                                color: "#353638"
+                                border.color: "#242526"
+                                border.width: 1
+                            }
+                            MouseArea {
+                                property bool hovered: false
+                                id: leftSwipe
+                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
+                                width: 20
+                                height: 80
+                                onEntered: {
+                                    if(hdrSet.currentIndex == 0) return
+                                    hovered = true
+                                    leftCanvas.requestPaint()
+                                }
+                                onExited: {
+                                    if(hdrSet.currentIndex == 0) return
+                                    hovered = false
+                                    leftCanvas.requestPaint()
+                                }
+                                onClicked: {
+                                    if(hdrSet.currentIndex == 0) return
+                                    hdrSet.decrementCurrentIndex()
+                                    if(hdrSet.currentIndex == 0) {
+                                        hovered = false
+                                        leftCanvas.requestPaint()
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 20
+                                    height: 80
+                                    radius: 2
+                                    color: "#484C51"
+                                    border.color: "#242526"
+                                    border.width: 1
+                                }
+                                Rectangle {
+                                    x: 18
+                                    y: 1
+                                    width: 3
+                                    height: 78
+                                    color: "#484C51"
+                                }
+
+                                Canvas {
+                                    id: leftCanvas
+                                    x: 7
+                                    y: (parent.height - height)*0.5
+                                    width: 6
+                                    height: 6
+                                    contextType: "2d"
+                                    onPaint: {
+                                        var ctx = getContext("2d")
+                                        ctx.reset();
+                                        ctx.fillStyle = leftSwipe.hovered ? "#A2A2A2" : "#4DA2A2A2"
+                                        ctx.moveTo(0, 3)
+                                        ctx.lineTo(6, 0)
+                                        ctx.lineTo(6, 6)
+                                        ctx.closePath()
+                                        ctx.fill()
+                                    }
+                                }
+                            }
+                            MouseArea {
+                                property bool hovered: false
+                                id: rightSwipe
+                                x: parent.width - width
+                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
+                                width: 20
+                                height: 80
+                                onEntered: {
+                                    if(hdrSet.currentIndex == hdrPreview.count - 1) return
+                                    hovered = true
+                                    rightCanvas.requestPaint()
+                                }
+                                onExited: {
+                                    if(hdrSet.currentIndex == hdrPreview.count - 1) return
+                                    hovered = false
+                                    rightCanvas.requestPaint()
+                                }
+                                onClicked: {
+                                    if(hdrSet.currentIndex == hdrPreview.count - 1) return
+                                    hdrSet.incrementCurrentIndex()
+                                    if(hdrSet.currentIndex == hdrPreview.count - 1) {
+                                        hovered = false;
+                                        rightCanvas.requestPaint()
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 20
+                                    height: 80
+                                    radius: 2
+                                    color: "#484C51"
+                                    border.color: "#242526"
+                                    border.width: 1
+                                }
+                                Rectangle {
+                                    x: -1
+                                    y: 1
+                                    width: 3
+                                    height: 78
+                                    color: "#484C51"
+                                }
+                                Canvas {
+                                    id: rightCanvas
+                                    x: 7
+                                    y: (parent.height - height)*0.5
+                                    width: 6
+                                    height: 6
+                                    contextType: "2d"
+                                    onPaint: {
+                                        var ctx = getContext("2d")
+                                        ctx.reset();
+                                        ctx.fillStyle = rightSwipe.hovered ? "#A2A2A2" : "#4DA2A2A2"
+                                        ctx.moveTo(6, 3)
+                                        ctx.lineTo(0, 0)
+                                        ctx.lineTo(0, 6)
+                                        ctx.closePath()
+                                        ctx.fill()
+                                    }
+                                }
+                            }
+                        }
                         ParamCheckbox {
                             id: bloom
                             x: 5
-                            y: 180
+                            y: 331
                             width: 70
                             text: "Bloom"
                             onToggled: {
@@ -1163,7 +1354,7 @@ MainWindow {
                         Rectangle {
                             width: 200
                             radius: 2
-                            color: "#2C2D2F"
+                            color: "#2B2C2E"
                         }
                     }
             }

@@ -23,11 +23,17 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <iostream>
 #include <QDir>
+#include <QMimeData>
+#include <QRegularExpression>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonDocument>
 
 Preview3DObject::Preview3DObject(QQuickItem *parent): QQuickFramebufferObject (parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
+    setFlag(ItemAcceptsDrops, true);
 
     connect(&m_timer, &QTimer::timeout, this, &Preview3DObject::transformed);
 }
@@ -169,6 +175,28 @@ void Preview3DObject::hoverLeaveEvent(QHoverEvent *event) {
     setFocus(false);
 }
 
+void Preview3DObject::dragEnterEvent(QDragEnterEvent *event) {
+    if(event->mimeData()->hasUrls()) {
+        QString path = event->mimeData()->urls()[0].path();
+        if(path.endsWith("hdr")) {
+            event->acceptProposedAction();
+        }
+    }
+}
+
+void Preview3DObject::dropEvent(QDropEvent *event) {
+    if(event->mimeData()->hasUrls()) {
+        QString path = event->mimeData()->urls()[0].path();
+        if(path.endsWith("hdr")) {
+            currentHDR = path.right(path.length() - 1);
+            newHDR = true;
+            //update();
+            addNewHDR(currentHDR);
+            event->acceptProposedAction();
+        }
+    }
+}
+
 QVector3D Preview3DObject::posCam() {
     return m_posCam;
 }
@@ -201,6 +229,15 @@ int Preview3DObject::tilesSize() {
 
 void Preview3DObject::setTilesSize(int id) {
     m_tile = id + 1;
+    update();
+}
+
+int Preview3DObject::environmentRotation() {
+    return m_environmentRotation;
+}
+
+void Preview3DObject::setEnvironmentRotation(int angle) {
+    m_environmentRotation = angle;
     update();
 }
 
@@ -299,6 +336,34 @@ void Preview3DObject::setTexResolution(QVector2D res) {
     update();
 }
 
+QString Preview3DObject::hdrPath() {
+    return currentHDR;
+}
+
+void Preview3DObject::setHDRPath(QString path) {
+    currentHDR = path;
+    //changedHDR = true;
+    //update();
+}
+
+int Preview3DObject::hdrIndex() {
+    return currentIndexHDR;
+}
+
+void Preview3DObject::setHDRIndex(int index) {
+    currentIndexHDR = index;
+}
+
+std::vector<FIBITMAP*> &Preview3DObject::hdrSet() {
+    return *currentWorld;
+}
+
+void Preview3DObject::setCurrentHDR(std::vector<FIBITMAP *> &set) {
+    currentWorld = &set;
+    changedHDR = true;
+    update();
+}
+
 void Preview3DObject::updateAlbedo(QVariant albedo, bool useTexture) {
     useAlbedoTex = useTexture;
     m_albedo = albedo;
@@ -359,6 +424,11 @@ Preview3DRenderer::Preview3DRenderer() {
     equirectangularShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/equirectangular.frag");
     equirectangularShader->link();
 
+    toEquirectangularShader = new QOpenGLShaderProgram();
+    toEquirectangularShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
+    toEquirectangularShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/toequirectangular.frag");
+    toEquirectangularShader->link();
+
     irradianceShader = new QOpenGLShaderProgram();
     irradianceShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/cubemap.vert");
     irradianceShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/irradiance.frag");
@@ -374,6 +444,11 @@ Preview3DRenderer::Preview3DRenderer() {
     brdfShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/brdf.frag");
     brdfShader->link();
 
+    hdrPreviewShader = new QOpenGLShaderProgram();
+    hdrPreviewShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/model.vert");
+    hdrPreviewShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/hdrpreview.frag");
+    hdrPreviewShader->link();
+
     backgroundShader = new QOpenGLShaderProgram();
     backgroundShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/background.vert");
     backgroundShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/background.frag");
@@ -388,6 +463,11 @@ Preview3DRenderer::Preview3DRenderer() {
     blurShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
     blurShader->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/brightblur.frag");
     blurShader->link();
+
+    blurEquirectangular = new QOpenGLShaderProgram();
+    blurEquirectangular->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
+    blurEquirectangular->addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/blur.frag");
+    blurEquirectangular->link();
 
     bloomShader = new QOpenGLShaderProgram();
     bloomShader->addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/texture.vert");
@@ -416,6 +496,19 @@ Preview3DRenderer::Preview3DRenderer() {
     pbrShader->setUniformValue(pbrShader->uniformLocation("res"), m_texResolution.x());
     pbrShader->release();
 
+    toEquirectangularShader->bind();
+    toEquirectangularShader->setUniformValue(toEquirectangularShader->uniformLocation("cubemap"), 0);
+    toEquirectangularShader->release();
+
+    hdrPreviewShader->bind();
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("irradianceMap"), 0);
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("prefilterMap"), 1);
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("brdfLUT"), 2);
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("albedoVal"), QVector3D(1.0f, 1.0f, 1.0f));
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("metallicVal"), 1.0f);
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("roughnessVal"), 0.0f);
+    hdrPreviewShader->release();
+
     backgroundShader->bind();
     backgroundShader->setUniformValue(backgroundShader->uniformLocation("environmentMap"), 0);
     backgroundShader->release();
@@ -427,6 +520,10 @@ Preview3DRenderer::Preview3DRenderer() {
     blurShader->bind();
     blurShader->setUniformValue(blurShader->uniformLocation("image"), 0);
     blurShader->release();
+
+    blurEquirectangular->bind();
+    blurEquirectangular->setUniformValue(blurEquirectangular->uniformLocation("sourceTexture"), 0);
+    blurEquirectangular->release();
 
     bloomShader->bind();
     bloomShader->setUniformValue(bloomShader->uniformLocation("scene"), 0);
@@ -452,111 +549,59 @@ Preview3DRenderer::Preview3DRenderer() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
-    FIBITMAP *dib(nullptr);
-    BYTE* bits(nullptr);
-    unsigned int width(0), height(0);
-    QString hdrPath = QCoreApplication::applicationDirPath() + "/hdr/Newport_Loft_Ref.hdr";
-    fif = FreeImage_GetFileType(hdrPath.toStdString().c_str(), 0);
-    if (fif == FIF_UNKNOWN) {
-        std::cout << "not get file type" << std::endl;
-    }
-    dib = FreeImage_Load(fif, hdrPath.toStdString().c_str());
-    if (!dib) {
-        std::cout << "not load image" << std::endl;
-    }
-    bits = FreeImage_GetBits(dib);
-    width = FreeImage_GetWidth(dib);
-    height = FreeImage_GetHeight(dib);
+    hdrPath = QCoreApplication::applicationDirPath() + "/hdr/christmas_photo_studio_05_2k.hdr";
+
     glGenTextures(1, &hdrTexture);
     glBindTexture(GL_TEXTURE_2D, hdrTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, (void*)bits);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindTexture(GL_TEXTURE_2D, 0);
-    FreeImage_Unload(dib);
 
-    QMatrix4x4 captureProjection;
-    captureProjection.perspective(90.0f, 1.0f, 0.1f, 10.0f);
-    QMatrix4x4 captureView[6];
-    captureView[0].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
-    captureView[1].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(-1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
-    captureView[2].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 1.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f));
-    captureView[3].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f));
-    captureView[4].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f), QVector3D(0.0f, -1.0f, 0.0f));
-    captureView[5].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f), QVector3D(0.0f, -1.0f, 0.0f));
-
-    std::cout << "env create" << std::endl;
     glGenTextures(1, &envCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
     for (unsigned int i = 0; i < 6; ++i)
     {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB32F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    equirectangularShader->bind();
-    equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("equirectangularMap"), 0);
-    equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("projection"), captureProjection);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, hdrTexture);
-    glViewport(0, 0, 512, 512);
-    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-    for(unsigned int i = 0; i < 6; ++i) {
-        equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("view"), captureView[i]);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        renderCube();
-    }
-    equirectangularShader->release();
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
-    //irradiance cubemap
-    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+    glGenFramebuffers(2, blurFBO);
+    glGenTextures(2, blurTexture);
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[i]);
+        glBindTexture(GL_TEXTURE_2D, blurTexture[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 64, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurTexture[i], 0);
+    }
+
     glGenTextures(1, &irradianceMap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
     for (unsigned int i = 0; i < 6; ++i)
     {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB32F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    irradianceShader->bind();
-    irradianceShader->setUniformValue(irradianceShader->uniformLocation("projection"), captureProjection);
-    glActiveTexture(GL_TEXTURE0);
-    irradianceShader->setUniformValue(irradianceShader->uniformLocation("environmentMap"), 0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-    glViewport(0, 0, 32, 32);
-    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-    for(unsigned int i = 0; i < 6; ++i) {
-        irradianceShader->setUniformValue(irradianceShader->uniformLocation("view"), captureView[i]);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        renderCube();
-    }
-    irradianceShader->release();
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    //prefiltered cubemap
     glGenTextures(1, &prefilterMap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
     for (unsigned int i = 0; i < 6; ++i)
     {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB32F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -567,34 +612,8 @@ Preview3DRenderer::Preview3DRenderer() {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 4);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LOD, 4);
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-    unsigned int maxMipLevels = 5;
-    for(unsigned int mip = 0; mip < maxMipLevels; ++mip) {
-        unsigned int mipWidth = 128 * std::pow(0.5, mip);
-        unsigned int mipHeight = 128 * std::pow(0.5, mip);
-        prefilteredShader->bind();
-        prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("environmentMap"), 0);
-        prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("projection"), captureProjection);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-
-        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
-        glViewport(0, 0, mipWidth, mipHeight);
-
-        float roughness = (float)mip / (float)(maxMipLevels - 1);
-        prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("roughness"), roughness);
-        for(unsigned int i = 0; i < 6; ++i) {
-            prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("view"), captureView[i]);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMap, mip);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            renderCube();
-        }
-        prefilteredShader->release();
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    //createEnvironment();
 
     glDisable(GL_BLEND);
     glGenTextures(1, &brdfLUTTexture);
@@ -823,6 +842,20 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
         rotQuat = previewItem->rotQuat();
         updateMatrix();
     }
+    if(previewItem->changedHDR) {
+        previewItem->changedHDR = false;
+        hdrPath = previewItem->hdrPath();
+        createEnvironment(previewItem->hdrSet());
+        if(previewItem->newHDR) {
+            previewItem->newHDR = false;
+            createHDRPreview();
+            QString hdrDir =  QCoreApplication::applicationDirPath() + "/hdr";
+            int idx = hdrPath.lastIndexOf(QRegularExpression("/|\\\\"));
+            QString fileName = hdrPath.right(hdrPath.length() - idx - 1);
+            fileName = hdrDir + "/" + fileName.left(fileName.lastIndexOf(".")) + ".png";
+            previewItem->hdrPreviewCreated(fileName);
+        }
+    }
     pbrShader->bind();
     if(previewItem->updateRes) {
         previewItem->updateRes = false;
@@ -841,6 +874,10 @@ void Preview3DRenderer::synchronize(QQuickFramebufferObject *item) {
     if(tilesSize != previewItem->tilesSize()) {
         tilesSize = previewItem->tilesSize();
         pbrShader->setUniformValue(pbrShader->uniformLocation("tilesSize"), tilesSize);
+    }
+    if(environmentRotation != previewItem->environmentRotation()) {
+        environmentRotation = previewItem->environmentRotation();
+        pbrShader->setUniformValue(pbrShader->uniformLocation("rotationAngle"), environmentRotation);
     }
     if(heightScale != previewItem->heightScale()) {
         heightScale = previewItem->heightScale();
@@ -970,22 +1007,503 @@ void Preview3DRenderer::render() {
         glClearColor(0.227f, 0.235f, 0.243f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
+        /*textureShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, blurTexture[1]);
+        renderQuad();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        textureShader->release();*/
         renderScene();
 
         glDisable(GL_DEPTH_TEST);
     }
-    glFlush();
-    glFinish();
 
-    /*glDepthFunc(GL_LEQUAL);
-    backgroundShader->bind();
+
+    //glDepthFunc(GL_LEQUAL);
+    /*backgroundShader->bind();
     backgroundShader->setUniformValue(backgroundShader->uniformLocation("projection"), projection);
-    backgroundShader->setUniformValue(backgroundShader->uniformLocation("view"), view);
+    backgroundShader->setUniformValue(backgroundShader->uniformLocation("view"), viewport);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
     renderCube();
     backgroundShader->release();
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);*/
+
+    glFlush();
+    glFinish();
+}
+
+void Preview3DRenderer::createEnvironment(std::vector<FIBITMAP*> &world) {
+    std::cout << "start create environment" << std::endl;
+    unsigned int captureFBO;
+    unsigned int captureRBO;
+    glGenFramebuffers(1, &captureFBO);
+    glGenRenderbuffers(1, &captureRBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    //load hdr
+    loadHDR(world[0]);
+    //createHDRPreview();
+    //environment cubemap
+    createEnvironmentCubemap(captureFBO);
+    //irradiance cubemap
+    createIrradianceCubemap(world ,captureFBO, captureRBO);
+    //prefiltered cubemap
+    createPrefilteredCubemap(world, captureFBO, captureRBO);
+
+    glDeleteRenderbuffers(1, &captureRBO);
+    glDeleteFramebuffers(1, &captureFBO);
+}
+
+void Preview3DRenderer::loadHDR(FIBITMAP* dib) {
+    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+    //FIBITMAP *dib(nullptr);
+    BYTE* bits(nullptr);
+    unsigned int width(0), height(0);
+    /*fif = FreeImage_GetFileType(path.toStdString().c_str(), 0);
+    if (fif == FIF_UNKNOWN) {
+        std::cout << "not get file type" << std::endl;
+        return;
+    }
+    dib = FreeImage_Load(fif, path.toStdString().c_str());*/
+    if (!dib) {
+        std::cout << "not load image" << std::endl;
+        return;
+   }
+
+    bits = FreeImage_GetBits(dib);
+    width = FreeImage_GetWidth(dib);
+    height = FreeImage_GetHeight(dib);
+    glBindTexture(GL_TEXTURE_2D, hdrTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, (void*)bits);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    QString hdrDir =  QCoreApplication::applicationDirPath() + "/hdr";
+    int idx = hdrPath.lastIndexOf(QRegularExpression("/|\\\\"));
+    if(hdrDir != hdrPath.left(idx)) {
+        std::cout << "save hdr" << std::endl;
+        hdrPath = hdrDir + "/" + hdrPath.right(hdrPath.length() - idx - 1);
+        if (FreeImage_Save(FIF_HDR, dib, hdrPath.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+    }
+    //FreeImage_Unload(dib);
+    std::cout << "load hdr" << std::endl;
+}
+
+void Preview3DRenderer::createEnvironmentCubemap(unsigned int &fbo) {
+    QMatrix4x4 captureProjection;
+    captureProjection.perspective(90.0f, 1.0f, 0.1f, 10.0f);
+    QMatrix4x4 captureView[6];
+    captureView[0].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[1].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(-1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[2].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 1.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f));
+    captureView[3].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f));
+    captureView[4].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[5].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f), QVector3D(0.0f, -1.0f, 0.0f));
+
+    std::cout << "env create" << std::endl;
+    equirectangularShader->bind();
+    equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("equirectangularMap"), 0);
+    equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("projection"), captureProjection);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, hdrTexture);
+    glViewport(0, 0, 512, 512);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    for(unsigned int i = 0; i < 6; ++i) {
+        equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("view"), captureView[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        renderCube();
+    }
+    equirectangularShader->release();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+
+void Preview3DRenderer::createIrradianceCubemap(std::vector<FIBITMAP*> &maps, unsigned int &fbo, unsigned int &rbo) {
+    QMatrix4x4 captureProjection;
+    captureProjection.perspective(90.0f, 1.0f, 0.1f, 10.0f);
+    QMatrix4x4 captureView[6];
+    captureView[0].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[1].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(-1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[2].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 1.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f));
+    captureView[3].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f));
+    captureView[4].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[5].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f), QVector3D(0.0f, -1.0f, 0.0f));
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+
+    QString irradiancePath = hdrPath.left(hdrPath.lastIndexOf(".")) + "_irradiance.hdr";
+    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+    //FIBITMAP *dib(nullptr);
+    FIBITMAP *dib = maps[1];
+    BYTE* bits(nullptr);
+    unsigned int width(0), height(0);
+    /*fif = FreeImage_GetFileType(irradiancePath.toStdString().c_str(), 0);
+    if (fif == FIF_UNKNOWN) {
+        std::cout << "not get file type" << std::endl;
+    }
+    dib = FreeImage_Load(fif, irradiancePath.toStdString().c_str());*/
+    if (!dib) {
+        std::cout << "not load image" << std::endl;
+        irradianceShader->bind();
+        irradianceShader->setUniformValue(irradianceShader->uniformLocation("projection"), captureProjection);
+        glActiveTexture(GL_TEXTURE0);
+        irradianceShader->setUniformValue(irradianceShader->uniformLocation("environmentMap"), 0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+        glViewport(0, 0, 32, 32);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        for(unsigned int i = 0; i < 6; ++i) {
+            irradianceShader->setUniformValue(irradianceShader->uniformLocation("view"), captureView[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            renderCube();
+        }
+        irradianceShader->release();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        glBindTexture(GL_TEXTURE_2D, blurTexture[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 64, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, blurTexture[1]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 64, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[1]);
+        glViewport(0, 0, 64, 32);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        toEquirectangularShader->bind();
+        glActiveTexture(0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+        renderQuad();
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        toEquirectangularShader->release();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        QVector2D dir = QVector2D(1, 0);
+        for (unsigned int i = 0; i < 2; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[i%2]);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(
+                GL_TEXTURE_2D, blurTexture[1 - (i%2)]
+            );
+
+            glViewport(0, 0, 64, 32);
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            blurEquirectangular->bind();
+            blurEquirectangular->setUniformValue(blurEquirectangular->uniformLocation("direction"), dir);
+            dir = QVector2D(1, 1) - dir;
+            blurEquirectangular->setUniformValue(blurEquirectangular->uniformLocation("resolution"), QVector2D(64, 32));
+            renderQuad();
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            blurEquirectangular->release();
+            glBindVertexArray(0);
+        }
+
+        //save irradiance
+        GLfloat *pixels = (GLfloat*)malloc(sizeof(GLfloat)*3*64*32);
+        glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[1]);
+        glReadPixels(0, 0, 64, 32, GL_BGR, GL_FLOAT, pixels);
+        FIBITMAP *imagef = FreeImage_AllocateT(FIT_RGBF, 64, 32);
+        int m_width = FreeImage_GetWidth(imagef);
+        int m_height = FreeImage_GetHeight(imagef);
+        for(int y = 0; y < m_height; ++y) {
+            FIRGBF *bits = (FIRGBF*)FreeImage_GetScanLine(imagef, y);
+            for(int x = 0; x < m_width; ++x) {
+                bits[x].red = pixels[(m_width*y + x)*3 + 2];
+                bits[x].green = pixels[(m_width*y + x)*3 + 1];
+                bits[x].blue = pixels[(m_width*y + x)*3];
+            }
+        }
+        if (FreeImage_Save(FIF_HDR, imagef, irradiancePath.toUtf8().constData(), 0))
+            printf("Successfully saved!\n");
+        else
+            printf("Failed saving!\n");
+        free(pixels);
+        maps[1] = imagef;
+        //FreeImage_Unload(imagef);
+    }
+    else {
+        bits = FreeImage_GetBits(dib);
+        width = FreeImage_GetWidth(dib);
+        height = FreeImage_GetHeight(dib);
+        glBindTexture(GL_TEXTURE_2D, blurTexture[1]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, (void*)bits);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        //FreeImage_Unload(dib);
+    }
+
+    equirectangularShader->bind();
+    equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("equirectangularMap"), 0);
+    equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("projection"), captureProjection);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, blurTexture[1]);
+    glViewport(0, 0, 32, 32);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    for(unsigned int i = 0; i < 6; ++i) {
+        equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("view"), captureView[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        renderCube();
+    }
+    equirectangularShader->release();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    std::cout << "create irradiance" << std::endl;
+}
+
+void Preview3DRenderer::createPrefilteredCubemap(std::vector<FIBITMAP*> &maps ,unsigned int &fbo, unsigned int &rbo) {
+    QMatrix4x4 captureProjection;
+    captureProjection.perspective(90.0f, 1.0f, 0.1f, 10.0f);
+    QMatrix4x4 captureView[6];
+    captureView[0].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[1].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(-1.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[2].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 1.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f));
+    captureView[3].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, -1.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f));
+    captureView[4].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f), QVector3D(0.0f, -1.0f, 0.0f));
+    captureView[5].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 0.0f, -1.0f), QVector3D(0.0f, -1.0f, 0.0f));
+
+    unsigned int maxMipLevels = 5;
+    for(unsigned int mip = 0; mip < maxMipLevels; ++mip) {
+        unsigned int mipWidth = 128 * std::pow(0.5, mip);
+        unsigned int mipHeight = 128 * std::pow(0.5, mip);
+
+        QString prefilteredPath = hdrPath.left(hdrPath.lastIndexOf(".")) + "_prefiltered" + std::to_string(mip).c_str() + ".hdr";
+        FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+        FIBITMAP *dib = maps[mip + 2];
+        BYTE* bits(nullptr);
+        unsigned int width(0), height(0);
+        /*fif = FreeImage_GetFileType(prefilteredPath.toStdString().c_str(), 0);
+        if (fif == FIF_UNKNOWN) {
+            std::cout << "not get file type" << std::endl;
+        }
+        dib = FreeImage_Load(fif, prefilteredPath.toStdString().c_str());*/
+        if(!dib) {
+            prefilteredShader->bind();
+            prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("environmentMap"), 0);
+            prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("projection"), captureProjection);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+            glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+            glViewport(0, 0, mipWidth, mipHeight);
+
+            float roughness = (float)mip / (float)(maxMipLevels - 1);
+            prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("roughness"), roughness);
+            for(unsigned int i = 0; i < 6; ++i) {
+                prefilteredShader->setUniformValue(prefilteredShader->uniformLocation("view"), captureView[i]);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMap, mip);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                renderCube();
+            }
+            prefilteredShader->release();
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            glBindTexture(GL_TEXTURE_2D, blurTexture[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, mipWidth*2, mipHeight, 0, GL_RGB, GL_FLOAT, nullptr);
+            glBindTexture(GL_TEXTURE_2D, blurTexture[1]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, mipWidth*2, mipHeight, 0, GL_RGB, GL_FLOAT, nullptr);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[1]);
+            glViewport(0, 0, mipWidth*2, mipHeight);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            toEquirectangularShader->bind();
+            toEquirectangularShader->setUniformValue(toEquirectangularShader->uniformLocation("lod"), static_cast<float>(mip));
+            glActiveTexture(0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+            renderQuad();
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+            toEquirectangularShader->release();
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            if(mip > 0) {
+                QVector2D dir = QVector2D(1, 0);
+                for (unsigned int i = 0; i < 2; i++)
+                {
+                    glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[i%2]);
+
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(
+                        GL_TEXTURE_2D, blurTexture[1 - (i%2)]
+                    );
+
+                    glViewport(0, 0, mipWidth*2, mipHeight);
+                    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    blurEquirectangular->bind();
+                    blurEquirectangular->setUniformValue(blurEquirectangular->uniformLocation("direction"), dir);
+                    blurEquirectangular->setUniformValue(blurEquirectangular->uniformLocation("intensity"), (float)std::pow(5.0, i));
+                    dir = QVector2D(1, 1) - dir;
+                    blurEquirectangular->setUniformValue(blurEquirectangular->uniformLocation("resolution"), QVector2D(mipWidth*2, mipHeight));
+                    renderQuad();
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                    blurEquirectangular->release();
+                    glBindVertexArray(0);
+                }
+            }
+
+            //save prefiltered
+            GLfloat *pixels = (GLfloat*)malloc(sizeof(GLfloat)*3*2*mipWidth*mipHeight);
+            glBindFramebuffer(GL_FRAMEBUFFER, blurFBO[1]);
+            glReadPixels(0, 0, 2*mipWidth, mipHeight, GL_BGR, GL_FLOAT, pixels);
+            FIBITMAP *imagef = FreeImage_AllocateT(FIT_RGBF, 2*mipWidth, mipHeight);
+            int m_width = FreeImage_GetWidth(imagef);
+            int m_height = FreeImage_GetHeight(imagef);
+            for(int y = 0; y < m_height; ++y) {
+                FIRGBF *bits = (FIRGBF*)FreeImage_GetScanLine(imagef, y);
+                for(int x = 0; x < m_width; ++x) {
+                    bits[x].red = pixels[(m_width*y + x)*3 + 2];
+                    bits[x].green = pixels[(m_width*y + x)*3 + 1];
+                    bits[x].blue = pixels[(m_width*y + x)*3];
+                }
+            }
+            if (FreeImage_Save(FIF_HDR, imagef, prefilteredPath.toUtf8().constData(), 0))
+                printf("Successfully saved!\n");
+            else
+                printf("Failed saving!\n");
+            free(pixels);
+            maps[mip + 2] = imagef;
+            //FreeImage_Unload(imagef);
+        }
+        else {
+            bits = FreeImage_GetBits(dib);
+            width = FreeImage_GetWidth(dib);
+            height = FreeImage_GetHeight(dib);
+            glBindTexture(GL_TEXTURE_2D, blurTexture[1]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, (void*)bits);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            //FreeImage_Unload(dib);
+        }
+
+        equirectangularShader->bind();
+        equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("equirectangularMap"), 0);
+        equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("projection"), captureProjection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, blurTexture[1]);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+        glViewport(0, 0, mipWidth, mipHeight);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        for(unsigned int i = 0; i < 6; ++i) {
+            equirectangularShader->setUniformValue(equirectangularShader->uniformLocation("view"), captureView[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMap, mip);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            renderCube();
+        }
+        equirectangularShader->release();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    std::cout << "create prefiltered" << std::endl;
+}
+
+void Preview3DRenderer::createHDRPreview() {
+    unsigned int captureFBO;
+    unsigned int captureRBO;
+    unsigned int texture;
+    glGenFramebuffers(1, &captureFBO);
+    glGenRenderbuffers(1, &captureRBO);
+    glGenTextures(1, &texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, texture);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 8, GL_RGBA, 64, 64, GL_TRUE);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 8, GL_DEPTH_COMPONENT24, 64, 64);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, texture, 0);
+
+    unsigned int FBO;
+    unsigned int screenTexture;
+    glGenFramebuffers(1, &FBO);
+    glGenTextures(1, &screenTexture);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glBindTexture(GL_TEXTURE_2D, screenTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
+
+    QMatrix4x4 projection = QMatrix4x4();
+    projection.perspective(8.0f, 1.0f, 0.1f, 38.0f);
+    QMatrix4x4 view = QMatrix4x4();
+    view.lookAt(QVector3D(19, 0, 0), QVector3D(0, 0, 0), QVector3D(0, -1, 0));
+    QMatrix4x4 model = QMatrix4x4();
+
+    glEnable(GL_DEPTH_TEST);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    glViewport(0, 0, 64, 64);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glActiveTexture(0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+    hdrPreviewShader->bind();
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("projection"), projection);
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("view"), view);
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("model"), model);
+    hdrPreviewShader->setUniformValue(hdrPreviewShader->uniformLocation("camPos"), QVector3D(19, 0, 0));
+    renderSphere();
+    hdrPreviewShader->release();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, captureFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO);
+    glBlitFramebuffer(0, 0, 64, 64, 0, 0, 64, 64, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+    BYTE *pixels = (BYTE*)malloc(4*64*64);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glReadPixels(0, 0, 64, 64, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(pixels, 64, 64, 4 * 64, 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    QString hdrDir =  QCoreApplication::applicationDirPath() + "/hdr";
+    int idx = hdrPath.lastIndexOf(QRegularExpression("/|\\\\"));
+    QString fileName = hdrPath.right(hdrPath.length() - idx - 1);
+    fileName = hdrDir + "/" + fileName.left(fileName.lastIndexOf(".")) + ".png";
+    if (FreeImage_Save(FIF_PNG, image, fileName.toUtf8().constData(), 0))
+        printf("Successfully saved!\n");
+    else
+        printf("Failed saving!\n");
+    FreeImage_Unload(image);
+    delete [] pixels;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_DEPTH_TEST);
+
+    glDeleteTextures(1, &texture);
+    glDeleteRenderbuffers(1, &captureRBO);
+    glDeleteFramebuffers(1, &captureFBO);
+    glDeleteTextures(1, &screenTexture);
+    glDeleteFramebuffers(1, &FBO);
 }
 
 void Preview3DRenderer::renderCube() {
@@ -1516,6 +2034,9 @@ void Preview3DRenderer::updateMatrix() {
     model = QMatrix4x4();
     model.translate(0.0f, 0.0f, 0.0f);
     model.rotate(rotQuat);
+    viewport = QMatrix4x4();
+    viewport.lookAt(positionV, positionV + QVector3D(0, 0, -1), QVector3D(0, -1, 0));
+    viewport.rotate(rotQuat);
     pbrShader->bind();
     pbrShader->setUniformValue(pbrShader->uniformLocation("projection"), projection);
     pbrShader->setUniformValue(pbrShader->uniformLocation("view"), view);

@@ -24,7 +24,7 @@ Item {
         property string path
         property string oldPath
         id: filePath
-        width: parent.width - 20
+        width: parent.width - 40
         height: 25
         x: 10
         y: 15
@@ -48,26 +48,25 @@ Item {
             color: "#B2B2B2"
             verticalAlignment: Text.AlignVCenter
         }
-        Button {
+        MouseArea{
             id: open
-            x: parent.width - width - 1
-            y: 1
-            width: 23
-            height: 23
-
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            Item {
+                x: parent.width - 26
+                y: 1
+                implicitWidth: 23
+                implicitHeight: 23
+                Image {
+                    x: 1
+                    y: 1
+                    source: "qrc:/icons/AddImg.svg"
+                }
+            }
             onClicked: {
                 filePath.oldPath = filePath.path
                 openFile()
             }
-            highlighted: true
-
-            background: Rectangle {
-                    implicitWidth: 23
-                    implicitHeight: 23
-                    color: open.down ? "#A2A2A2" : "#4DA2A2A2";
-                    //opacity: enabled ? 1 : 0.3
-                    radius: 2
-                }
         }
     }
 

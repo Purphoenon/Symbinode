@@ -22,6 +22,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 #include <QQuickWindow>
+#include "FreeImage.h"
 #include "tab.h"
 #include "clipboard.h"
 #include "noisenode.h"
@@ -79,6 +80,7 @@ public:
     Q_INVOKABLE void paste();
     Q_INVOKABLE void cut();
     Q_INVOKABLE void deleteItems(bool saveConnection);
+    Q_INVOKABLE void loadHDRSet();
     Q_INVOKABLE bool saveScene();
     Q_INVOKABLE void saveSceneAs();
     Q_INVOKABLE void loadScene();
@@ -87,12 +89,14 @@ public:
     Q_INVOKABLE void changeResolution(QVector2D res);
     Q_INVOKABLE void changePrimitive(int id);
     Q_INVOKABLE void changeTilePreview3D(int id);
+    Q_INVOKABLE void changeEnvironmentRotation(int angle);
     Q_INVOKABLE void changeHeightScale(qreal scale);
     Q_INVOKABLE void changeEmissiveStrenght(qreal strenght);
     Q_INVOKABLE void changeBloomRadius(qreal radius);
     Q_INVOKABLE void changeBloomIntensity(qreal intensity);
     Q_INVOKABLE void changeBloomThreshold(qreal threshold);
     Q_INVOKABLE void changeBloom(bool enable);
+    Q_INVOKABLE void changeEnvironment(int index);
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
     Q_INVOKABLE void pin(bool pinned);
@@ -111,6 +115,8 @@ public:
     Node *activeNode();
     void activeItemChanged();
     void loadFile(QString filename);
+    FIBITMAP *loadImage(QString path);
+    void addNewHDR(QString path);
 signals:
     void addTab(Tab *tab);
     void tabClosing(Tab *tab);
@@ -118,6 +124,7 @@ signals:
     void preview3DChanged(QQuickItem *oldPreview, QQuickItem *newPreview);
     void previewUpdate(unsigned int previewData);
     void resolutionChanged(QVector2D res);
+    void addHDR(QString icon);
 private:
     Tab *activeTab = nullptr;
     QQuickItem *m_activeItem = nullptr;
@@ -125,6 +132,8 @@ private:
     Node *m_pinnedNode = nullptr;
     QList<Tab*> tabs;
     Clipboard *m_clipboard = nullptr;
+    QJsonArray environments;
+    std::vector<std::vector<FIBITMAP*>> worldsSet;
 };
 
 #endif // MAINWINDOW_H

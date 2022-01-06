@@ -23,11 +23,12 @@
 #include <iostream>
 #include <QtWidgets/QFileDialog>
 #include <QApplication>
+#include <QRegularExpression>
 
 MainWindow::MainWindow(QWindow *parent):QQuickWindow (parent)
 {
     setVisibility(QWindow::Maximized);
-    m_clipboard = new Clipboard();
+    m_clipboard = new Clipboard();    
 }
 
 MainWindow::~MainWindow() {
@@ -203,6 +204,10 @@ void MainWindow::newDocument() {
     connect(tab, &Tab::changeActiveTab, this, &MainWindow::setActiveTab);
     connect(tab, &Tab::closedTab, this, &MainWindow::tabClosing);
     connect(tab->scene(), &Scene::activeItemChanged, this, &MainWindow::activeItemChanged);
+    connect(tab->scene()->preview3d(), &Preview3DObject::addNewHDR, this, &MainWindow::addNewHDR);
+    connect(tab->scene()->preview3d(), &Preview3DObject::hdrPreviewCreated, this, &MainWindow::addHDR);
+    tab->scene()->preview3d()->setHDRPath(environments[0].toObject()["source"].toString());
+    tab->scene()->preview3d()->setCurrentHDR(worldsSet[0]);
     setActiveTab(tab);
     tabs.append(tab);
     emit addTab(tab);
@@ -231,6 +236,41 @@ void MainWindow::cut() {
 void MainWindow::deleteItems(bool saveConnection) {
     if(activeTab) {
         activeTab->scene()->deleteItems(saveConnection);
+    }
+}
+
+void MainWindow::loadHDRSet() {
+    QString hdrDir =  QCoreApplication::applicationDirPath() + "/hdr";
+    QFile saveFile(hdrDir + "/" + "environments.json");
+    if(!saveFile.open(QIODevice::ReadOnly)) {
+        qWarning("Couldn`t open save file.");
+        return;
+    }
+    QByteArray saveData = saveFile.readAll();
+    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+    QJsonObject json = loadDoc.object();
+    if(json.contains("environments") && json["environments"].isArray()) {
+        environments = json["environments"].toArray();
+        for(int i = 0; i < environments.size(); ++i) {
+            QJsonObject world = environments[i].toObject();
+            std::vector<FIBITMAP*> set;
+            QString hdrPath = QCoreApplication::applicationDirPath() + world["source"].toString();
+            set.push_back(loadImage(hdrPath));
+            QString irradiancePath = hdrPath.left(hdrPath.lastIndexOf(".")) + "_irradiance.hdr";
+            set.push_back(loadImage(irradiancePath));
+            for(unsigned int mip = 0; mip < 5; ++mip) {
+                QString prefilteredPath = hdrPath.left(hdrPath.lastIndexOf(".")) + "_prefiltered" + std::to_string(mip).c_str() + ".hdr";
+                set.push_back(loadImage(prefilteredPath));
+            }
+            worldsSet.push_back(set);
+            if(world.contains("icon")) {
+                addHDR(QCoreApplication::applicationDirPath() + world["icon"].toString());
+            }
+        }
+    }
+    saveFile.close();
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setCurrentHDR(worldsSet[0]);
     }
 }
 
@@ -312,6 +352,12 @@ void MainWindow::changeTilePreview3D(int id) {
     }
 }
 
+void MainWindow::changeEnvironmentRotation(int angle) {
+    if(activeTab) {
+        activeTab->scene()->preview3d()->setEnvironmentRotation(angle);
+    }
+}
+
 void MainWindow::changeHeightScale(qreal scale) {
     if(activeTab) {
         activeTab->scene()->preview3d()->setHeightScale(0.1f*scale);
@@ -345,6 +391,17 @@ void MainWindow::changeBloomThreshold(qreal threshold) {
 void MainWindow::changeBloom(bool enable) {
     if(activeTab) {
         activeTab->scene()->preview3d()->setBloom(enable);
+    }
+}
+
+void MainWindow::changeEnvironment(int index) {
+    if(activeTab) {
+        std::cout << "index " << index << std::endl;
+        std::cout << "current index " << activeTab->scene()->preview3d()->hdrIndex() << std::endl;
+        if(index == activeTab->scene()->preview3d()->hdrIndex()) return;
+        activeTab->scene()->preview3d()->setHDRIndex(index);
+        activeTab->scene()->preview3d()->setHDRPath(QCoreApplication::applicationDirPath() + environments[index].toObject()["source"].toString());
+        activeTab->scene()->preview3d()->setCurrentHDR(worldsSet[index]);        
     }
 }
 
@@ -496,6 +553,61 @@ void MainWindow::loadFile(QString filename) {
         activeTab->scene()->loadScene(filename);
         resolutionChanged(activeTab->scene()->resolution());
     }
+}
+
+FIBITMAP *MainWindow::loadImage(QString path) {
+    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+    FIBITMAP *dib(nullptr);
+    fif = FreeImage_GetFileType(path.toStdString().c_str(), 0);
+    if (fif == FIF_UNKNOWN) {
+        std::cout << "not get file type" << std::endl;
+        return dib;
+    }
+    dib = FreeImage_Load(fif, path.toStdString().c_str());
+    return dib;
+}
+
+void MainWindow::addNewHDR(QString path) {
+    for(int i = 0; i < environments.size(); ++i) {
+        QJsonObject w = environments[i].toObject();
+        if(w["source"] == path) {
+            std::cout << "hdr already added" << std::endl;
+            changeEnvironment(i);
+            return;
+        }
+    }
+    std::vector<FIBITMAP*> newHDR;
+    newHDR.push_back(loadImage(path));
+    QString hdrDir =  QCoreApplication::applicationDirPath() + "/hdr";
+    int idx = path.lastIndexOf(QRegularExpression("/|\\\\"));
+    QString fileName = path.right(path.length() - idx - 1);
+    QString irradiancePath = path.left(path.lastIndexOf(".")) + "_irradiance.hdr";
+    newHDR.push_back(loadImage(irradiancePath));
+    for(unsigned int mip = 0; mip < 5; ++mip) {
+        QString prefilteredPath = path.left(path.lastIndexOf(".")) + "_prefiltered" + std::to_string(mip).c_str() + ".hdr";
+        newHDR.push_back(loadImage(prefilteredPath));
+    }
+    worldsSet.push_back(newHDR);
+
+    QJsonObject world;
+    world["icon"] = "/hdr/" + fileName.left(fileName.lastIndexOf(".")) + ".png";
+    world["source"] = "/hdr/" + fileName;
+    environments.append(world);
+
+    changeEnvironment(worldsSet.size() - 1);    
+
+    QFile saveFile(hdrDir + "/" + "environments.json");
+    QJsonObject saveObject;
+    saveObject["environments"] = environments;
+    if(!saveFile.open(QIODevice::WriteOnly)) {
+        qWarning("Couldn`t open save file.");
+        return;
+    }
+    QJsonDocument saveDoc(saveObject);
+    saveFile.write(saveDoc.toJson());
+    saveFile.close();
+
+    //addHDR(QCoreApplication::applicationDirPath() + world["icon"].toString());
 }
 
 void MainWindow::closeTab(Tab *tab) {

@@ -4,10 +4,10 @@ in vec3 WorldPos;
 
 uniform sampler2D equirectangularMap;
 
-const vec2 invAtan = vec2(0.1591, 0.3183);
+const vec2 invAtan = vec2(0.1591549431, 0.3183098861);
 vec2 SampleSphericalMap(vec3 v)
 {
-    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    vec2 uv = vec2(atan(v.x, v.z), asin(v.y));
     uv *= invAtan;
     uv += 0.5;
     return uv;

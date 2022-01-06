@@ -311,4 +311,7 @@ DISTFILES += \
     qml/ImageProperty.qml \
     shaders/layer.frag \
     shaders/ambientocclusion.frag \
-    qml/AmbientOcclusionProperty.qml
+    qml/AmbientOcclusionProperty.qml \
+    shaders/toequirectangular.frag \
+    shaders/model.vert \
+    shaders/hdrpreview.frag
